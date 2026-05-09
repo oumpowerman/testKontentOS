@@ -163,7 +163,7 @@ const RewardShop: React.FC<RewardShopProps> = ({
                                                     onClick={() => canAfford && onRedeem(reward)}
                                                     disabled={!canAfford}
                                                     className={`
-                                                        w-full py-4 rounded-2xl font-black text-sm shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2
+                                                        w-full py-4 rounded-2xl font-bold text-sm shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2
                                                         ${canAfford 
                                                             ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:brightness-110 shadow-purple-200' 
                                                             : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
@@ -203,15 +203,15 @@ const RewardShop: React.FC<RewardShopProps> = ({
                                                         {item.rewardSnapshot?.icon || '🎁'}
                                                     </div>
                                                     <div>
-                                                        <h4 className="font-black text-gray-800 leading-tight">{item.rewardSnapshot?.title}</h4>
-                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                                                        <h4 className="text-[20px] font-bold font-kanit text-gray-800 leading-tight">{item.rewardSnapshot?.title}</h4>
+                                                        <p className="text-[12px] text-gray-400 font-kanit font-medium uppercase tracking-widest mt-1">
                                                             ซื้อเมื่อ {format(item.redeemedAt, 'd MMM yyyy', { locale: th })}
                                                         </p>
                                                     </div>
                                                 </div>
                                                 <button 
                                                     onClick={() => onUseReward(item.id)}
-                                                    className="px-6 py-3 bg-purple-600 text-white rounded-2xl font-black text-xs hover:bg-purple-700 shadow-lg shadow-purple-100 transition-all active:scale-95"
+                                                    className="px-6 py-3 bg-purple-600 text-white rounded-2xl font-medium font-kanit text-sm hover:bg-purple-700 shadow-lg shadow-purple-100 transition-all active:scale-95"
                                                 >
                                                     ใช้เลย ✨
                                                 </button>

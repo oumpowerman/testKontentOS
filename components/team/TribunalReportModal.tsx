@@ -211,8 +211,8 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
                                                     {isAnonymous ? <Cloud className="w-5 h-5" /> : <User className="w-5 h-5" />}
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-black text-gray-800">ฟ้องแบบไม่ระบุตัวตน</p>
-                                                    <p className="text-[10px] text-gray-500 font-bold">Admin จะยังคงเห็นชื่อคุณเพื่อความโปร่งใส</p>
+                                                    <p className="text-sm font-bold text-gray-800">ฟ้องแบบไม่ระบุตัวตน</p>
+                                                    <p className="text-[10px] text-gray-500 font-medium">Admin จะยังคงเห็นชื่อคุณเพื่อความโปร่งใส</p>
                                                 </div>
                                             </div>
                                             <div className={`w-12 h-6 rounded-full transition-all relative p-1 ${isAnonymous ? 'bg-indigo-500' : 'bg-gray-300'}`}>
@@ -226,7 +226,7 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
 
                                         {/* Category Selection */}
                                         <div className="space-y-3">
-                                            <label className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
                                                 <FileText className="w-4 h-4 text-red-500" /> หมวดหมู่ปัญหา
                                             </label>
                                             <div className="grid grid-cols-2 gap-2">
@@ -242,7 +242,7 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
                                                             whileHover={{ scale: 1.03 }}
                                                             whileTap={{ scale: 0.97 }}
                                                             onClick={() => setCategory(label)}
-                                                            className={`p-3 rounded-2xl text-xs font-black transition-all border-2 text-left flex items-center justify-between ${
+                                                            className={`p-3 rounded-2xl text-xs font-bold transition-all border-2 text-left flex items-center justify-between ${
                                                                 category === label 
                                                                 ? 'border-red-500 bg-red-50 text-red-700 shadow-md shadow-red-100' 
                                                                 : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200'
@@ -259,7 +259,7 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
                                         {/* Target Selection (Avatar Grid) */}
                                         <div className="space-y-4">
                                             <div className="flex items-center justify-between">
-                                                <label className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                                <label className="text-[15px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
                                                     <Target className="w-4 h-4 text-red-500" /> ใครคือคนผิด? (ถ้ามี)
                                                 </label>
                                                 {targetId && (
@@ -268,7 +268,7 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
                                                         animate={{ opacity: 1, x: 0 }}
                                                         type="button"
                                                         onClick={() => setTargetId('')}
-                                                        className="text-[10px] font-black text-red-500 hover:text-red-600 bg-red-50 px-2 py-1 rounded-lg transition-colors"
+                                                        className="text-[12px] font-medium text-red-500 hover:text-red-600 bg-red-50 px-2 py-1 rounded-lg transition-colors"
                                                     >
                                                         ล้างการเลือก
                                                     </motion.button>
@@ -283,7 +283,7 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
                                                     placeholder="ค้นหาชื่อจำเลย..."
                                                     value={searchTerm}
                                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-0 transition-all outline-none font-bold text-xs text-gray-700"
+                                                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-0 transition-all outline-none font-medium text-md text-gray-700"
                                                 />
                                             </div>
 
@@ -304,7 +304,7 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
                                                     <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${!targetId ? 'bg-red-100 text-red-600' : 'bg-gray-200 text-gray-400'}`}>
                                                         <User className="w-6 h-6" />
                                                     </div>
-                                                    <span className={`text-[9px] font-black text-center leading-tight ${!targetId ? 'text-red-600' : 'text-gray-500'}`}>
+                                                    <span className={`text-[10px] font-bold text-center leading-tight ${!targetId ? 'text-red-600' : 'text-gray-500'}`}>
                                                         ไม่ระบุตัวตน
                                                     </span>
                                                     {!targetId && (
@@ -347,7 +347,7 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
                                                                 </motion.div>
                                                             )}
                                                         </div>
-                                                        <span className={`text-[9px] font-black text-center leading-tight truncate w-full ${targetId === user.id ? 'text-red-600' : 'text-gray-500'}`}>
+                                                        <span className={`text-[12px] font-medium text-center leading-tight truncate w-full ${targetId === user.id ? 'text-red-600' : 'text-gray-500'}`}>
                                                             {user.name.split(' ')[0]}
                                                         </span>
                                                     </motion.button>
@@ -357,7 +357,7 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
 
                                         {/* Description */}
                                         <div className="space-y-3">
-                                            <label className="text-xs font-black text-gray-500 uppercase tracking-widest">รายละเอียดเหตุการณ์</label>
+                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">รายละเอียดเหตุการณ์</label>
                                             <textarea 
                                                 required
                                                 value={description}
@@ -370,14 +370,14 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
                                         {/* Evidence Upload */}
                                         <div className="space-y-3">
                                             <div className="flex justify-between items-center">
-                                                <label className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                                <label className="text-xs font-medium text-gray-500 uppercase tracking-widest flex items-center gap-2">
                                                     <Camera className="w-4 h-4 text-red-500" /> หลักฐานรูปถ่าย (แนะนำ)
                                                 </label>
                                                 {isGDriveConnected ? (
                                                     <motion.span 
                                                         initial={{ scale: 0.8, opacity: 0 }}
                                                         animate={{ scale: 1, opacity: 1 }}
-                                                        className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100"
+                                                        className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100"
                                                     >
                                                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                                                         CONNECTED
@@ -386,7 +386,7 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
                                                     <button 
                                                         type="button"
                                                         onClick={handleConnectGDrive}
-                                                        className="flex items-center gap-1 text-[10px] font-black text-indigo-600 hover:text-indigo-700 transition-colors bg-indigo-50 px-2 py-1 rounded-full border border-indigo-100"
+                                                        className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors bg-indigo-50 px-2 py-1 rounded-full border border-indigo-100"
                                                     >
                                                         <Link2 className="w-3 h-3" /> เชื่อมต่อ Google Drive
                                                     </button>
@@ -416,13 +416,13 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
                                                         {!isGDriveConnected ? (
                                                             <div className="text-center p-6">
                                                                 <Cloud className="w-12 h-12 text-indigo-400 mb-2 mx-auto animate-bounce" />
-                                                                <p className="text-sm text-indigo-600 font-black">ต้องเชื่อมต่อ Google Drive ก่อนแนบรูป</p>
-                                                                <p className="text-[10px] text-indigo-400 font-bold">คลิกเพื่อเชื่อมต่อบัญชีของคุณ</p>
+                                                                <p className="text-sm text-indigo-600 font-bold">ต้องเชื่อมต่อ Google Drive ก่อนแนบรูป</p>
+                                                                <p className="text-[10px] text-indigo-400 font-medium">คลิกเพื่อเชื่อมต่อบัญชีของคุณ</p>
                                                             </div>
                                                         ) : (
                                                             <div className="text-center p-6">
                                                                 <Camera className="w-12 h-12 text-gray-400 mb-2 mx-auto group-hover:scale-110 transition-transform" />
-                                                                <p className="text-sm text-gray-500 font-black">กดเพื่อถ่ายรูปหรือเลือกไฟล์</p>
+                                                                <p className="text-sm text-gray-500 font-bold">กดเพื่อถ่ายรูปหรือเลือกไฟล์</p>
                                                             </div>
                                                         )}
                                                     </>
@@ -436,7 +436,7 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
                                                 />
                                             </motion.div>
                                             {file && !isGDriveConnected && (
-                                                <p className="text-[10px] text-red-500 font-black flex items-center gap-1 justify-center">
+                                                <p className="text-[10px] text-red-500 font-bold flex items-center gap-1 justify-center">
                                                     <AlertTriangle className="w-3 h-3" /> กรุณาเชื่อมต่อ Google Drive ก่อนส่งคำฟ้องที่มีรูปแนบ
                                                 </p>
                                             )}
@@ -450,8 +450,8 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
                                         >
                                             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 animate-pulse" />
                                             <p className="text-[11px] text-amber-700 leading-relaxed font-bold">
-                                                <span className="text-amber-800 font-black">คำเตือน:</span> หาก Admin ตรวจพบว่าเป็นการฟ้องเท็จหรือแกล้งกัน 
-                                                คุณจะถูกหัก <span className="text-red-600 font-black">-{tribunalCfg?.false_report_penalty_hp || 15} HP</span> ทันที!
+                                                <span className="text-amber-800 font-bold">คำเตือน:</span> หาก Admin ตรวจพบว่าเป็นการฟ้องเท็จหรือแกล้งกัน 
+                                                คุณจะถูกหัก <span className="text-red-600 font-bold">-{tribunalCfg?.false_report_penalty_hp || 15} HP</span> ทันที!
                                             </p>
                                         </motion.div>
 
@@ -461,7 +461,7 @@ const TribunalReportModal: React.FC<TribunalReportModalProps> = ({ isOpen, onClo
                                             whileHover={{ scale: 1.02, y: -2 }}
                                             whileTap={{ scale: 0.98 }}
                                             disabled={isLoading || !category || !description || (!!file && !isGDriveConnected)}
-                                            className="w-full py-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 disabled:from-gray-300 disabled:to-gray-300 text-white font-black rounded-2xl shadow-xl shadow-red-200 transition-all flex items-center justify-center gap-2 sticky bottom-0"
+                                            className="w-full py-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 disabled:from-gray-300 disabled:to-gray-300 text-white font-medium rounded-2xl shadow-xl shadow-red-200 transition-all flex items-center justify-center gap-2 sticky bottom-0"
                                         >
                                             {isLoading ? (
                                                 <Loader2 className="w-6 h-6 animate-spin" />
@@ -525,7 +525,7 @@ const TribunalHistory: React.FC<{ currentUser: UserType | null }> = ({ currentUs
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                     className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full shadow-lg shadow-indigo-100"
                 />
-                <p className="text-sm text-gray-500 font-black animate-pulse">กำลังขุดคุ้ยประวัติ...</p>
+                <p className="text-md text-gray-500 font-bold animate-pulse">กำลังขุดคุ้ยประวัติ...</p>
             </div>
         );
     }
@@ -549,7 +549,7 @@ const TribunalHistory: React.FC<{ currentUser: UserType | null }> = ({ currentUs
                     </motion.div>
                 </motion.div>
                 <div className="space-y-2">
-                    <h4 className="text-xl font-black text-gray-800">ยังไม่มีประวัติการฟ้อง</h4>
+                    <h4 className="text-xl font-bold text-gray-800">ยังไม่มีประวัติการฟ้อง</h4>
                     <p className="text-sm text-gray-500 font-medium max-w-[200px] mx-auto">
                         ดูเหมือนคุณจะเป็นคนดีนะเนี่ย!<br/>ยังไม่เคยฟ้องใครเลย
                     </p>
@@ -558,7 +558,7 @@ const TribunalHistory: React.FC<{ currentUser: UserType | null }> = ({ currentUs
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={fetchHistory}
-                    className="px-6 py-2 bg-indigo-50 text-indigo-600 rounded-full text-xs font-black hover:bg-indigo-100 transition-all flex items-center gap-2"
+                    className="px-6 py-2 bg-indigo-50 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-100 transition-all flex items-center gap-2"
                 >
                     <Loader2 className="w-3 h-3" /> รีเฟรชข้อมูล
                 </motion.button>

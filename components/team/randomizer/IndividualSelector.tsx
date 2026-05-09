@@ -34,7 +34,7 @@ const IndividualSelector: React.FC<IndividualSelectorProps> = ({
                     <button
                         onClick={onClear}
                         disabled={disabled}
-                        className="text-[10px] font-black uppercase tracking-widest text-rose-500 hover:text-rose-600 flex items-center gap-1 transition-colors"
+                        className="text-[12px] font-bold uppercase tracking-widest text-rose-500 hover:text-rose-600 flex items-center gap-1 transition-colors"
                     >
                         <Trash2 className="w-3 h-3" /> ล้างทั้งหมด ({selectedIds.length})
                     </button>
@@ -99,7 +99,7 @@ const IndividualSelector: React.FC<IndividualSelectorProps> = ({
                 {/* Selected Pool */}
                 {selectedUsers.length > 0 && (
                     <div className="space-y-2 pt-4 border-t border-slate-200/50">
-                        <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-2">
+                        <div className="text-[12px] font-medium text-indigo-500 uppercase tracking-widest flex items-center gap-2">
                             <Check className="w-3 h-3" /> สมาชิกที่จะถูกสุ่ม ({selectedUsers.length})
                         </div>
                         <div className="flex flex-wrap gap-3">
@@ -128,7 +128,7 @@ const IndividualSelector: React.FC<IndividualSelectorProps> = ({
                                                         referrerPolicy="no-referrer"
                                                     />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-black text-sm">
+                                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-bold text-sm">
                                                         {user.name.charAt(0).toUpperCase()}
                                                     </div>
                                                 )}
@@ -137,7 +137,7 @@ const IndividualSelector: React.FC<IndividualSelectorProps> = ({
                                         <div className="absolute -top-1 -right-1 bg-rose-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <Trash2 className="w-2.5 h-2.5" />
                                         </div>
-                                        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[8px] font-black text-indigo-600 uppercase tracking-tighter whitespace-nowrap">
+                                        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[12px] font-medium text-indigo-600 uppercase tracking-tighter whitespace-nowrap">
                                             {user.name.split(' ')[0]}
                                         </div>
                                     </motion.button>

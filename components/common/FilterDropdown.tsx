@@ -163,16 +163,16 @@ const FilterDropdown: React.FC<FilterDropdownProps> = (props) => {
                             />
                         </div>
 
-                        <div className="text-[10px] font-bold text-slate-400 px-4 py-2 mb-1 uppercase tracking-widest bg-slate-50/50 rounded-xl flex justify-between items-center">
+                        <div className="text-[12px] font-medium text-slate-400 px-4 py-2 mb-1 uppercase tracking-widest bg-slate-50/50 rounded-xl flex justify-between items-center">
                             <span>เลือก {label}</span>
-                            <span className="text-[9px] opacity-60">{filteredOptions.length} รายการ</span>
+                            <span className="text-[10px] opacity-60">{filteredOptions.length} รายการ</span>
                         </div>
 
                         {multiSelect && (
                             <div className="flex gap-1 mb-2 px-1">
                                 <button 
                                     onClick={handleSelectAll}
-                                    className="flex-1 py-2 text-[9px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors uppercase tracking-widest"
+                                    className="flex-1 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors uppercase tracking-widest"
                                 >
                                     เลือกทั้งหมด
                                 </button>

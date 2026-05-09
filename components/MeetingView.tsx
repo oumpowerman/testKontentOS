@@ -42,6 +42,15 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
     const [isStartupModalOpen, setIsStartupModalOpen] = useState(false);
     const [originalMeetingId, setOriginalMeetingId] = useState<string | null>(null);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Mobile Detection
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Selected Meeting State (Controlled)
     const [title, setTitle] = useState('');
@@ -346,17 +355,36 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
             )}
 
             {/* Main Workspace */}
-            <div className="flex-1 flex gap-0 md:gap-6 overflow-hidden bg-white/60 backdrop-blur-xl rounded-t-[1.5rem] md:rounded-[2.5rem] shadow-sm border border-white/80 ring-1 ring-indigo-50 p-1 md:p-2 relative">
+            <div className="flex-1 flex gap-0 md:gap-0 overflow-hidden bg-white/60 backdrop-blur-xl rounded-t-[1.5rem] md:rounded-[2.5rem] shadow-sm border border-white/80 ring-1 ring-indigo-50 p-2 md:p-4 relative">
                 
                 {/* Sidebar Container */}
-                <AnimatePresence mode="wait">
+                <AnimatePresence>
                     {!isSidebarCollapsed && (
                         <motion.div 
-                            initial={{ width: 0, opacity: 0, x: -20 }}
-                            animate={{ width: 'auto', opacity: 1, x: 0 }}
-                            exit={{ width: 0, opacity: 0, x: -20 }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className={`flex flex-col bg-white/80 backdrop-blur-md rounded-[1.5rem] md:rounded-[2rem] border border-indigo-50 shadow-sm overflow-hidden h-full shrink-0 relative z-[70] w-full md:w-[300px] absolute md:relative inset-1 md:inset-auto`}
+                            initial={{ width: 0, opacity: 0, x: -20, marginRight: 0 }}
+                            animate={{ 
+                                width: isMobile ? '100%' : 500, 
+                                marginRight: isMobile ? 0 : 24,
+                                opacity: 1, 
+                                x: 0,
+                                transition: {
+                                    width: { duration: 0.4, ease: [0.33, 1, 0.68, 1] },
+                                    marginRight: { duration: 0.4, ease: [0.33, 1, 0.68, 1] },
+                                    opacity: { duration: 0.3, delay: 0.1 }
+                                }
+                            }}
+                            exit={{ 
+                                width: 0, 
+                                marginRight: 0,
+                                opacity: 0, 
+                                x: -20,
+                                transition: {
+                                    width: { duration: 0.4, ease: [0.65, 0, 0.35, 1] },
+                                    marginRight: { duration: 0.4, ease: [0.65, 0, 0.35, 1] },
+                                    opacity: { duration: 0.2 }
+                                }
+                            }}
+                            className={`flex flex-col bg-white/80 backdrop-blur-md rounded-[1.5rem] md:rounded-[2rem] border border-indigo-50 shadow-sm overflow-hidden h-full shrink-0 relative z-[70] w-full md:w-[500px] absolute md:relative inset-1 md:inset-auto`}
                         >
                              <MeetingListSidebar 
                                 meetings={filteredMeetings}
@@ -400,7 +428,10 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
                 )}
 
                 {/* Detail Container */}
-                <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative bg-white rounded-[1.5rem] md:rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/50">
+                <motion.div 
+                    layout
+                    className="flex-1 min-h-0 flex flex-col overflow-hidden relative bg-white rounded-[1.5rem] md:rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/50"
+                >
                     <AnimatePresence mode="wait">
                         {selectedMeeting ? (
                             <motion.div 
@@ -478,7 +509,7 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
                             </motion.div>
                         )}
                     </AnimatePresence>
-                </div>
+                </motion.div>
             </div>
 
             {/* INFO MODAL */}

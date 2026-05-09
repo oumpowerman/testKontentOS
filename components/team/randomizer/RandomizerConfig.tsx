@@ -106,7 +106,7 @@ const RandomizerConfig: React.FC<RandomizerConfigProps> = ({
                             คน
                         </div>
                     </div>
-                    <p className="text-[10px] text-slate-400 font-bold italic">
+                    <p className="text-[12px] text-slate-400 font-medium italic">
                         * สุ่มได้สูงสุด {finalPool.length} คน
                     </p>
                 </div>
@@ -143,7 +143,7 @@ const RandomizerConfig: React.FC<RandomizerConfigProps> = ({
                     whileTap={{ scale: 0.95 }}
                     onClick={onSpin}
                     disabled={isSpinning || finalPool.length === 0 || !topic.trim()}
-                    className="w-full max-w-sm py-6 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-[2rem] font-black text-2xl shadow-2xl shadow-indigo-500/30 hover:shadow-indigo-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+                    className="w-full max-w-sm py-6 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-[2rem] font-medium text-2xl shadow-2xl shadow-indigo-500/30 hover:shadow-indigo-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
                 >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
                     <div className="relative z-10 flex items-center justify-center gap-3">
