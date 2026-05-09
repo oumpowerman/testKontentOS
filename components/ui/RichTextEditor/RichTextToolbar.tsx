@@ -37,7 +37,7 @@ const MenuButton = ({ onClick, isActive, icon: Icon, title, label, disabled, var
         type="button"
     >
         <Icon className={`w-4 h-4 ${isActive ? 'scale-110' : ''}`} />
-        {label && <span className="ml-1.5 text-[10px] font-black uppercase tracking-wider">{label}</span>}
+        {label && <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider">{label}</span>}
         {isActive && (
             <motion.div 
                 layoutId="active-indicator"

@@ -1,10 +1,15 @@
 
 import React, { useState, useRef } from 'react';
-import { MeetingAgendaItem, TaskAsset, MeetingNoteSheet } from '../../types';
-import { Paperclip, Plus, Link as LinkIcon, File, Sparkles, HardDrive, UploadCloud, Loader2, RefreshCw } from 'lucide-react';
+import { MeetingAgendaItem, TaskAsset, MeetingNoteSheet, MeetingLog } from '../../types';
+import { 
+    Paperclip, Plus, Link as LinkIcon, File, Sparkles, HardDrive, 
+    UploadCloud, Loader2, RefreshCw, History as HistoryIcon,
+    Maximize2, Minimize2, X
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MeetingAgenda from './MeetingAgenda';
 import MeetingNotes from './MeetingNotes';
+import RichTextEditor from '../ui/RichTextEditor';
 import AddLinkModal from './AddLinkModal';
 import { useGoogleDrive } from '../../hooks/useGoogleDrive';
 import { format } from 'date-fns';
@@ -24,6 +29,8 @@ interface MeetingNotesTabProps {
     sheets: MeetingNoteSheet[];
     setSheets: (val: MeetingNoteSheet[]) => void;
     hideExtraPanels?: boolean;
+    referenceMeeting?: MeetingLog;
+    onSwitchMeeting?: (id: string, isTemporary?: boolean) => void;
 }
 
 const MeetingNotesTab: React.FC<MeetingNotesTabProps> = ({
@@ -31,12 +38,16 @@ const MeetingNotesTab: React.FC<MeetingNotesTabProps> = ({
     assets, onAddAsset,
     content, setContent, onBlurContent,
     sheets, setSheets,
-    hideExtraPanels = false
+    hideExtraPanels = false,
+    referenceMeeting,
+    onSwitchMeeting
 }) => {
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [isFocusMode, setIsFocusMode] = useState(false);
     const [isAgendaExpanded, setIsAgendaExpanded] = useState(false);
     const [isAssetsExpanded, setIsAssetsExpanded] = useState(false);
+    const [showComparison, setShowComparison] = useState(false);
+    const [isPreviousFocused, setIsPreviousFocused] = useState(false);
 
     const driveUploadInputRef = useRef<HTMLInputElement>(null);
     const { openDrivePicker, uploadFileToDrive, isReady: isDriveReady, isUploading, isAuthenticated: isDriveAuthenticated, login, retry } = useGoogleDrive();
@@ -87,6 +98,28 @@ const MeetingNotesTab: React.FC<MeetingNotesTabProps> = ({
     return (
         <div className="flex-1 p-3 md:p-5 flex flex-col gap-4 relative">
             
+            {/* Reference Meeting Toggle */}
+            {referenceMeeting && (
+                <div className="flex items-center justify-between bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-3 rounded-2xl shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-500 text-white rounded-xl shadow-sm">
+                            <HistoryIcon className="w-4 h-4" />
+                        </div>
+                        <div>
+                            <div className="text-[12px] font-kanit font-bold text-amber-600 uppercase tracking-widest">ติดตามผลจากประชุมเมื่อ: {format(referenceMeeting.date, 'd MMM yyyy')}</div>
+                            <div className="font-kanit font-medium text-gray-700 text-sm">หัวข้อ: {referenceMeeting.title}</div>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={() => setShowComparison(!showComparison)}
+                        className={`px-4 py-1.5 rounded-xl text-xs font-kanit font-medium transition-all flex items-center gap-2 ${showComparison ? 'bg-amber-500 text-white shadow-lg' : 'bg-white text-amber-600 hover:bg-amber-100'}`}
+                    >
+                        <RefreshCw className={`w-3 h-3 ${showComparison && 'animate-spin-slow'}`} />
+                        {showComparison ? 'ซ่อนการเปรียบเทียบ' : 'ดูบันทึกครั้งก่อน'}
+                    </button>
+                </div>
+            )}
+
             {/* TOP ROW: Assets & Agenda (Hidden in Focus Mode or if hidden by prop) */}
             {!isFocusMode && !hideExtraPanels && (
                 <div className="flex flex-col lg:flex-row gap-4 shrink-0 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -105,11 +138,11 @@ const MeetingNotesTab: React.FC<MeetingNotesTabProps> = ({
                                 <div className="p-1.5 bg-indigo-50 rounded-lg text-indigo-500">
                                     <Paperclip className="w-3.5 h-3.5" />
                                 </div>
-                                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
                                     ไฟล์แนบ
                                 </h4>
                                 <div className="flex items-center gap-1">
-                                    <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[8px] font-black tracking-tighter ${isDriveAuthenticated ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-amber-50 border-amber-100 text-amber-600'}`}>
+                                    <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[8px] font-bold tracking-tighter ${isDriveAuthenticated ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-amber-50 border-amber-100 text-amber-600'}`}>
                                         <HardDrive className={`w-2 h-2 ${isDriveAuthenticated && isUploading ? 'animate-spin' : ''}`} />
                                         {isDriveAuthenticated ? 'ONLINE' : 'OFFLINE'}
                                     </div>
@@ -123,7 +156,7 @@ const MeetingNotesTab: React.FC<MeetingNotesTabProps> = ({
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="bg-slate-100 text-slate-500 text-[9px] font-black px-2 py-0.5 rounded-full border border-slate-200 shadow-inner">
+                                <span className="bg-slate-100 text-slate-500 text-[9px] font-bold px-2 py-0.5 rounded-full border border-slate-200 shadow-inner">
                                     {assets.length}
                                 </span>
                                 <div className="lg:hidden text-slate-400">
@@ -152,7 +185,7 @@ const MeetingNotesTab: React.FC<MeetingNotesTabProps> = ({
                                                 >
                                                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover/empty:opacity-100 transition-opacity" />
                                                     <LinkIcon className="w-5 h-5 md:w-6 md:h-6 mb-1 opacity-20 group-hover/empty:opacity-40 group-hover/empty:scale-110 transition-all" />
-                                                    <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest group-hover/empty:text-indigo-400">แปะลิงก์</span>
+                                                    <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest group-hover/empty:text-indigo-400">แปะลิงก์</span>
                                                 </motion.button>
 
                                                 <motion.button 
@@ -164,7 +197,7 @@ const MeetingNotesTab: React.FC<MeetingNotesTabProps> = ({
                                                 >
                                                     <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 opacity-0 group-hover/drive:opacity-100 transition-opacity" />
                                                     <HardDrive className={`w-5 h-5 md:w-6 md:h-6 mb-1 opacity-20 group-hover/drive:opacity-40 group-hover/drive:scale-110 transition-all ${isDriveAuthenticated ? 'text-blue-500 opacity-40' : ''}`} />
-                                                    <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest group-hover/drive:text-blue-400">
+                                                    <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest group-hover/drive:text-blue-400">
                                                         {isDriveAuthenticated ? 'เลือกจาก Drive' : 'เชื่อมต่อ Drive'}
                                                     </span>
                                                 </motion.button>
@@ -178,7 +211,7 @@ const MeetingNotesTab: React.FC<MeetingNotesTabProps> = ({
                                                 >
                                                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover/upload:opacity-100 transition-opacity" />
                                                     {isUploading ? <Loader2 className="w-5 h-5 md:w-6 md:h-6 mb-1 animate-spin text-emerald-400" /> : <UploadCloud className={`w-5 h-5 md:w-6 md:h-6 mb-1 opacity-20 group-hover/upload:opacity-40 group-hover/upload:scale-110 transition-all ${isDriveAuthenticated ? 'text-emerald-500 opacity-40' : ''}`} />}
-                                                    <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest group-hover/upload:text-emerald-400">
+                                                    <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest group-hover/upload:text-emerald-400">
                                                         {isUploading ? 'กำลังอัป...' : isDriveAuthenticated ? 'อัปโหลดขึ้น Drive' : 'เชื่อมต่อเพื่ออัปโหลด'}
                                                     </span>
                                                 </motion.button>
@@ -260,7 +293,7 @@ const MeetingNotesTab: React.FC<MeetingNotesTabProps> = ({
                         >
                             <div className="flex items-center gap-2">
                                 <Sparkles className="w-4 h-4 text-amber-500" />
-                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">วาระการประชุม</span>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">วาระการประชุม</span>
                             </div>
                             <Plus className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isAgendaExpanded ? 'rotate-45' : ''}`} />
                         </div>
@@ -280,27 +313,121 @@ const MeetingNotesTab: React.FC<MeetingNotesTabProps> = ({
             {/* BOTTOM ROW: Notes */}
             <motion.div 
                 layout
-                className={`w-full flex flex-col transition-all duration-500 ease-in-out ${isFocusMode ? 'z-[100] flex-1' : 'min-h-[400px] md:min-h-[500px]'}`}
+                className={`w-full flex flex-col transition-all duration-500 ease-in-out ${isFocusMode ? 'z-[100] flex-1' : 'min-h-[400px] md:min-h-[500px]'} ${isPreviousFocused ? 'flex-col' : 'flex-col lg:flex-row gap-4'}`}
             >
-                <div className={`bg-white rounded-[1.5rem] md:rounded-[2.5rem] border-b-4 border-r-2 border-slate-200 shadow-xl overflow-hidden flex flex-col relative group ${isFocusMode ? 'flex-1' : ''}`}>
-                    <MeetingNotes 
-                        initialContent={content}
-                        onUpdate={setContent}
-                        onBlur={onBlurContent}
-                        sheets={sheets}
-                        onUpdateSheets={setSheets}
-                        isFocused={isFocusMode}
-                        onToggleFocus={() => setIsFocusMode(!isFocusMode)}
-                    />
-                    
-                    {/* Focus Mode Decor */}
-                    {!isFocusMode && (
-                        <div className="absolute top-4 right-16 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 rounded-full border border-amber-100 text-[9px] font-black text-amber-600 uppercase tracking-widest shadow-sm">
-                                <Sparkles className="w-3 h-3" /> Focus Mode Available
+                <div className={`flex flex-col lg:flex-row gap-4 flex-1 ${isPreviousFocused ? 'flex-col' : ''}`}>
+                    {/* Previous Meeting Notes (Comparison View) */}
+                    <AnimatePresence mode="wait">
+                        {showComparison && referenceMeeting && (
+                            <motion.div 
+                                initial={{ width: 0, opacity: 0 }}
+                                animate={{ width: '100%', opacity: 1 }}
+                                exit={{ width: 0, opacity: 0 }}
+                                className={`
+                                    bg-amber-50/20 rounded-[1.5rem] md:rounded-[2.5rem] border-2 border-dashed border-amber-100 overflow-hidden flex flex-col relative transition-all duration-500
+                                    ${isPreviousFocused ? 'fixed inset-4 md:inset-12 z-[200] shadow-2xl bg-white border-solid' : 'flex-1'}
+                                `}
+                            >
+                                <div className="p-4 border-b border-amber-100 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-10">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-amber-100 text-amber-600 rounded-lg">
+                                            <HistoryIcon className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <div className="text-[12px] font-kanit font-bold text-amber-600 uppercase tracking-[0.2em] leading-none mb-1">บันทึกครั้งก่อน</div>
+                                            <div className="text-sm font-kanit font-medium text-gray-700">{referenceMeeting.title}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={() => setIsPreviousFocused(!isPreviousFocused)}
+                                            className={`px-3 py-1.5 rounded-xl text-[12px] font-kanit font-medium transition-all flex items-center gap-1.5 ${isPreviousFocused ? 'bg-amber-600 text-white shadow-lg' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
+                                        >
+                                            {isPreviousFocused ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                                            {isPreviousFocused ? 'ย่อหน้าต่าง' : 'ดูเต็มจอ'}
+                                        </button>
+
+                                        {onSwitchMeeting && (
+                                            <button 
+                                                onClick={() => onSwitchMeeting(referenceMeeting.id, true)}
+                                                className="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-[12px] font-kanit font-medium hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-100"
+                                            >
+                                                <RefreshCw className="w-3.5 h-3.5" />
+                                                สลับไปดูสรุปเต็ม
+                                            </button>
+                                        )}
+                                        
+                                        {isPreviousFocused && (
+                                            <button 
+                                                onClick={() => {
+                                                    setIsPreviousFocused(false);
+                                                    setShowComparison(false);
+                                                }}
+                                                className="p-1.5 bg-gray-100 text-gray-400 hover:text-red-500 rounded-lg transition-colors"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className={`flex-1 overflow-y-auto ${isPreviousFocused ? 'p-6 md:p-12' : 'p-4 md:p-6'}`}>
+                                    <div className="max-w-4xl mx-auto">
+                                        <RichTextEditor 
+                                            content={referenceMeeting.content || ''}
+                                            onChange={() => {}} // Read-only doesn't need onChange
+                                            readOnly={true}
+                                            className="prose-amber"
+                                        />
+                                        
+                                        {referenceMeeting.decisions && (
+                                            <div className="mt-12 pt-8 border-t border-amber-100 animate-in fade-in duration-700">
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <div className="w-1 h-4 bg-amber-400 rounded-full"></div>
+                                                    <div className="text-[10px] font-bold text-amber-600 uppercase tracking-[0.2em]">มติจากครั้งก่อน</div>
+                                                </div>
+                                                <div className="p-6 bg-gradient-to-br from-white to-amber-50/30 rounded-3xl italic border border-amber-100 text-gray-600 shadow-sm leading-relaxed text-sm">
+                                                    "{referenceMeeting.decisions}"
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                {!isPreviousFocused && (
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 opacity-[0.03]">
+                                        <HistoryIcon className="w-64 h-64 text-amber-500" />
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <div className={`
+                        bg-white rounded-[1.5rem] md:rounded-[2.5rem] border-b-4 border-r-2 border-slate-200 shadow-xl overflow-hidden flex flex-col relative group transition-all duration-500
+                        ${isFocusMode ? 'flex-1' : ''}
+                        ${showComparison && !isPreviousFocused ? 'flex-[1.5]' : 'flex-1'}
+                        ${isPreviousFocused ? 'hidden lg:flex lg:opacity-20 pointer-events-none grayscale' : 'flex'}
+                    `}>
+                        <MeetingNotes 
+                            initialContent={content}
+                            onUpdate={setContent}
+                            onBlur={onBlurContent}
+                            sheets={sheets}
+                            onUpdateSheets={setSheets}
+                            isFocused={isFocusMode}
+                            onToggleFocus={() => setIsFocusMode(!isFocusMode)}
+                        />
+                        
+                        {/* Focus Mode Decor */}
+                        {!isFocusMode && (
+                            <div className="absolute top-4 right-16 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 rounded-full border border-amber-100 text-[9px] font-bold text-amber-600 uppercase tracking-widest shadow-sm">
+                                    <Sparkles className="w-3 h-3" /> Focus Mode Available
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </motion.div>
 

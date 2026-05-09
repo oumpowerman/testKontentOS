@@ -17,6 +17,7 @@ import StockSidePanel from './StockSidePanel';
 import DelayModal from './DelayModal';
 import AppBackground, { BackgroundTheme } from './common/AppBackground';
 import MobileLandscapeWrapper from './common/MobileLandscapeWrapper';
+import { useGlobalDialog } from '../context/GlobalDialogContext';
 export type TaskDisplayMode = 'MINIMAL' | 'DOT' | 'EMOJI' | 'FULL';
 
 interface CalendarViewProps {
@@ -123,12 +124,21 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   // --- Mobile Landscape State ---
   const [isMobileLandscape, setIsMobileLandscape] = useState(false);
 
+  const { showAlert } = useGlobalDialog();
+
   // Trigger Range Change when month changes
   useEffect(() => {
       if (onRangeChange) {
           onRangeChange(currentDate);
       }
   }, [currentDate, onRangeChange]);
+
+  // Auto-close stock panel when switching to TASK mode
+  useEffect(() => {
+      if (viewMode === 'TASK' && isStockOpen) {
+          setIsStockOpen(false);
+      }
+  }, [viewMode, isStockOpen]);
 
   // --- MEMOIZATION: Pre-calculate filtered tasks for the view (Used ONLY for Board View now) ---
   const filteredTasksForView = useMemo(() => {
@@ -237,7 +247,16 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               taskDisplayMode={taskDisplayMode}
               setTaskDisplayMode={setTaskDisplayMode}
               isStockOpen={isStockOpen}
-              onToggleStock={() => setIsStockOpen(!isStockOpen)}
+              onToggleStock={() => {
+                  if (viewMode === 'TASK') {
+                      showAlert(
+                          'ฟีเจอร์ "คลังเก็บเนื้อหา" จะใช้งานได้เฉพาะในโหมด Content เท่านั้น เพื่อช่วยให้คุณดึงไอเดียมาวางแผนลงตารางได้สะดวกขึ้น',
+                          'เปิดหน้าต่างคลังไม่ได้'
+                      );
+                      return;
+                  }
+                  setIsStockOpen(!isStockOpen);
+              }}
               isMobileLandscape={isMobileLandscape}
               onToggleMobileLandscape={() => setIsMobileLandscape(!isMobileLandscape)}
               onToggleWorkbox={onToggleWorkbox}
@@ -279,6 +298,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                             customChips={customChips || []}
                             highlights={highlights}
                             masterOptions={masterOptions}
+                            channels={channels}
                             getTasksForDay={getTasksForDay}
                             filterTasks={filterTasks}
                             onDayClick={handleDayClick}
@@ -316,11 +336,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               <div 
                   className={`
                       shrink-0 hidden lg:block sticky top-24 self-start h-[calc(100vh-120px)]
-                      transition-all duration-500 ease-[cubic-bezier(0.25,0.8,0.25,1)] overflow-hidden
+                      transition-all duration-500 ease-[cubic-bezier(0.25,0.8,0.25,1)]
+                      overflow-hidden
+
+                      rounded-3xl
+                      border border-white/50
+                      bg-white/40
+                      backdrop-blur-xl
+                      shadow-[0_10px_40px_rgba(0,0,0,0.08)]
+
                       ${isStockOpen ? 'w-80 opacity-100 translate-x-0' : 'w-0 opacity-0 translate-x-10'}
                   `}
               >
-                   <div className="w-80 h-full">
+                   <div className="w-80 h-full rounded-3xl overflow-hidden">
                        <StockSidePanel 
                           isOpen={true} // Always render internal logic, control visibility via wrapper
                           onClose={() => setIsStockOpen(false)}
@@ -337,7 +365,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         {/* Mobile Stock Panel Overlay (If Open on Mobile & Not Landscape) */}
         {isStockOpen && !isMobileLandscape && (
             <div className="lg:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsStockOpen(false)}>
-                 <div className="absolute right-0 top-0 bottom-0 w-80 bg-white shadow-2xl animate-in slide-in-from-right duration-300" onClick={e => e.stopPropagation()}>
+                 <div 
+                    className="
+                        absolute right-2 top-2 bottom-2 w-80
+                        rounded-3xl
+                        border border-white/50
+                        bg-white/80
+                        backdrop-blur-2xl
+                        shadow-[0_20px_60px_rgba(0,0,0,0.18)]
+                        animate-in slide-in-from-right duration-300
+                        overflow-hidden
+                    "
+                    onClick={e => e.stopPropagation()}
+                 >
                       <StockSidePanel 
                           isOpen={true}
                           onClose={() => setIsStockOpen(false)}
@@ -357,6 +397,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               title={`รายการวันที่ ${format(selectedDayDate, 'd MMM yyyy')}`}
               tasks={selectedDayTasks}
               channels={channels}
+              masterOptions={masterOptions}
               onEditTask={onSelectTask}
               colorTheme={viewMode === 'CONTENT' ? 'blue' : 'green'}
         />

@@ -137,7 +137,7 @@ const StockFilterModal: React.FC<StockFilterModalProps> = ({
                 {/* Header */}
                 <div className="px-8 py-6 border-b border-gray-100 bg-white shrink-0 flex justify-between items-center bg-gradient-to-r from-gray-50 to-white relative z-20">
                     <div>
-                        <h3 className="text-xl font-black text-gray-800 flex items-center gap-2">
+                        <h3 className="text-[26px] font-bold text-gray-800 flex items-center gap-2">
                             <span className="bg-indigo-600 text-white p-2 rounded-xl shadow-lg shadow-indigo-200">
                                 <Filter className="w-5 h-5" />
                             </span>

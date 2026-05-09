@@ -11,23 +11,24 @@
     box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.25) !important;
     background: white !important;
     padding: 1rem !important;
-    width: auto !important;
+    width: auto !important; /* Let it grow to fit content */
 }
 
 .react-datepicker__month-container {
-    width: 320px !important; /* Wider calendar */
+    width: 330px !important; 
+    padding: 0 0.5rem !important;
 }
 
 .react-datepicker__day-name, .react-datepicker__day {
-    width: 3rem !important; /* Larger days */
-    line-height: 3rem !important;
-    margin: 0.15rem !important;
+    width: 2.5rem !important; 
+    line-height: 2.5rem !important;
+    margin: 0.1rem !important;
 }
 
 /* Modern Time Picker Styling */
 .react-datepicker__time-container {
     border-left: 1px solid rgba(99, 102, 241, 0.1) !important;
-    width: 180px !important; /* Significantly wider for better presence */
+    width: 140px !important; 
 }
 
 .react-datepicker--time-only .react-datepicker__time-container {
@@ -61,12 +62,12 @@
 
 .react-datepicker__time-list-item {
     font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.95rem !important;
+    font-size: 0.85rem !important;
     font-weight: 700 !important;
     color: #334155 !important;
-    padding: 1rem 0 !important;
-    margin: 0.4rem 0.75rem !important;
-    border-radius: 1rem !important;
+    padding: 0.75rem 0.5rem !important;
+    margin: 0.3rem 0.4rem !important;
+    border-radius: 0.75rem !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     display: flex !important;
     align-items: center !important;
@@ -140,38 +141,52 @@
   }
 }
 
-/* Custom Scrollbar for better UX */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+/* Modern Scrollbar Styling (Premium & Slim) */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99, 102, 241, 0.1) transparent;
 }
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.08);
+    border-radius: 100px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid transparent;
+    background-clip: content-box;
+}
+
+/* Specific Scrollbar Utilities */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background-color: rgba(99, 102, 241, 0.1);
-  border-radius: 20px;
-  transition: background-color 0.3s ease;
 }
 .scrollbar-thin:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(99, 102, 241, 0.2);
-}
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(99, 102, 241, 0.4);
+  background-color: rgba(99, 102, 241, 0.3);
 }
 
 .custom-slim-scrollbar::-webkit-scrollbar {
-  width: 5px;
-}
-.custom-slim-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+  width: 4px;
 }
 .custom-slim-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(129, 140, 248, 0.3);
-  border-radius: 20px;
-}
-.custom-slim-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(99, 102, 241, 0.6);
+  background-color: rgba(129, 140, 248, 0.2);
 }
 
 /* Hide scrollbar utility */

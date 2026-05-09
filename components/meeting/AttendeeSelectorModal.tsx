@@ -60,15 +60,40 @@ const AttendeeSelectorModal: React.FC<AttendeeSelectorModalProps> = ({
         );
     };
 
-    const handleSelectAll = () => {
-        // Select all visible users in the current filter
-        const visibleIds: string[] = [];
-        // Iterate manually to avoid flat() type issues
+    const toggleGroupSelection = (usersInGroup: User[]) => {
+        const groupIds = usersInGroup.map(u => u.id);
+        const allSelected = groupIds.every(id => localSelected.includes(id));
+
+        if (allSelected) {
+            // Deselect all in group
+            setLocalSelected(prev => prev.filter(id => !groupIds.includes(id)));
+        } else {
+            // Select all in group (keeping others)
+            const newSelection = new Set([...localSelected, ...groupIds]);
+            setLocalSelected(Array.from(newSelection));
+        }
+    };
+
+    const visibleUsers = useMemo(() => {
+        const list: User[] = [];
         Object.values(groupedUsers).forEach((group: User[]) => {
-            group.forEach(u => visibleIds.push(u.id));
+            group.forEach(u => list.push(u));
         });
-        const newSelection = new Set([...localSelected, ...visibleIds]);
-        setLocalSelected(Array.from(newSelection));
+        return list;
+    }, [groupedUsers]);
+
+    const isAllVisibleSelected = visibleUsers.length > 0 && visibleUsers.every(u => localSelected.includes(u.id));
+
+    const handleToggleAllVisible = () => {
+        const visibleIds = visibleUsers.map(u => u.id);
+        if (isAllVisibleSelected) {
+            // Deselect all visible
+            setLocalSelected(prev => prev.filter(id => !visibleIds.includes(id)));
+        } else {
+            // Select all visible
+            const newSelection = new Set([...localSelected, ...visibleIds]);
+            setLocalSelected(Array.from(newSelection));
+        }
     };
 
     const handleClearSelection = () => {
@@ -82,76 +107,124 @@ const AttendeeSelectorModal: React.FC<AttendeeSelectorModalProps> = ({
 
     if (!isOpen) return null;
 
-    // FIX: Increased Z-Index to 10000 to ensure it appears above the Expanded Meeting Detail (which is z-9999)
     return createPortal(
         <div 
-            className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+            className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
             onClick={onClose}
         >
             <div 
-                className="bg-white w-full max-w-2xl rounded-[2rem] shadow-2xl border-4 border-white ring-1 ring-gray-200 overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300 relative"
+                className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl border-4 border-white ring-1 ring-gray-100 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300 relative"
                 onClick={e => e.stopPropagation()} // Prevent close when clicking inside
             >
                 
                 {/* Header */}
-                <div className="px-6 py-5 border-b border-gray-100 bg-white flex flex-col gap-4">
-                    <div className="flex justify-between items-center">
+                <div className="px-8 py-7 border-b border-gray-100 bg-white relative">
+                    {/* Background decoration */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none overflow-hidden" />
+                    
+                    <div className="flex justify-between items-start relative z-10">
                         <div>
-                            <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                                <Users className="w-6 h-6 text-indigo-600" />
+                            <h3 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+                                <span className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200">
+                                    <Users className="w-6 h-6 text-white" />
+                                </span>
                                 เลือกผู้เข้าร่วมประชุม
                             </h3>
-                            <p className="text-sm text-gray-500">เลือกสมาชิกที่ต้องการเชิญเข้าห้องนี้</p>
+                            <p className="text-sm font-medium text-gray-400 mt-2 ml-14">ระบุสมาชิกที่ต้องการเชิญเข้าร่วมการประชุม</p>
                         </div>
-                        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-red-500 transition-colors">
+                        <button 
+                            onClick={onClose} 
+                            className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-red-500 transition-all active:scale-90"
+                        >
                             <X className="w-6 h-6" />
                         </button>
                     </div>
 
                     {/* Search & Actions */}
-                    <div className="flex gap-3">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <div className="flex flex-col sm:flex-row gap-4 mt-8 relative z-20">
+                        <div className="relative flex-1 group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-focus-within:text-indigo-500 transition-colors" />
                             <input 
                                 type="text" 
                                 placeholder="ค้นหาชื่อ หรือตำแหน่ง..." 
-                                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:border-indigo-500 focus:bg-white outline-none transition-all"
+                                className="w-full pl-12 pr-4 py-4 bg-gray-50/50 border-2 border-transparent rounded-[1.5rem] text-sm font-medium focus:border-indigo-100 focus:bg-white focus:ring-4 focus:ring-indigo-50/30 outline-none transition-all placeholder:text-gray-300 shadow-sm"
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <button 
-                            onClick={handleSelectAll}
-                            className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-colors whitespace-nowrap"
-                        >
-                            Select All
-                        </button>
+                        {visibleUsers.length > 0 && (
+                            <button 
+                                onClick={handleToggleAllVisible}
+                                className={`
+                                    px-8 py-4 rounded-[1.5rem] text-sm font-medium transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap min-w-[140px]
+                                    ${isAllVisibleSelected 
+                                        ? 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white shadow-rose-100/50' 
+                                        : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100/50'
+                                    }
+                                `}
+                            >
+                                {isAllVisibleSelected ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                                {isAllVisibleSelected ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+                            </button>
+                        )}
                     </div>
                 </div>
 
                 {/* Body: Grouped List */}
-                <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50 space-y-6">
+                <div className="flex-1 overflow-y-auto px-8 py-6 bg-white space-y-8 scrollbar-hide">
                     {Object.keys(groupedUsers).length === 0 ? (
-                        <div className="text-center py-12 text-gray-400">
-                            <Users className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                            <p>ไม่พบรายชื่อสมาชิก</p>
+                        <div className="text-center py-20 text-gray-300">
+                            <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Users className="w-10 h-10 opacity-30" />
+                            </div>
+                            <p className="font-medium">ไม่พบรายชื่อสมาชิกนิคะ</p>
                         </div>
                     ) : (
                         Object.entries(groupedUsers).map(([position, groupUsers]) => {
-                            // Explicit cast to resolve 'unknown' type error
                             const usersList = groupUsers as User[];
+                            const allSelectedInGroup = usersList.every(u => localSelected.includes(u.id));
+                            const someSelectedInGroup = usersList.some(u => localSelected.includes(u.id));
                             
                             return (
-                                <div key={position} className="animate-in slide-in-from-bottom-2">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <span className="bg-white border border-gray-200 p-1.5 rounded-lg text-gray-500 shadow-sm">
-                                            <Briefcase className="w-3.5 h-3.5" />
-                                        </span>
-                                        <h4 className="text-sm font-bold text-gray-600 uppercase tracking-wide">{position}</h4>
-                                        <span className="text-xs text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full font-bold">{usersList.length}</span>
-                                    </div>
+                                <div key={position} className="animate-in slide-in-from-bottom-2 fade-in duration-300">
+                                    <button 
+                                        onClick={() => toggleGroupSelection(usersList)}
+                                        className="w-full flex items-center justify-between mb-4 group/header p-2 -mx-2 rounded-2xl hover:bg-gray-50 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className={`
+                                                p-2 rounded-xl border-2 transition-all
+                                                ${allSelectedInGroup 
+                                                    ? 'bg-indigo-600 border-indigo-600 text-white' 
+                                                    : someSelectedInGroup
+                                                        ? 'bg-indigo-50 border-indigo-200 text-indigo-600'
+                                                        : 'bg-white border-gray-100 text-gray-400 group-hover/header:border-indigo-200'
+                                                }
+                                            `}>
+                                                <Briefcase className="w-4 h-4" />
+                                            </div>
+                                            <h4 className="text-sm font-black text-gray-700 uppercase tracking-widest">{position}</h4>
+                                            <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2.5 py-0.5 rounded-full">{usersList.length}</span>
+                                        </div>
+                                        
+                                        <div className={`
+                                            flex items-center gap-2 text-xs font-bold transition-all
+                                            ${allSelectedInGroup ? 'text-indigo-600' : 'text-gray-300 group-hover/header:text-indigo-400'}
+                                        `}>
+                                            <span className="hidden sm:inline uppercase tracking-tighter">
+                                                {allSelectedInGroup ? 'Deselect Group' : 'Select Group'}
+                                            </span>
+                                            <div className={`
+                                                w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all
+                                                ${allSelectedInGroup ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-gray-200'}
+                                            `}>
+                                                {allSelectedInGroup && <Check className="w-3.5 h-3.5 text-white stroke-[3px]" />}
+                                                {!allSelectedInGroup && someSelectedInGroup && <div className="w-2 h-0.5 bg-indigo-400 rounded-full" />}
+                                            </div>
+                                        </div>
+                                    </button>
                                     
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
                                         {usersList.map(user => {
                                             const isSelected = localSelected.includes(user.id);
                                             return (
@@ -159,37 +232,36 @@ const AttendeeSelectorModal: React.FC<AttendeeSelectorModalProps> = ({
                                                     key={user.id}
                                                     onClick={() => toggleSelection(user.id)}
                                                     className={`
-                                                        flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all duration-200 relative overflow-hidden group
+                                                        flex items-center gap-4 p-4 rounded-[1.5rem] border-2 cursor-pointer transition-all duration-300 relative overflow-hidden
                                                         ${isSelected 
-                                                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-md transform scale-[1.02]' 
-                                                            : 'bg-white border-transparent hover:border-indigo-200 hover:shadow-sm'
+                                                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-100 ring-2 ring-indigo-50 ring-offset-2' 
+                                                            : 'bg-white border-gray-50 hover:border-indigo-100 hover:shadow-lg hover:shadow-gray-100/50'
                                                         }
                                                     `}
                                                 >
-                                                    {/* Checkmark BG Effect */}
+                                                    {/* Background Glow for Selected */}
                                                     {isSelected && (
-                                                        <div className="absolute -right-4 -bottom-4 text-indigo-500 opacity-20">
-                                                            <Check className="w-16 h-16" />
-                                                        </div>
+                                                        <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
                                                     )}
 
                                                     <div className="relative shrink-0">
                                                         <img 
                                                             src={user.avatarUrl} 
-                                                            className={`w-10 h-10 rounded-full object-cover border-2 ${isSelected ? 'border-white/30' : 'border-gray-100'}`} 
+                                                            className={`w-12 h-12 rounded-2xl object-cover border-2 shadow-sm transition-all duration-300 ${isSelected ? 'border-white/40 scale-105' : 'border-white'}`} 
+                                                            referrerPolicy="no-referrer"
                                                         />
                                                         {isSelected && (
-                                                            <div className="absolute -top-1 -right-1 bg-white text-indigo-600 rounded-full p-0.5 border border-indigo-100 shadow-sm">
+                                                            <div className="absolute -top-2 -right-2 bg-white text-indigo-600 rounded-full p-1 border border-indigo-100 shadow-md animate-in zoom-in-50 duration-300">
                                                                 <Check className="w-3 h-3 stroke-[3px]" />
                                                             </div>
                                                         )}
                                                     </div>
                                                     
                                                     <div className="flex-1 min-w-0 z-10">
-                                                        <h5 className={`font-bold text-sm truncate ${isSelected ? 'text-white' : 'text-gray-800'}`}>
+                                                        <h5 className={`font-medium text-base truncate tracking-tight transition-colors ${isSelected ? 'text-white' : 'text-gray-800'}`}>
                                                             {user.name}
                                                         </h5>
-                                                        <p className={`text-xs truncate ${isSelected ? 'text-indigo-200' : 'text-gray-400'}`}>
+                                                        <p className={`text-xs font-normal truncate transition-colors ${isSelected ? 'text-indigo-100' : 'text-gray-400'}`}>
                                                             {user.position}
                                                         </p>
                                                     </div>
@@ -204,27 +276,48 @@ const AttendeeSelectorModal: React.FC<AttendeeSelectorModalProps> = ({
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-gray-100 bg-white flex justify-between items-center shrink-0 z-20">
-                    <div className="flex items-center gap-2">
-                         <span className="text-xs font-bold text-gray-500">เลือกแล้ว:</span>
-                         <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold">
-                            {localSelected.length} คน
-                         </span>
-                         {localSelected.length > 0 && (
-                             <button onClick={handleClearSelection} className="text-[10px] text-gray-400 hover:text-red-500 underline ml-2">
-                                 ล้างค่า
-                             </button>
-                         )}
+                <div className="p-6 border-t border-gray-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0 z-20">
+                    <div className="flex items-center gap-3">
+                         <div className="flex -space-x-2 mr-2">
+                             {users.filter(u => localSelected.includes(u.id)).slice(0, 3).map(u => (
+                                 <img key={u.id} src={u.avatarUrl} className="w-8 h-8 rounded-full border-2 border-white shadow-sm" referrerPolicy="no-referrer" />
+                             ))}
+                             {localSelected.length > 3 && (
+                                 <div className="w-8 h-8 rounded-full bg-indigo-50 border-2 border-white flex items-center justify-center text-[10px] font-bold text-indigo-600">
+                                     +{localSelected.length - 3}
+                                 </div>
+                             )}
+                         </div>
+                         <div className="flex flex-col">
+                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Total Selection</span>
+                             <div className="flex items-center gap-2">
+                                <span className="bg-indigo-600 text-white px-3 py-0.5 rounded-full text-xs font-bold">
+                                    {localSelected.length} คน
+                                </span>
+                                {localSelected.length > 0 && (
+                                    <button 
+                                        onClick={handleClearSelection} 
+                                        className="text-[10px] font-bold text-rose-400 hover:text-rose-600 transition-colors uppercase tracking-wider underline border-none bg-transparent"
+                                    >
+                                        Clear All
+                                    </button>
+                                )}
+                             </div>
+                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        <button onClick={onClose} className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">
+                    <div className="flex gap-3 w-full sm:w-auto">
+                        <button 
+                            onClick={onClose} 
+                            className="flex-1 sm:flex-none px-8 py-3.5 rounded-2xl text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all border-2 border-transparent"
+                        >
                             ยกเลิก
                         </button>
                         <button 
                             onClick={handleSave}
-                            className="px-8 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all active:scale-95"
+                            disabled={localSelected.length === 0}
+                            className="flex-1 sm:flex-none px-12 py-3.5 rounded-2xl text-sm font-medium bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xl shadow-indigo-100 hover:shadow-indigo-300 hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:grayscale disabled:translate-y-0"
                         >
-                            ยืนยัน ({localSelected.length})
+                            ยืนยันเลือก ({localSelected.length})
                         </button>
                     </div>
                 </div>

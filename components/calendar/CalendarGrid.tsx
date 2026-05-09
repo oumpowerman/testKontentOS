@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { eachDayOfInterval, isSameDay } from 'date-fns';
-import { Task, ChipConfig, CalendarHighlight, MasterOption } from '../../types';
+import { Task, ChipConfig, CalendarHighlight, MasterOption, Channel } from '../../types';
 import CalendarDayCell from './CalendarDayCell';
 import { TaskDisplayMode } from '../CalendarView';
 
@@ -19,6 +19,7 @@ interface CalendarGridProps {
     // New Props for Highlights
     highlights: CalendarHighlight[];
     masterOptions: MasterOption[];
+    channels: Channel[];
     
     // Functions passed down
     getTasksForDay: (day: Date) => Task[];
@@ -46,6 +47,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     customChips,
     highlights,
     masterOptions,
+    channels,
     getTasksForDay,
     filterTasks,
     onDayClick,
@@ -101,6 +103,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                             customChips={customChips}
                             highlight={dayHighlight}
                             masterOptions={masterOptions}
+                            channels={channels}
                             onDayClick={onDayClick}
                             onContextMenu={onDayContextMenu}
                             onDragOver={onDragOver}

@@ -28,6 +28,7 @@ const MeetingNotes: React.FC<MeetingNotesProps> = ({
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const sheetsRef = useRef(sheets);
     const contentRef = useRef(initialContent);
+    const lastEditorHtmlRef = useRef(initialContent);
 
     // Sync refs
     useEffect(() => {
@@ -36,18 +37,48 @@ const MeetingNotes: React.FC<MeetingNotesProps> = ({
 
     useEffect(() => {
         contentRef.current = initialContent;
+        lastEditorHtmlRef.current = initialContent;
     }, [initialContent]);
+
+    // Flush changes immediately
+    const flushChanges = useCallback(() => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+            
+            const html = lastEditorHtmlRef.current;
+            if (activeSheetId === 'main') {
+                onUpdate(html);
+            } else {
+                const newSheets = sheetsRef.current.map(s => s.id === activeSheetId ? { ...s, content: html } : s);
+                onUpdateSheets(newSheets);
+            }
+            setIsTyping(false);
+        }
+    }, [activeSheetId, onUpdate, onUpdateSheets]);
+
+    // Handle focus toggle with immediate save
+    const handleToggleFocus = useCallback(() => {
+        flushChanges();
+        onToggleFocus?.();
+    }, [flushChanges, onToggleFocus]);
 
     // Handle unmount saving
     useEffect(() => {
         return () => {
             if (timeoutRef.current) {
+                const html = lastEditorHtmlRef.current;
+                if (activeSheetId === 'main') {
+                    onUpdate(html);
+                } else {
+                    // Note: This might be tricky on unmount due to state closure
+                    // but onUpdate (parent state) is usually safer
+                    onUpdate(html);
+                }
                 clearTimeout(timeoutRef.current);
-                // We don't know which one was being edited easily without more state tracking in ref
-                // But usually the last one edited is the one in the editor
             }
         };
-    }, []);
+    }, [activeSheetId, onUpdate]);
 
     // Get current content based on active tab - Memoized for performance
     const currentContent = useMemo(() => {
@@ -57,6 +88,7 @@ const MeetingNotes: React.FC<MeetingNotesProps> = ({
 
     const handleEditorChange = useCallback((html: string) => {
         setIsTyping(true);
+        lastEditorHtmlRef.current = html;
         
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         
@@ -64,13 +96,13 @@ const MeetingNotes: React.FC<MeetingNotesProps> = ({
             if (activeSheetId === 'main') {
                 onUpdate(html);
             } else {
-                const newSheets = sheets.map(s => s.id === activeSheetId ? { ...s, content: html } : s);
+                const newSheets = sheetsRef.current.map(s => s.id === activeSheetId ? { ...s, content: html } : s);
                 onUpdateSheets(newSheets);
             }
             setIsTyping(false);
             timeoutRef.current = null;
         }, 1000); 
-    }, [activeSheetId, onUpdate, onUpdateSheets, sheets]);
+    }, [activeSheetId, onUpdate, onUpdateSheets]);
 
     const handleAddSheet = () => {
         const newSheet: MeetingNoteSheet = {
@@ -131,7 +163,7 @@ const MeetingNotes: React.FC<MeetingNotesProps> = ({
                 `}
             >
                 {/* Header Strip */}
-                <div className="h-12 md:h-14 bg-gradient-to-r from-slate-50 to-white border-b border-dashed border-slate-200 flex items-center justify-between px-4 md:px-6 shrink-0 relative z-30">
+                <div className={`h-12 md:h-14 bg-gradient-to-r from-slate-50 to-white border-b border-dashed border-slate-200 flex items-center justify-between px-4 md:px-6 shrink-0 relative z-30 ${isFocused ? 'rounded-none md:rounded-t-[3rem]' : 'rounded-t-[1.5rem] md:rounded-t-[2.5rem]'}`}>
                     <div className="flex items-center gap-2">
                         <div className="flex gap-1">
                             <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-rose-400 shadow-sm"></div>
@@ -139,7 +171,7 @@ const MeetingNotes: React.FC<MeetingNotesProps> = ({
                             <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-emerald-400 shadow-sm"></div>
                         </div>
                         <div className="h-4 w-px bg-slate-200 mx-1 md:mx-2"></div>
-                        <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.1em] md:tracking-[0.2em] flex items-center">
+                        <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-[0.1em] md:tracking-[0.2em] flex items-center">
                             {isTyping ? (
                                 <span className="text-indigo-500 flex items-center animate-pulse">
                                     <Sparkles className="w-2.5 h-2.5 md:w-3 md:h-3 mr-1" /> Saving...
@@ -153,12 +185,12 @@ const MeetingNotes: React.FC<MeetingNotesProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2 md:gap-3 relative z-50">
-                        <span className="text-[8px] md:text-[9px] font-black text-slate-300 hidden sm:inline uppercase tracking-widest">Multi-Sheet Notes</span>
+                        <span className="text-[8px] md:text-[9px] font-bold text-slate-300 hidden sm:inline uppercase tracking-widest">Multi-Sheet Notes</span>
                         {onToggleFocus && (
                             <button 
-                                onClick={onToggleFocus}
+                                onClick={handleToggleFocus}
                                 className={`
-                                    p-1.5 md:p-2 rounded-lg md:rounded-xl transition-all font-black text-[9px] md:text-[10px] flex items-center gap-1 md:gap-2 shadow-sm uppercase tracking-widest
+                                    p-1.5 md:p-2 rounded-lg md:rounded-xl transition-all font-bold text-[9px] md:text-[10px] flex items-center gap-1 md:gap-2 shadow-sm uppercase tracking-widest
                                     ${isFocused 
                                         ? 'bg-rose-500 text-white hover:bg-rose-600 shadow-rose-200 border-b-2 md:border-b-4 border-rose-700' 
                                         : 'bg-white text-slate-400 hover:text-indigo-600 hover:bg-slate-50 border border-slate-200'}
@@ -171,7 +203,7 @@ const MeetingNotes: React.FC<MeetingNotesProps> = ({
                 </div>
 
                 {/* Editor Area */}
-                <div className={`relative bg-white flex flex-col flex-1 ${isFocused ? 'overflow-hidden' : ''}`}>
+                <div className={`relative bg-white flex flex-col flex-1 font-normal ${isFocused ? 'overflow-hidden' : ''}`}>
                     <div 
                         className="absolute inset-0 pointer-events-none opacity-[0.3] md:opacity-[0.4]" 
                         style={{ backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px' }}
@@ -195,7 +227,7 @@ const MeetingNotes: React.FC<MeetingNotesProps> = ({
                     <button 
                         onClick={() => setActiveSheetId('main')}
                         className={`
-                            h-8 px-4 rounded-t-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all
+                            h-8 px-4 rounded-t-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all
                             ${activeSheetId === 'main' 
                                 ? 'bg-white text-indigo-600 shadow-sm border-t-2 border-indigo-500' 
                                 : 'text-slate-400 hover:bg-slate-100'}
@@ -210,7 +242,7 @@ const MeetingNotes: React.FC<MeetingNotesProps> = ({
                             key={sheet.id}
                             onClick={() => setActiveSheetId(sheet.id)}
                             className={`
-                                h-8 px-3 rounded-t-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all cursor-pointer group/tab
+                                h-8 px-3 rounded-t-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all cursor-pointer group/tab
                                 ${activeSheetId === sheet.id 
                                     ? 'bg-white text-indigo-600 shadow-sm border-t-2 border-indigo-500' 
                                     : 'text-slate-400 hover:bg-slate-100'}

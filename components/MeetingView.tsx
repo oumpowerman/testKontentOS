@@ -4,8 +4,10 @@ import { User, MeetingLog, Task, MeetingCategory, MasterOption, MeetingNoteSheet
 import { useMeetings } from '../hooks/useMeetings';
 import { useTasks } from '../hooks/useTasks';
 import { FileText, Plus, Info, Sparkles, StickyNote, X, Save, Coffee, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { format, addDays } from 'date-fns';
+import { format, addDays, isBefore, startOfDay } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../lib/supabase';
+import { useGlobalDialog } from '../context/GlobalDialogContext';
 
 // Import New Components
 import MeetingListSidebar from './meeting/MeetingListSidebar';
@@ -14,6 +16,7 @@ import MeetingDetail from './meeting/MeetingDetail';
 import MeetingActionModule from './meeting/MeetingActionModule';
 import InfoModal from './ui/InfoModal';
 import MeetingGuide from './meeting/MeetingGuide';
+import MeetingStartupModal from './meeting/MeetingStartupModal';
 
 interface MeetingViewProps {
     users: User[];
@@ -25,10 +28,11 @@ interface MeetingViewProps {
 type MeetingTab = 'AGENDA' | 'NOTES' | 'FILES' | 'ACTIONS' | 'DECISIONS';
 
 const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, masterOptions = [] }) => {
-    const { meetings, createMeeting, updateMeeting, deleteMeeting } = useMeetings();
+    const { meetings, createMeeting, updateMeeting, deleteMeeting, isLoading: isMeetingsLoading } = useMeetings();
     const { handleSaveTask } = useTasks(() => {}); 
     
     // UI State
+    const { showConfirm } = useGlobalDialog();
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<MeetingTab>('NOTES');
@@ -36,6 +40,8 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
     const [isInfoOpen, setIsInfoOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+    const [isStartupModalOpen, setIsStartupModalOpen] = useState(false);
+    const [originalMeetingId, setOriginalMeetingId] = useState<string | null>(null);
 
     // Selected Meeting State (Controlled)
     const [title, setTitle] = useState('');
@@ -106,14 +112,76 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
         return () => clearTimeout(timer);
     }, [content, decisions, sheets, selectedId]);
 
-    const handleCreate = async () => {
-        const id = await createMeeting('การประชุมครั้งใหม่...', new Date(), currentUser.id);
-        if (id) {
-            setSelectedId(id);
-            setActiveTab('NOTES');
-            setProjectTags([]);
-            setIsSidebarCollapsed(true); // Auto-hide on create
-            setIsHeaderCollapsed(true); // Auto-hide header on create
+    const handleCreate = () => {
+        setIsStartupModalOpen(true);
+    };
+
+    const handleSwitchToMeeting = (id: string, isTemporary = true) => {
+        if (isTemporary && selectedId && id !== selectedId) {
+            setOriginalMeetingId(selectedId);
+        } else if (!isTemporary) {
+            setOriginalMeetingId(null);
+        }
+        setSelectedId(id);
+    };
+
+    const handleReturnToOriginal = () => {
+        if (originalMeetingId) {
+            setSelectedId(originalMeetingId);
+            setOriginalMeetingId(null);
+        }
+    };
+
+    const handleConfirmStart = async (data: {
+        title: string;
+        date: Date;
+        startTime?: string;
+        attendees: string[];
+        referenceMeetingId?: string;
+        notify: boolean;
+    }) => {
+        const isPast = isBefore(startOfDay(data.date), startOfDay(new Date()));
+
+        const proceed = async () => {
+            const id = await createMeeting(data.title, data.date, currentUser.id, {
+                attendees: data.attendees,
+                startTime: data.startTime,
+                referenceMeetingId: data.referenceMeetingId,
+                attendance: data.attendees.reduce((acc, uid) => ({ ...acc, [uid]: 'INVITED' }), {})
+            });
+
+            if (id) {
+                setSelectedId(id);
+                setActiveTab('NOTES');
+                setProjectTags([]);
+                setIsSidebarCollapsed(true);
+                setIsHeaderCollapsed(true);
+                setIsStartupModalOpen(false);
+
+                // Handle Notifications
+                if (data.notify && data.attendees.length > 0) {
+                    const notifs = data.attendees.map(uid => ({
+                        user_id: uid,
+                        type: 'INFO',
+                        title: 'การประชุมใหม่! 🗓️',
+                        message: `${currentUser.name} เริ่มประชุม: ${data.title}`,
+                        created_at: new Date().toISOString(),
+                        is_read: false,
+                        metadata: { meetingId: id }
+                    }));
+                    await supabase.from('notifications').insert(notifs);
+                }
+            }
+        };
+
+        if (isPast) {
+            const confirmed = await showConfirm(
+                `คุณกำลังสร้างบันทึกการประชุมสำหรับวันที่ ${format(data.date, 'd MMMM yyyy')} ซึ่งเป็นวันในอดีต ระบบจะทำการบันทึกข้อมูลย้อนหลังให้ ตกลงไหม?`,
+                'สร้างการประชุมย้อนหลัง?'
+            );
+            if (confirmed) await proceed();
+        } else {
+            await proceed();
         }
     };
 
@@ -332,53 +400,84 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
                 )}
 
                 {/* Detail Container */}
-                <div className="flex-1 flex flex-col overflow-hidden relative bg-white rounded-[1.5rem] md:rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/50">
-                    {selectedMeeting ? (
-                        <MeetingDetail 
-                            meeting={selectedMeeting}
-                            users={users}
-                            title={title} setTitle={setTitle}
-                            date={date} setDate={setDate}
-                            category={category} setCategory={setCategory}
-                            projectTags={projectTags} setProjectTags={setProjectTags}
-                            attendees={attendees} onUpdateAttendees={handleUpdateAttendees}
-                            attendance={attendance} onUpdateRSVP={handleUpdateRSVP}
-                            startTime={startTime} setStartTime={setStartTime}
-                            endTime={endTime} setEndTime={setEndTime}
-                            currentUser={currentUser}
-                            content={content} setContent={setContent}
-                            sheets={sheets} setSheets={setSheets} // PASS SHEETS
-                            decisions={decisions} setDecisions={setDecisions} 
-                            activeTab={activeTab} setActiveTab={setActiveTab}
-                            isSaving={isSaving} onBlurUpdate={handleUpdate}
-                            masterOptions={masterOptions} // PASS MASTER OPTIONS
-                        >
-                            <MeetingActionModule 
-                                users={users}
-                                tasks={tasks}
-                                projectTags={projectTags}
-                                meetingTitle={title} 
-                                meetingDate={date}
-                                onAddTask={handleAddTask}
-                                onUpdateTask={handleUpdateTask}
-                            />
-                        </MeetingDetail>
-                    ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-gray-300 bg-indigo-50/30 p-6 md:p-12 text-center relative overflow-hidden">
-                            {/* Empty State Decor */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 md:w-96 h-64 md:h-96 bg-indigo-200/20 rounded-full blur-3xl animate-pulse"></div>
-                            
-                            <div className="relative z-10 flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-                                <div className="w-24 h-24 md:w-32 md:h-32 bg-white rounded-[2rem] md:rounded-[2.5rem] flex items-center justify-center mb-6 md:mb-8 shadow-2xl shadow-indigo-100 border-4 border-white rotate-3 hover:rotate-6 transition-transform duration-500">
-                                    <Sparkles className="w-12 h-12 md:w-16 md:h-16 text-indigo-400" />
+                <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative bg-white rounded-[1.5rem] md:rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/50">
+                    <AnimatePresence mode="wait">
+                        {selectedMeeting ? (
+                            <motion.div 
+                                key={selectedId}
+                                initial={{ x: 40, opacity: 0, rotateY: -20, scale: 0.95 }}
+                                animate={{ x: 0, opacity: 1, rotateY: 0, scale: 1 }}
+                                exit={{ x: -40, opacity: 0, rotateY: 20, scale: 0.95 }}
+                                transition={{ 
+                                    type: "spring", 
+                                    stiffness: 120, 
+                                    damping: 18,
+                                    opacity: { duration: 0.25 }
+                                }}
+                                style={{ 
+                                    perspective: "2000px", 
+                                    transformStyle: "preserve-3d",
+                                    transformOrigin: "center left"
+                                }}
+                                className="flex-1 min-h-0 flex flex-col min-w-0"
+                            >
+                                <MeetingDetail 
+                                    meeting={selectedMeeting}
+                                    users={users}
+                                    title={title} setTitle={setTitle}
+                                    date={date} setDate={setDate}
+                                    category={category} setCategory={setCategory}
+                                    projectTags={projectTags} setProjectTags={setProjectTags}
+                                    attendees={attendees} onUpdateAttendees={handleUpdateAttendees}
+                                    attendance={attendance} onUpdateRSVP={handleUpdateRSVP}
+                                    startTime={startTime} setStartTime={setStartTime}
+                                    endTime={endTime} setEndTime={setEndTime}
+                                    currentUser={currentUser}
+                                    content={content} setContent={setContent}
+                                    sheets={sheets} setSheets={setSheets} // PASS SHEETS
+                                    decisions={decisions} setDecisions={setDecisions} 
+                                    activeTab={activeTab} setActiveTab={setActiveTab}
+                                    isSaving={isSaving} onBlurUpdate={handleUpdate}
+                                    masterOptions={masterOptions} // PASS MASTER OPTIONS
+                                    meetings={meetings}
+                                    onSwitchMeeting={handleSwitchToMeeting}
+                                    onReturnToActive={originalMeetingId ? handleReturnToOriginal : undefined}
+                                    activeMeetingTitle={meetings.find(m => m.id === originalMeetingId)?.title}
+                                >
+                                    <MeetingActionModule 
+                                        users={users}
+                                        tasks={tasks}
+                                        projectTags={projectTags}
+                                        meetingTitle={title} 
+                                        meetingDate={date}
+                                        onAddTask={handleAddTask}
+                                        onUpdateTask={handleUpdateTask}
+                                    />
+                                </MeetingDetail>
+                            </motion.div>
+                        ) : (
+                            <motion.div 
+                                key="empty"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="flex-1 flex flex-col items-center justify-center text-gray-300 bg-indigo-50/30 p-6 md:p-12 text-center relative overflow-hidden"
+                            >
+                                {/* Empty State Decor */}
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 md:w-96 h-64 md:h-96 bg-indigo-200/20 rounded-full blur-3xl animate-pulse"></div>
+                                
+                                <div className="relative z-10 flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+                                    <div className="w-24 h-24 md:w-32 md:h-32 bg-white rounded-[2rem] md:rounded-[2.5rem] flex items-center justify-center mb-6 md:mb-8 shadow-2xl shadow-indigo-100 border-4 border-white rotate-3 hover:rotate-6 transition-transform duration-500">
+                                        <Sparkles className="w-12 h-12 md:w-16 md:h-16 text-indigo-400" />
+                                    </div>
+                                    <h3 className="font-black text-xl md:text-3xl text-gray-700 mb-3 tracking-tight">พร้อมประชุมรึยัง?</h3>
+                                    <p className="max-w-[200px] md:max-w-xs mx-auto text-[11px] md:text-sm text-gray-500 leading-relaxed font-medium bg-white/50 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/50">
+                                        เลือกหัวข้อการประชุมจากทางซ้าย <br/>หรือกดปุ่ม <span className="text-indigo-600 font-bold">"เริ่มการประชุม"</span> เพื่อเริ่มเรื่องใหม่
+                                    </p>
                                 </div>
-                                <h3 className="font-black text-xl md:text-3xl text-gray-700 mb-3 tracking-tight">พร้อมประชุมรึยัง?</h3>
-                                <p className="max-w-[200px] md:max-w-xs mx-auto text-[11px] md:text-sm text-gray-500 leading-relaxed font-medium bg-white/50 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/50">
-                                    เลือกหัวข้อการประชุมจากทางซ้าย <br/>หรือกดปุ่ม <span className="text-indigo-600 font-bold">"เริ่มการประชุม"</span> เพื่อเริ่มเรื่องใหม่
-                                </p>
-                            </div>
-                        </div>
-                    )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
 
@@ -390,6 +489,15 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
             >
                 <MeetingGuide />
             </InfoModal>
+
+            {/* STARTUP MODAL */}
+            <MeetingStartupModal 
+                isOpen={isStartupModalOpen}
+                onClose={() => setIsStartupModalOpen(false)}
+                users={users}
+                meetings={meetings}
+                onConfirm={handleConfirmStart}
+            />
 
             {/* NEW: Custom Note Modal (Styled) */}
             {isNoteModalOpen && (

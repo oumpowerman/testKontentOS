@@ -139,6 +139,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             shootLocation: data.shoot_location || undefined,
             localPath: data.local_path || undefined,
             driveLabel: data.drive_label || undefined,
+            isInShootQueue: data.is_in_shoot_queue || data.isInShootQueue || false,
+            isSoftFinished: data.is_soft_finished || data.isSoftFinished || false,
             contentId: data.content_id,
             showOnBoard: data.show_on_board,
             parentContentTitle: data.contents?.title,

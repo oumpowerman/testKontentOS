@@ -28,6 +28,7 @@ export const useMeetings = () => {
         tags: m.tags || [],
         agenda: m.agenda || [], 
         assets: m.assets || [],
+        referenceMeetingId: m.reference_meeting_id || undefined,
         createdAt: new Date(m.created_at),
         updatedAt: new Date(m.updated_at),
         authorId: m.author_id
@@ -76,24 +77,25 @@ export const useMeetings = () => {
         return () => { supabase.removeChannel(channel); };
     }, []);
 
-    const createMeeting = async (title: string, date: Date, userId: string) => {
+    const createMeeting = async (title: string, date: Date, userId: string, extra?: Partial<MeetingLog>) => {
         try {
             const dateStr = format(date, 'yyyy-MM-dd');
 
             const payload = {
                 title,
                 date: dateStr,
-                start_time: '09:00',
-                end_time: '10:00',
-                content: '',
-                decisions: '',
+                start_time: extra?.startTime || '09:00',
+                end_time: extra?.endTime || '10:00',
+                content: extra?.content || '',
+                decisions: extra?.decisions || '',
                 author_id: userId,
-                category: 'GENERAL',
-                attendees: [],
-                attendance: {},
-                tags: [],
-                agenda: [],
-                assets: []
+                category: extra?.category || 'GENERAL',
+                attendees: extra?.attendees || [],
+                attendance: extra?.attendance || {},
+                tags: extra?.tags || [],
+                agenda: extra?.agenda || [],
+                assets: extra?.assets || [],
+                reference_meeting_id: extra?.referenceMeetingId || null
             };
 
             const { data, error } = await supabase.from('meeting_logs').insert(payload).select().single();
@@ -136,6 +138,7 @@ export const useMeetings = () => {
             if (updates.attendees !== undefined) payload.attendees = updates.attendees;
             if (updates.tags !== undefined) payload.tags = updates.tags;
             if (updates.category !== undefined) payload.category = updates.category;
+            if (updates.referenceMeetingId !== undefined) payload.reference_meeting_id = updates.referenceMeetingId;
             
             if (updates.agenda !== undefined) payload.agenda = updates.agenda;
             if (updates.assets !== undefined) payload.assets = updates.assets;

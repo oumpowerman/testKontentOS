@@ -113,7 +113,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         },
         editorProps: {
             attributes: {
-                class: `prose prose-sm sm:prose-base ${variant === 'dark' ? 'prose-invert text-white caret-white' : 'text-black caret-black'} focus:outline-none max-w-none ${className} whitespace-pre-wrap [&_.ProseMirror]:caret-current [&_ol]:list-decimal [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:pl-5 [&_h1]:text-3xl [&_h1]:font-black [&_h1]:mb-4 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-3 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:mb-2 [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_a]:text-indigo-600 [&_a]:underline [&_a]:cursor-pointer [&_p:empty]:min-h-[1em] [&_p:empty]:mb-4 [&_p>br:only-child]:min-h-[1em]`,
+                class: `prose prose-sm sm:prose-base ${variant === 'dark' ? 'prose-invert text-white caret-white' : 'text-black caret-black'} focus:outline-none max-w-none ${className} whitespace-pre-wrap [&_.ProseMirror]:caret-current [&_ol]:list-decimal [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:pl-5 [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-4 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-3 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:mb-2 [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_a]:text-indigo-600 [&_a]:underline [&_a]:cursor-pointer [&_p:empty]:min-h-[1em] [&_p:empty]:mb-4 [&_p>br:only-child]:min-h-[1em]`,
                 style: `min-height: ${minHeight}; outline: none;`,
             },
             handleKeyDown: (view, event) => {
@@ -238,6 +238,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         };
     }, [editor]);
 
+    const lastPropContent = useRef(content);
+
     // Initial content sync
     useEffect(() => {
         if (editor && onEditorReady) {
@@ -247,15 +249,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
     // Handle external content updates
     useEffect(() => {
-        // Only update if content is different AND editor is not focused
-        if (editor && !editor.isFocused && content !== editor.getHTML()) {
-            // Use a small delay to avoid race conditions with modal closing
-            const timer = setTimeout(() => {
-                if (editor && !editor.isFocused) {
-                    editor.commands.setContent(content, false);
-                }
-            }, 100);
-            return () => clearTimeout(timer);
+        if (!editor) return;
+
+        // Only update if the prop 'content' actually changed to a new value from the parent
+        // (meaning an external update happened, not just a re-render of the same stale data)
+        if (content !== lastPropContent.current) {
+            lastPropContent.current = content;
+            
+            // Only apply if the editor isn't focused to avoid interrupting the user
+            if (!editor.isFocused && content !== editor.getHTML()) {
+                editor.commands.setContent(content, false);
+            }
         }
     }, [content, editor]);
 

@@ -172,7 +172,7 @@ const MemberHistoryModal: React.FC<MemberHistoryModalProps> = ({ isOpen, onClose
                                     </div>
                                 </div>
                                 <div>
-                                    <h3 className="font-black text-slate-800 text-lg leading-tight">{currentUser.name}</h3>
+                                    <h3 className="font-bold text-slate-800 text-lg leading-tight">{currentUser.name}</h3>
                                     <p className="text-xs text-slate-500 font-medium">{currentUser.position}</p>
                                 </div>
                             </div>
@@ -180,11 +180,11 @@ const MemberHistoryModal: React.FC<MemberHistoryModalProps> = ({ isOpen, onClose
                             <div className="grid grid-cols-2 gap-3 mt-5 relative z-10">
                                 <div className="bg-indigo-50 p-3 rounded-2xl border border-indigo-100">
                                     <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Wallet</p>
-                                    <p className="text-lg font-black text-indigo-700">{currentUser.availablePoints.toLocaleString()}</p>
+                                    <p className="text-lg font-bold text-indigo-700">{currentUser.availablePoints.toLocaleString()}</p>
                                 </div>
                                 <div className="bg-amber-50 p-3 rounded-2xl border border-amber-100">
                                     <p className="text-[10px] font-bold text-amber-500 uppercase tracking-wider mb-1">Total XP</p>
-                                    <p className="text-lg font-black text-amber-700">{currentUser.xp.toLocaleString()}</p>
+                                    <p className="text-lg font-bold text-amber-700">{currentUser.xp.toLocaleString()}</p>
                                 </div>
                             </div>
                         </div>
@@ -245,7 +245,7 @@ const MemberHistoryModal: React.FC<MemberHistoryModalProps> = ({ isOpen, onClose
                     {/* Header & Filters */}
                     <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white/90 backdrop-blur-md sticky top-0 z-20">
                         <div>
-                            <h2 className="text-xl font-black text-gray-800">Transaction History</h2>
+                            <h2 className="text-xl font-bold text-gray-800">Transaction History</h2>
                             <p className="text-xs text-gray-400 font-medium">ประวัติการทำรายการย้อนหลัง</p>
                         </div>
                         <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors">
@@ -297,7 +297,7 @@ const MemberHistoryModal: React.FC<MemberHistoryModalProps> = ({ isOpen, onClose
                                     <div key={gIdx} className="relative">
                                         {/* Date Sticky Header */}
                                         <div className="sticky top-0 z-10 flex justify-center mb-6">
-                                            <span className="bg-slate-100/90 backdrop-blur-md text-slate-500 text-[10px] font-black px-4 py-1.5 rounded-full shadow-sm border border-white uppercase tracking-wider">
+                                            <span className="bg-slate-100/90 backdrop-blur-md text-slate-500 text-[10px] font-bold px-4 py-1.5 rounded-full shadow-sm border border-white uppercase tracking-wider">
                                                 {group.label}
                                             </span>
                                         </div>

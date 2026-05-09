@@ -267,6 +267,7 @@ export interface MeetingLog {
     authorId: string;
     agenda?: MeetingAgendaItem[];
     assets?: TaskAsset[];
+    referenceMeetingId?: string;
 }
 
 // --- FEEDBACK ---

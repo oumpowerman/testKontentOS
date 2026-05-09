@@ -1,18 +1,22 @@
 
 import React from 'react';
-import { Coffee, Info, Plus } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ArrowLeft, Coffee, Info, Plus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface MeetingMainHeaderProps {
     onInfoOpen: () => void;
     onCreateMeeting: () => void;
 }
 
-const MeetingMainHeader: React.FC<MeetingMainHeaderProps> = ({ onInfoOpen, onCreateMeeting }) => {
+const MeetingMainHeader: React.FC<MeetingMainHeaderProps> = ({ 
+    onInfoOpen, 
+    onCreateMeeting
+}) => {
     return (
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 md:mb-6 shrink-0 px-2 md:px-0 pt-2">
             <div className="flex items-center gap-3 md:gap-4">
                 <motion.div 
+                    key="logo"
                     whileHover={{ rotate: 0, scale: 1.1 }}
                     initial={{ rotate: -3 }}
                     className="bg-gradient-to-tr from-indigo-500 to-purple-500 p-2 md:p-3 rounded-xl md:rounded-2xl shadow-lg shadow-indigo-200 text-white transition-transform duration-300 cursor-pointer"

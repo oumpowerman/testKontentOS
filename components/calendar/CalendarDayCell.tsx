@@ -1,7 +1,7 @@
 
 import React, { memo } from 'react';
 import { format, isSameMonth, isToday, isSameDay, isSameWeek } from 'date-fns';
-import { Task, ChipConfig, CalendarHighlight, MasterOption } from '../../types';
+import { Task, ChipConfig, CalendarHighlight, MasterOption, Channel } from '../../types';
 import CalendarTaskPill from './CalendarTaskPill';
 import { TaskDisplayMode } from '../CalendarView';
 
@@ -19,6 +19,7 @@ interface CalendarDayCellProps {
     // Highlights
     highlight?: CalendarHighlight;
     masterOptions?: MasterOption[];
+    channels: Channel[];
     
     onDayClick: (day: Date, tasks: Task[]) => void;
     onContextMenu: (day: Date) => void;
@@ -41,6 +42,7 @@ const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
     customChips,
     highlight,
     masterOptions,
+    channels,
     onDayClick,
     onContextMenu,
     onDragOver,
@@ -95,7 +97,7 @@ const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
         dayTextClass = 'text-white bg-indigo-600 shadow-md shadow-indigo-200';
     } else if (isSameWeek(day, now)) {
         // Active Week: Bright Green
-        dayTextClass = 'text-emerald-500 font-black drop-shadow-sm'; 
+        dayTextClass = 'text-emerald-500 font-bold drop-shadow-sm'; 
     } else if (day < now) {
         // Past Weeks: Greyish
         // Note: isSameWeek catches the current week, so day < now covers strictly past weeks here
@@ -163,6 +165,7 @@ const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
                             activeChipIds={activeChipIds}
                             customChips={customChips}
                             masterOptions={masterOptions}
+                            channels={channels}
                             onDragStart={onTaskDragStart}
                             onClick={onTaskClick}
                         />
@@ -194,6 +197,7 @@ const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
                                 activeChipIds={activeChipIds}
                                 customChips={customChips}
                                 masterOptions={masterOptions}
+                                channels={channels}
                                 onDragStart={onTaskDragStart}
                                 onClick={onTaskClick}
                             />

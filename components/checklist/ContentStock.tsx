@@ -312,23 +312,51 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
                   )}
 
                   {/* Fixed Critical Actions (Add & Notification) */}
-                  <div className="flex items-center gap-3 shrink-0 ml-auto xl:ml-0">
-                      {/* Add Item Button */}
-                      <button
+                  <div className="flex items-center gap-4 shrink-0 ml-auto xl:ml-0">
+                      {/* Premium Pastel Add Button: The "Million Dollar Idea" Entry */}
+                      <motion.button
+                          whileHover={{ scale: 1.05, rotate: [0, -1, 1, 0] }}
+                          whileTap={{ scale: 0.95 }}
                           onClick={onAdd}
                           className="
-                              relative group flex items-center gap-2.5 px-6 xl:px-7 py-3.5 rounded-[1.25rem]
-                              bg-slate-900 hover:bg-indigo-600
-                              text-white font-black text-sm
-                              shadow-xl shadow-slate-200 hover:shadow-indigo-200
-                              active:scale-95
-                              transition-all duration-300
-                              border border-slate-700/10
+                              relative group flex items-center gap-3 px-7 py-3.5 rounded-[1.5rem]
+                              bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400
+                              text-white font-bold text-sm tracking-tight
+                              shadow-[0_10px_25px_-5px_rgba(165,180,252,0.5)]
+                              hover:shadow-[0_20px_40px_-10px_rgba(192,132,252,0.6)]
+                              transition-all duration-500 border border-white/30
+                              overflow-hidden
                           "
                       >
-                          <Plus className="w-5 h-5 stroke-[3px]" />
-                          <span className="tracking-wide drop-shadow-sm truncate max-w-[100px] sm:max-w-none">เพิ่มรายการ</span>
-                      </button>
+                          {/* Floating Sparkle Animation */}
+                          <motion.div
+                              animate={{ 
+                                  y: [0, -4, 0],
+                                  opacity: [0.5, 1, 0.5]
+                              }}
+                              transition={{ repeat: Infinity, duration: 2 }}
+                              className="absolute top-1 right-3 pointer-events-none"
+                          >
+                              <Sparkles className="w-3 h-3 text-white/80" />
+                          </motion.div>
+
+                          {/* Shimmer Light effect */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none" />
+
+                          <div className="relative z-10 flex items-center gap-2">
+                              <motion.div
+                                  animate={{ rotate: [0, 90, 0] }}
+                                  transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                                  className="bg-white/20 p-1 rounded-lg backdrop-blur-sm"
+                              >
+                                  <Plus className="w-5 h-5 stroke-[3.5px]" />
+                              </motion.div>
+                              <span className="drop-shadow-sm">เพิ่มคอนเทนต์</span>
+                          </div>
+
+                          {/* Glow background on hover */}
+                          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      </motion.button>
 
                       <NotificationBellBtn
                           onClick={onOpenSettings}

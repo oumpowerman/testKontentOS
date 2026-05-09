@@ -18,7 +18,7 @@ interface QueueTableViewProps {
     onOpenPlanning: (item: MergedQueueItem) => void;
 }
 
-const ReorderableItem: React.FC<{
+interface ReorderableItemProps {
     item: MergedQueueItem;
     index: number;
     channels: Channel[];
@@ -30,11 +30,26 @@ const ReorderableItem: React.FC<{
     onMarkAsDone: (item: MergedQueueItem) => void;
     onRemove: (item: MergedQueueItem) => void;
     onOpenPlanning: (item: MergedQueueItem) => void;
-}> = ({ item, index, channels, masterOptions, isProcessing, onEditContent, onEditScript, onToggleFinished, onMarkAsDone, onRemove, onOpenPlanning }) => {
+}
+
+const ReorderableItem = React.forwardRef<any, ReorderableItemProps>(({ 
+    item, 
+    index, 
+    channels, 
+    masterOptions, 
+    isProcessing, 
+    onEditContent, 
+    onEditScript, 
+    onToggleFinished, 
+    onMarkAsDone, 
+    onRemove, 
+    onOpenPlanning 
+}, ref) => {
     const controls = useDragControls();
 
     return (
         <Reorder.Item
+            ref={ref}
             value={item}
             dragListener={false}
             dragControls={controls}
@@ -64,7 +79,9 @@ const ReorderableItem: React.FC<{
             />
         </Reorder.Item>
     );
-};
+});
+
+ReorderableItem.displayName = 'ReorderableItem';
 
 const QueueTableView: React.FC<QueueTableViewProps> = ({
     items,

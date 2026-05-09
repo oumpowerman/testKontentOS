@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import th from 'date-fns/locale/th';
 import { Task, Channel, User, MasterOption } from '../../../../types';
 import { ColumnKey } from './StockTableSettings';
+import { useGlobalDialog } from '../../../../context/GlobalDialogContext';
 
 interface StockTableRowProps {
     task: Task;
@@ -50,6 +51,7 @@ const StockTableRow = React.memo(React.forwardRef<HTMLTableRowElement, StockTabl
     getPillarLabel,
     getCategoryLabel
 }, ref) => {
+    const { showConfirm } = useGlobalDialog();
     const channelStyle = channel ? channel.color : 'bg-gray-100 text-gray-500 border-gray-200';
 
     const handleDragStart = (e: React.DragEvent) => {
@@ -76,19 +78,41 @@ const StockTableRow = React.memo(React.forwardRef<HTMLTableRowElement, StockTabl
             draggable
             onDragStartCapture={handleDragStart}
             onDragEndCapture={() => setIsDragging(false)}
-            className="hover:bg-indigo-50 transition-colors group cursor-pointer relative cursor-grab active:cursor-grabbing border-b border-gray-50"
+            className={`transition-colors group cursor-pointer relative cursor-grab active:cursor-grabbing border-b border-gray-50 ${
+                task.isInShootQueue 
+                    ? 'bg-[#f5f7ff] hover:bg-[#ebf0ff]' 
+                    : 'hover:bg-indigo-50'
+            }`}
         >
             {/* 1. Title (Fixed) */}
             <td 
-                className="px-6 py-5 sticky left-0 bg-white group-hover:bg-indigo-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] align-top border-r border-gray-100 transition-colors overflow-hidden"
+                className={`px-6 py-5 sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] align-top border-r border-gray-100 transition-colors overflow-hidden ${
+                    task.isInShootQueue ? 'bg-[#f5f7ff] group-hover:bg-[#ebf0ff]' : 'bg-white group-hover:bg-indigo-50'
+                }`}
                 style={{ width: columnWidths['title'] || 350 }}
             >
                 <div className="relative">
-                    <div className="font-medium font-kanit text-[18px] text-gray-800 group-hover:text-indigo-700 line-clamp-2 text-sm leading-snug mb-2" title={task.title}>
-                        {task.title}
+                    <div className="flex items-start gap-2 mb-2">
+                        {task.isInShootQueue && (
+                            <motion.div 
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="flex-shrink-0"
+                            >
+                                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-50 text-indigo-500 border border-indigo-100 text-[8px] font-black rounded-md shadow-sm animate-pulse uppercase tracking-wider">
+                                    <Video className="w-2 h-2 fill-current" />
+                                    IN QUEUE
+                                </span>
+                            </motion.div>
+                        )}
+                        <div className={`font-medium font-kanit text-[18px] group-hover:text-indigo-700 line-clamp-2 text-sm leading-snug ${task.isInShootQueue ? 'text-indigo-600' : 'text-gray-800'}`} title={task.title}>
+                            {task.title}
+                        </div>
                     </div>
                     {/* Subtle fade for long text */}
-                    <div className="absolute bottom-2 right-0 w-12 h-4 bg-gradient-to-r from-transparent to-white group-hover:to-indigo-50 pointer-events-none" />
+                    <div className={`absolute bottom-2 right-0 w-12 h-4 bg-gradient-to-r from-transparent pointer-events-none ${
+                        task.isInShootQueue ? 'to-indigo-50 group-hover:to-indigo-100' : 'to-white group-hover:to-indigo-50'
+                    }`} />
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                     {channel ? (
@@ -237,11 +261,23 @@ const StockTableRow = React.memo(React.forwardRef<HTMLTableRowElement, StockTabl
             })}
 
             {/* 7. Actions (Fixed) */}
-            <td className="px-4 py-5 text-right sticky right-0 bg-white group-hover:bg-indigo-50 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)] align-middle border-l border-gray-100 transition-colors hidden lg:table-cell">
+            <td className={`px-4 py-5 text-right sticky right-0 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)] align-middle border-l border-gray-100 transition-colors hidden lg:table-cell ${
+                task.isInShootQueue ? 'bg-[#f5f7ff] group-hover:bg-[#ebf0ff]' : 'bg-white group-hover:bg-indigo-50'
+            }`}>
                 <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {onToggleQueue && (
                         <button 
-                            onClick={(e) => { e.stopPropagation(); onToggleQueue(task.id, task.isInShootQueue || false); }} 
+                            onClick={async (e) => { 
+                                e.stopPropagation(); 
+                                if (!task.isInShootQueue) {
+                                    const confirmed = await showConfirm(
+                                        `คุณต้องการเพิ่ม "${task.title}" เข้าสู่คิวถ่ายใช่หรือไม่?`,
+                                        "ยืนยันการเพิ่มเข้าคิวถ่าย"
+                                    );
+                                    if (!confirmed) return;
+                                }
+                                onToggleQueue(task.id, task.isInShootQueue || false); 
+                            }} 
                             className={`p-2 rounded-xl transition-all shadow-sm ${
                                 task.isInShootQueue 
                                     ? 'text-indigo-600 bg-indigo-50 border border-indigo-100' 

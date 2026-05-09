@@ -84,7 +84,7 @@ const ItemShopModal: React.FC<ItemShopModalProps> = ({ isOpen, onClose, currentU
                     
                     <div className="flex justify-between items-start relative z-10">
                         <div>
-                            <h2 className="text-2xl font-black flex items-center gap-2">
+                            <h2 className="text-2xl font-bold flex items-center gap-2">
                                 <ShoppingBag className="w-6 h-6 text-yellow-300" /> ร้านค้าสวัสดิการ
                             </h2>
                             <p className="text-indigo-200 text-sm mt-1">ใช้แต้มแลกตัวช่วยชีวิต</p>

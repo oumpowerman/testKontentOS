@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, subMonths, addMonths } from 'date-fns';
-import { Calendar, Clock, Tag, Users, Maximize2, Minimize2, Copy, Check, ChevronDown, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, Tag, Users, Maximize2, Minimize2, Copy, Check, ChevronDown, X, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import { MeetingCategory, User, MasterOption } from '../../types';
 import AttendeeSelectorModal from './AttendeeSelectorModal';
 import MeetingTagInput from './MeetingTagInput';
@@ -38,6 +38,8 @@ interface MeetingHeaderProps {
     onToggleExpand: () => void;
     isCopied: boolean;
     onCopySummary: () => void;
+    onReturnToActive?: () => void;
+    activeMeetingTitle?: string;
 }
 
 const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
@@ -51,7 +53,8 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
     attendance, onUpdateRSVP,
     users, currentUser, masterOptions,
     isExpanded, onToggleExpand,
-    isCopied, onCopySummary
+    isCopied, onCopySummary,
+    onReturnToActive, activeMeetingTitle
 }) => {
     const [isAttendeesModalOpen, setIsAttendeesModalOpen] = useState(false);
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
@@ -151,13 +154,13 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
                         <button onClick={() => setViewDate(subMonths(viewDate, 1))} className="p-1.5 hover:bg-slate-50 rounded-full transition-colors text-slate-400">
                             <ChevronLeft className="w-4 h-4" />
                         </button>
-                        <span className="text-sm font-black text-slate-700">{format(viewDate, 'MMMM yyyy')}</span>
+                        <span className="text-sm font-bold text-slate-700">{format(viewDate, 'MMMM yyyy')}</span>
                         <button onClick={() => setViewDate(addMonths(viewDate, 1))} className="p-1.5 hover:bg-slate-50 rounded-full transition-colors text-slate-400">
                             <ChevronRight className="w-4 h-4" />
                         </button>
                     </div>
                     <div className="grid grid-cols-7 gap-1 mb-2">
-                        {days.map(d => <div key={d} className="text-[10px] font-black text-slate-300 text-center uppercase">{d}</div>)}
+                        {days.map(d => <div key={d} className="text-[10px] font-bold text-slate-300 text-center uppercase">{d}</div>)}
                     </div>
                     <div className="grid grid-cols-7 gap-1">
                         {calendarDays.map((d, i) => {
@@ -197,13 +200,29 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
     return (
         <div className="p-6 bg-white/40 backdrop-blur-md border-b border-white/60 relative z-30">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4 mb-4 md:mb-6">
-                <div className="flex-1 flex items-center gap-3">
+                <div className="flex-1 flex items-center gap-2 md:gap-3">
+                    {onReturnToActive && (
+                        <motion.button
+                            initial={{ x: -10, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            onClick={onReturnToActive}
+                            className="bg-amber-500 p-2 rounded-xl shadow-lg shadow-amber-100 text-white hover:bg-amber-600 transition-all flex items-center gap-2 group shrink-0"
+                            title={`กลับไปสู้การประชุมหลัก: ${activeMeetingTitle}`}
+                        >
+                            <ArrowLeft className="w-4 h-4 md:w-5 md:h-5 group-hover:-translate-x-1 transition-transform" />
+                            <div className="hidden lg:block text-left pr-1">
+                                <div className="text-[7px] font-black uppercase opacity-70 leading-none">กลับไปที่</div>
+                                <div className="text-[9px] font-bold truncate max-w-[80px] leading-tight">{activeMeetingTitle}</div>
+                            </div>
+                        </motion.button>
+                    )}
+                    
                     <input 
                         type="text"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         onBlur={onBlurTitle}
-                        className="w-full text-xl md:text-2xl font-black text-slate-800 bg-transparent border-none focus:ring-0 p-0 placeholder:text-slate-300"
+                        className="w-full text-xl md:text-2xl font-bold text-slate-800 bg-transparent border-none focus:ring-0 p-0 placeholder:text-slate-300"
                         placeholder="หัวข้อการประชุม..."
                     />
                 </div>
@@ -216,19 +235,19 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
                                  <>
                                     <button 
                                         onClick={() => onUpdateRSVP(currentUser.id, 'CONFIRMED')}
-                                        className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black hover:bg-emerald-600 hover:text-white transition-all"
+                                        className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold hover:bg-emerald-600 hover:text-white transition-all"
                                     >
                                         เข้าร่วมแน่นอน
                                     </button>
                                     <button 
                                         onClick={() => onUpdateRSVP(currentUser.id, 'DECLINED')}
-                                        className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black hover:bg-rose-600 hover:text-white transition-all"
+                                        className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-bold hover:bg-rose-600 hover:text-white transition-all"
                                     >
                                         ไม่สะดวก
                                     </button>
                                  </>
                              ) : (
-                                 <div className={`px-4 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-2 ${
+                                 <div className={`px-4 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-2 ${
                                      myStatus === 'CONFIRMED' ? 'bg-emerald-500 text-white' :
                                      myStatus === 'PRESENT' ? 'bg-indigo-600 text-white' :
                                      myStatus === 'DECLINED' ? 'bg-slate-200 text-slate-500' : 'bg-amber-100 text-amber-600'
@@ -303,7 +322,7 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
                                 if (val.length <= 5) setStartTime(val);
                             }}
                             onBlur={() => onBlurStartTime(startTime)}
-                            className="text-[10px] font-black text-slate-600 bg-transparent border-none p-0 w-10 focus:ring-0 text-center"
+                            className="text-[13px] font-bold text-slate-600 bg-transparent border-none p-0 w-10 focus:ring-0 text-center"
                             placeholder="00:00"
                         />
                         <TimePickerPortal 
@@ -328,7 +347,7 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
                                 if (val.length <= 5) setEndTime(val);
                             }}
                             onBlur={() => onBlurEndTime(endTime)}
-                            className="text-[10px] font-black text-slate-600 bg-transparent border-none p-0 w-10 focus:ring-0 text-center"
+                            className="text-[13px] font-bold text-slate-600 bg-transparent border-none p-0 w-10 focus:ring-0 text-center"
                             placeholder="00:00"
                         />
                         <TimePickerPortal 
@@ -375,7 +394,7 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
 
                 {/* Project Tag Input */}
                 <div className="flex items-center gap-3 bg-white/60 p-1 rounded-2xl border border-white/80 shadow-sm">
-                    <span className="ml-3 text-amber-400 font-black text-[10px]">#</span>
+                    <span className="ml-3 text-amber-500 font-bold text-[10px]">#</span>
                     <MeetingTagInput 
                         tags={projectTags}
                         onTagsChange={(tags) => {
@@ -408,7 +427,7 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
                         {attendees.length === 0 && <span className="text-xs font-bold text-slate-300">Invite...</span>}
                     </div>
                     {/* Tiny stats */}
-                    <div className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded">
+                    <div className="text-[8px] font-bold text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded">
                         {Object.values(attendance).filter(s => s === 'CONFIRMED' || s === 'PRESENT').length}/{attendees.length}
                     </div>
                 </button>
