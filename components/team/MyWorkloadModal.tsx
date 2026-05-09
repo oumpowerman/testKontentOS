@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight, Users, User, Battery, BatteryCharging, BatteryFull, BatteryWarning, AlertTriangle, CalendarClock, Calendar, Layers, UserCircle, CheckCircle2, ArrowRight, LayoutGrid, List, Timer } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Users, User, Battery, BatteryCharging, BatteryFull, BatteryWarning, AlertTriangle, CalendarClock, Calendar, Layers, UserCircle, CheckCircle2, ArrowRight, LayoutGrid, List, Timer, History as HistoryIcon } from 'lucide-react';
 import { Task, User as UserType, Channel } from '../../types';
 import { startOfWeek, endOfWeek, addWeeks, format, isWithinInterval, startOfDay, endOfDay, isPast, isToday, isTomorrow, isSameWeek, differenceInCalendarDays } from 'date-fns';
 import { th } from 'date-fns/locale';
@@ -17,6 +17,7 @@ interface MyWorkloadModalProps {
     currentUser: UserType;
     channels: Channel[];
     onOpenTask: (task: Task) => void;
+    onOpenHistory?: () => void;
 }
 
 type GroupMode = 'DATE' | 'CHANNEL' | 'ROLE';
@@ -34,7 +35,7 @@ const WORKLOAD_LEVELS = [
 ];
 
 const MyWorkloadModal: React.FC<MyWorkloadModalProps> = ({ 
-    isOpen, onClose, tasks, users, currentUser, channels, onOpenTask 
+    isOpen, onClose, tasks, users, currentUser, channels, onOpenTask, onOpenHistory 
 }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [groupMode, setGroupMode] = useState<GroupMode>('DATE');
@@ -223,9 +224,20 @@ const MyWorkloadModal: React.FC<MyWorkloadModalProps> = ({
                             <p className="text-indigo-100 text-base font-medium mt-1">นี่คือรายการงานที่ค้างอยู่ของคุณ</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-3 bg-white/20 hover:bg-white/30 rounded-full transition-colors text-white">
-                        <X className="w-6 h-6" />
-                    </button>
+                    <div className="flex gap-2">
+                        {onOpenHistory && (
+                            <button 
+                                onClick={onOpenHistory}
+                                className="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-white group"
+                                title="ดูประวัติการทำงาน"
+                            >
+                                <HistoryIcon className="w-6 h-6 group-hover:rotate-[-45deg] transition-transform" />
+                            </button>
+                        )}
+                        <button onClick={onClose} className="p-3 bg-white/20 hover:bg-white/30 rounded-full transition-colors text-white">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Stats Bar */}

@@ -6,6 +6,7 @@ import { X, CheckCircle2, Wrench, Check, Send, MessageSquare, Calculator, Trendi
 import { differenceInDays } from 'date-fns';
 import { Task, MasterOption } from '../../types';
 import { calculateTaskXP } from '../../lib/gameLogic';
+import { useGameConfig } from '../../context/GameConfigContext';
 
 interface ReviewActionModalProps {
     isOpen: boolean;
@@ -26,6 +27,7 @@ const ReviewActionModal: React.FC<ReviewActionModalProps> = ({
     onConfirm, 
     masterOptions = [] 
 }) => {
+    const { config } = useGameConfig();
     const [feedback, setFeedback] = useState('');
     const [adjustment, setAdjustment] = useState<number>(0);
     const [showReasons, setShowReasons] = useState(false);
@@ -61,7 +63,7 @@ const ReviewActionModal: React.FC<ReviewActionModalProps> = ({
     const baseScoreInfo = useMemo(() => {
         if (!task) return { base: 0, timeBonus: 0, earlyBonus: 0, total: 0 };
         
-        const breakdown = calculateTaskXP(task, submissionDate);
+        const breakdown = calculateTaskXP(task, submissionDate, config);
         
         return {
             base: breakdown.base,

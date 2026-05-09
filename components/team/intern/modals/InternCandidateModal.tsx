@@ -2,7 +2,7 @@
     import React, { useState, useEffect, useMemo } from 'react';
     import { createPortal } from 'react-dom';
     import { motion, AnimatePresence } from 'framer-motion';
-    import { X, Save, User, Mail, Phone, GraduationCap, Briefcase, Calendar, Link as LinkIcon, MessageSquare, BarChart3, Loader2, Cloud, CloudOff } from 'lucide-react';
+    import { X, Save, User, Mail, Phone, GraduationCap, Briefcase, Calendar, Link as LinkIcon, MessageSquare, BarChart3, Loader2, Cloud, CloudOff, AlertCircle } from 'lucide-react';
     import { InternCandidate, InternStatus, Gender } from '../../../../types';
     import { format } from 'date-fns';
     import GenderSelector from './form-components/GenderSelector';
@@ -13,6 +13,7 @@
     import FilterDropdown from '../../../common/FilterDropdown';
     import { Sparkles } from 'lucide-react';
     import { useGoogleDriveContext } from '../../../../context/GoogleDriveContext';
+    import { useGlobalDialog } from '../../../../context/GlobalDialogContext';
 
     interface InternCandidateModalProps {
         isOpen: boolean;
@@ -24,6 +25,7 @@
 
     const InternCandidateModal: React.FC<InternCandidateModalProps> = ({ isOpen, onClose, onSave, intern, allInterns = [] }) => {
         const { isAuthenticated, openDrivePicker, login } = useGoogleDriveContext();
+        const { showAlert } = useGlobalDialog();
         const [formData, setFormData] = useState<Partial<InternCandidate>>({
             fullName: '',
             nickname: '',
@@ -47,6 +49,8 @@
         });
 
         const [uploadStatus, setUploadStatus] = useState<'IDLE' | 'CROPPING' | 'UPLOADING' | 'SUCCESS' | 'ERROR' | 'TIMEOUT'>('IDLE');
+        const [errors, setErrors] = useState<Record<string, string>>({});
+        const [isSubmitting, setIsSubmitting] = useState(false);
 
         const uniqueUniversities = useMemo(() => {
             const unis = allInterns.map(i => i.university).filter(u => u && u.trim() !== '');
@@ -82,10 +86,63 @@
             }
         }, [intern, isOpen]);
 
+        const validateForm = (): boolean => {
+            const newErrors: Record<string, string> = {};
+            
+            if (!formData.fullName?.trim()) {
+                newErrors.fullName = 'กรุณากรอกชื่อ-นามสกุล';
+            }
+            
+            if (!formData.email?.trim()) {
+                newErrors.email = 'กรุณากรอกอีเมล';
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+                newErrors.email = 'รูปแบบอีเมลไม่ถูกต้อง';
+            }
+            
+            if (!formData.phoneNumber?.trim()) {
+                newErrors.phoneNumber = 'กรุณากรอกเบอร์โทรศัพท์';
+            }
+            
+            if (!formData.position?.trim()) {
+                newErrors.position = 'กรุณาเลือกตำแหน่งที่สมัคร';
+            }
+
+            if (!formData.university?.trim()) {
+                newErrors.university = 'กรุณาระบุมหาวิทยาลัย';
+            }
+
+            setErrors(newErrors);
+            return Object.keys(newErrors).length === 0;
+        };
+
         const handleSubmit = async (e: React.FormEvent) => {
             e.preventDefault();
-            if (uploadStatus === 'UPLOADING' || uploadStatus === 'CROPPING') return;
-            await onSave(formData);
+            if (uploadStatus === 'UPLOADING' || uploadStatus === 'CROPPING' || isSubmitting) return;
+
+            if (!validateForm()) {
+                showAlert('กรุณาตรวจสอบข้อมูลให้ครบถ้วนและถูกต้องก่อนบันทึก', 'ข้อมูลไม่ครบถ้วน');
+                return;
+            }
+
+            try {
+                setIsSubmitting(true);
+                await onSave(formData);
+                setErrors({});
+            } catch (err: any) {
+                // If it still fails (e.g. database error), show a nice alert
+                let errorMsg = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+                if (err.message?.includes('email_format')) {
+                    errorMsg = 'รูปแบบอีเมลไม่ถูกต้องตามที่ระบบกำหนด';
+                    setErrors(prev => ({ ...prev, email: errorMsg }));
+                } else if (err.message?.includes('unique_email')) {
+                    errorMsg = 'อีเมลนี้มีอยู่ในระบบแล้ว';
+                    setErrors(prev => ({ ...prev, email: errorMsg }));
+                }
+                
+                showAlert(errorMsg, 'บันทึกไม่สำเร็จ');
+            } finally {
+                setIsSubmitting(false);
+            }
         };
 
         const isSavingDisabled = uploadStatus === 'UPLOADING' || uploadStatus === 'CROPPING';
@@ -166,13 +223,22 @@
                                             </div>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                                 <div className="space-y-1.5">
-                                                    <label className="text-sm font-kanit font-bold text-gray-600 ml-1">ชื่อ-นามสกุล</label>
+                                                    <label className="text-sm font-kanit font-bold text-gray-600 ml-1 flex items-center gap-1">
+                                                        ชื่อ-นามสกุล
+                                                        {errors.fullName && <span className="text-[10px] text-rose-500 font-normal">({errors.fullName})</span>}
+                                                    </label>
                                                     <input 
                                                         required
                                                         type="text"
-                                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 focus:bg-white focus:border-indigo-200 rounded-lg text-sm font-kanit font-medium outline-none transition-all"
+                                                        className={`w-full px-4 py-2.5 bg-gray-50 border ${errors.fullName ? 'border-rose-300 bg-rose-50/30' : 'border-gray-100'} focus:bg-white focus:border-indigo-200 rounded-lg text-sm font-kanit font-medium outline-none transition-all`}
                                                         value={formData.fullName}
-                                                        onChange={e => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                                                        onChange={e => {
+                                                            setFormData(prev => ({ ...prev, fullName: e.target.value }));
+                                                            if (errors.fullName) setErrors(prev => {
+                                                                const { fullName, ...rest } = prev;
+                                                                return rest;
+                                                            });
+                                                        }}
                                                         placeholder="ชื่อจริง - นามสกุล"
                                                     />
                                                 </div>
@@ -208,29 +274,47 @@
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                         <div className="space-y-1.5">
-                                            <label className="text-sm font-kanit font-bold text-gray-600 ml-1">อีเมล</label>
+                                            <label className="text-sm font-kanit font-bold text-gray-600 ml-1 flex items-center gap-1">
+                                                อีเมล
+                                                {errors.email && <span className="text-[10px] text-rose-500 font-normal">({errors.email})</span>}
+                                            </label>
                                             <div className="relative">
-                                                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                                <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${errors.email ? 'text-rose-400' : 'text-gray-400'}`} />
                                                 <input 
                                                     required
                                                     type="email"
-                                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-blue-100 focus:border-blue-300 rounded-xl text-sm  font-medium outline-none transition-all"
+                                                    className={`w-full pl-10 pr-4 py-2.5 bg-white border ${errors.email ? 'border-rose-300 ring-4 ring-rose-50' : 'border-blue-100'} focus:border-blue-300 rounded-xl text-sm  font-medium outline-none transition-all`}
                                                     value={formData.email}
-                                                    onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                                                    onChange={e => {
+                                                        setFormData(prev => ({ ...prev, email: e.target.value }));
+                                                        if (errors.email) setErrors(prev => {
+                                                            const { email, ...rest } = prev;
+                                                            return rest;
+                                                        });
+                                                    }}
                                                     placeholder="example@email.com"
                                                 />
                                             </div>
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-sm font-kanit font-bold text-gray-600 ml-1">เบอร์โทรศัพท์</label>
+                                            <label className="text-sm font-kanit font-bold text-gray-600 ml-1 flex items-center gap-1">
+                                                เบอร์โทรศัพท์
+                                                {errors.phoneNumber && <span className="text-[10px] text-rose-500 font-normal">({errors.phoneNumber})</span>}
+                                            </label>
                                             <div className="relative">
-                                                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                                <Phone className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${errors.phoneNumber ? 'text-rose-400' : 'text-gray-400'}`} />
                                                 <input 
                                                     required
                                                     type="tel"
-                                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-blue-100 focus:border-blue-300 rounded-xl text-sm font-medium outline-none transition-all"
+                                                    className={`w-full pl-10 pr-4 py-2.5 bg-white border ${errors.phoneNumber ? 'border-rose-300 ring-4 ring-rose-50' : 'border-blue-100'} focus:border-blue-300 rounded-xl text-sm font-medium outline-none transition-all`}
                                                     value={formData.phoneNumber}
-                                                    onChange={e => setFormData(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                                                    onChange={e => {
+                                                        setFormData(prev => ({ ...prev, phoneNumber: e.target.value }));
+                                                        if (errors.phoneNumber) setErrors(prev => {
+                                                            const { phoneNumber, ...rest } = prev;
+                                                            return rest;
+                                                        });
+                                                    }}
                                                     placeholder="08x-xxx-xxxx"
                                                 />
                                             </div>
@@ -444,13 +528,13 @@
                                 </button>
                                 <button 
                                     onClick={handleSubmit}
-                                    disabled={isSavingDisabled}
+                                    disabled={isSavingDisabled || isSubmitting}
                                     className={`flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-kanit font-medium shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
                                 >
-                                    {isSavingDisabled ? (
+                                    {isSavingDisabled || isSubmitting ? (
                                         <>
                                             <Loader2 className="w-4 h-4 animate-spin" />
-                                            <span>กำลังประมวลผล...</span>
+                                            <span>กำลังบันทึก...</span>
                                         </>
                                     ) : (
                                         <>

@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Save, Check, Printer, Clock, Wand2, PlayCircle, LayoutTemplate, Settings, User as UserIcon, Users, MessageSquare, ChevronDown, Sparkles, Share2, Globe, Copy, X, FileText, Rocket, MessageSquarePlus, Loader2, Maximize2, Minimize2, Zap, ZapOff, Tag, Hash, Search } from 'lucide-react';
 import { format } from 'date-fns';
@@ -59,6 +60,11 @@ const EditorToolbar: React.FC = () => {
     
     // New State for Save Feedback
     const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+    
+    // Refs for Portal positioning
+    const statusBtnRef = useRef<HTMLDivElement>(null);
+    const zoomBtnRef = useRef<HTMLDivElement>(null);
+    const templatesBtnRef = useRef<HTMLDivElement>(null);
 
     const cleanContentForTiming = (html: string) => {
         return html
@@ -150,6 +156,55 @@ const EditorToolbar: React.FC = () => {
     const magicLink = shareToken ? `${window.location.origin}/s/${shareToken}` : '';
     const isAnyMenuOpen = showStatusMenu || showTemplates || showZoomMenu;
     const openCommentCount = comments.filter(c => c.status === 'OPEN').length;
+
+    const FloatingPortal: React.FC<{
+        isOpen: boolean;
+        onClose: () => void;
+        anchorRef: React.RefObject<HTMLElement>;
+        children: React.ReactNode;
+        className?: string;
+        align?: 'left' | 'right';
+    }> = ({ isOpen, onClose, anchorRef, children, className = '', align = 'right' }) => {
+        const [pos, setPos] = useState({ top: 0, left: 0, right: 0 });
+        const [isReady, setIsReady] = useState(false);
+
+        useEffect(() => {
+            if (isOpen && anchorRef.current) {
+                const rect = anchorRef.current.getBoundingClientRect();
+                setPos({
+                    top: rect.bottom + 8,
+                    left: rect.left,
+                    right: window.innerWidth - rect.right
+                });
+                setIsReady(true);
+            } else {
+                setIsReady(false);
+            }
+        }, [isOpen, anchorRef]);
+
+        if (!isOpen) return null;
+
+        return createPortal(
+            <>
+                <div className="fixed inset-0 z-[10010]" onClick={onClose} />
+                <div 
+                    style={{ 
+                        position: 'fixed',
+                        top: pos.top,
+                        left: align === 'left' ? pos.left : 'auto',
+                        right: align === 'right' ? pos.right : 'auto',
+                        opacity: isReady ? 1 : 0,
+                        zIndex: 10011
+                    }} 
+                    className={className} 
+                    onClick={e => e.stopPropagation()}
+                >
+                    {children}
+                </div>
+            </>,
+            document.body
+        );
+    };
 
     const handleSelectTemplate = async (tplContent: string) => {
         const confirmed = await showConfirm(
@@ -352,8 +407,8 @@ const EditorToolbar: React.FC = () => {
                         {isPublic ? 'Public' : 'Share'}
                     </button>
 
-                    {/* Status Pill */}
-                    <div className="relative shrink-0">
+                     {/* Status Pill */}
+                    <div className="relative shrink-0" ref={statusBtnRef}>
                         <button 
                             onClick={() => setShowStatusMenu(!showStatusMenu)}
                             className={`
@@ -365,31 +420,36 @@ const EditorToolbar: React.FC = () => {
                             {STATUS_CONFIG[status].label}
                             <ChevronDown className="w-3 h-3 opacity-50 ml-1" />
                         </button>
-                        {showStatusMenu && (
-                            <div className="absolute left-0 md:left-auto md:right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-indigo-50 p-2 z-50 animate-in fade-in zoom-in-95 origin-top-right">
-                                {Object.entries(STATUS_CONFIG).map(([key, conf]) => (
-                                    <button 
-                                        key={key} 
-                                        type="button"
-                                        onClick={(e) => { 
-                                            e.stopPropagation(); 
-                                            changeStatus(key as ScriptStatus); 
-                                            setShowStatusMenu(false); 
-                                        }} 
-                                        className={`w-full text-left px-3 py-2 text-xs font-bold rounded-lg flex items-center justify-between transition-colors mb-1 ${status === key ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}
-                                    >
-                                        <span className="flex items-center gap-2"><span className="text-base">{conf.icon}</span> {conf.label}</span>
-                                        {status === key && <Check className="w-3 h-3 text-indigo-600" />}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                        
+                        <FloatingPortal 
+                            isOpen={showStatusMenu} 
+                            onClose={() => setShowStatusMenu(false)} 
+                            anchorRef={statusBtnRef}
+                            className="w-48 bg-white rounded-xl shadow-xl border border-indigo-50 p-2 animate-in fade-in zoom-in-95 origin-top-right"
+                            align="left"
+                        >
+                            {Object.entries(STATUS_CONFIG).map(([key, conf]) => (
+                                <button 
+                                    key={key} 
+                                    type="button"
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        changeStatus(key as ScriptStatus); 
+                                        setShowStatusMenu(false); 
+                                    }} 
+                                    className={`w-full text-left px-3 py-2 text-xs font-bold rounded-lg flex items-center justify-between transition-colors mb-1 ${status === key ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                                >
+                                    <span className="flex items-center gap-2"><span className="text-base">{conf.icon}</span> {conf.label}</span>
+                                    {status === key && <Check className="w-3 h-3 text-indigo-600" />}
+                                </button>
+                            ))}
+                        </FloatingPortal>
                     </div>
 
                     <div className="h-6 w-px bg-gray-200 mx-1 shrink-0"></div>
 
-                    {/* Zoom Dropdown */}
-                    <div className="relative shrink-0">
+                     {/* Zoom Dropdown */}
+                    <div className="relative shrink-0" ref={zoomBtnRef}>
                          <button 
                             onClick={() => setShowZoomMenu(!showZoomMenu)}
                             className="h-9 px-3 bg-gray-100 rounded-lg flex items-center gap-1 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-colors border border-gray-200"
@@ -397,19 +457,23 @@ const EditorToolbar: React.FC = () => {
                              {zoomLevel}% <ChevronDown className="w-3 h-3 opacity-50" />
                         </button>
                         
-                        {showZoomMenu && (
-                            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-24 bg-white rounded-xl shadow-xl border border-gray-100 p-1 z-50 animate-in fade-in zoom-in-95">
-                                {ZOOM_OPTIONS.map(z => (
-                                    <button
-                                        key={z}
-                                        onClick={() => { setZoomLevel(z); setShowZoomMenu(false); }}
-                                        className={`w-full text-center px-2 py-1.5 rounded-lg text-xs font-bold transition-colors ${zoomLevel === z ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-50'}`}
-                                    >
-                                        {z}%
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                        <FloatingPortal
+                            isOpen={showZoomMenu}
+                            onClose={() => setShowZoomMenu(false)}
+                            anchorRef={zoomBtnRef}
+                            className="w-24 bg-white rounded-xl shadow-xl border border-gray-100 p-1 animate-in fade-in zoom-in-95"
+                            align="right"
+                        >
+                            {ZOOM_OPTIONS.map(z => (
+                                <button
+                                    key={z}
+                                    onClick={() => { setZoomLevel(z); setShowZoomMenu(false); }}
+                                    className={`w-full text-center px-2 py-1.5 rounded-lg text-xs font-bold transition-colors ${zoomLevel === z ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-50'}`}
+                                >
+                                    {z}%
+                                </button>
+                            ))}
+                        </FloatingPortal>
                     </div>
 
                     <div className="h-6 w-px bg-gray-200 mx-1 shrink-0"></div>
@@ -457,29 +521,34 @@ const EditorToolbar: React.FC = () => {
                         <PlayCircle className="w-4 h-4" />
                     </button>
                     
-                    {/* Templates Dropdown */}
-                    <div className="relative shrink-0">
+                     {/* Templates Dropdown */}
+                    <div className="relative shrink-0" ref={templatesBtnRef}>
                         <button onClick={() => setShowTemplates(!showTemplates)} className="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 text-gray-500 hover:text-orange-500 hover:border-orange-200 hover:bg-orange-50 rounded-lg shadow-sm transition-all hover:-translate-y-0.5 active:translate-y-0" title="Templates">
                             <LayoutTemplate className="w-4 h-4" />
                         </button>
-                        {showTemplates && (
-                            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-orange-100 p-2 z-50 animate-in fade-in zoom-in-95 origin-top-right">
-                                <p className="text-[10px] font-black text-orange-400 uppercase px-3 py-1.5 flex items-center"><Sparkles className="w-3 h-3 mr-1"/> เลือก Template</p>
-                                {TEMPLATES.map((tpl, i) => (
-                                    <button 
-                                        key={i} 
-                                        type="button"
-                                        onClick={(e) => { 
-                                            e.stopPropagation(); 
-                                            handleSelectTemplate(tpl.content); 
-                                        }} 
-                                        className="w-full text-left px-3 py-2.5 text-xs font-bold text-gray-600 hover:bg-orange-50 hover:text-orange-600 rounded-lg transition-colors truncate mb-1"
-                                    >
-                                        {tpl.label}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                        
+                        <FloatingPortal
+                            isOpen={showTemplates}
+                            onClose={() => setShowTemplates(false)}
+                            anchorRef={templatesBtnRef}
+                            className="w-64 bg-white rounded-xl shadow-xl border border-orange-100 p-2 animate-in fade-in zoom-in-95 origin-top-right"
+                            align="right"
+                        >
+                            <p className="text-[10px] font-black text-orange-400 uppercase px-3 py-1.5 flex items-center"><Sparkles className="w-3 h-3 mr-1"/> เลือก Template</p>
+                            {TEMPLATES.map((tpl, i) => (
+                                <button 
+                                    key={i} 
+                                    type="button"
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        handleSelectTemplate(tpl.content); 
+                                    }} 
+                                    className="w-full text-left px-3 py-2.5 text-xs font-bold text-gray-600 hover:bg-orange-50 hover:text-orange-600 rounded-lg transition-colors truncate mb-1"
+                                >
+                                    {tpl.label}
+                                </button>
+                            ))}
+                        </FloatingPortal>
                     </div>
 
                     <button onClick={handlePrint} className="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg shadow-sm transition-all hover:-translate-y-0.5 active:translate-y-0 shrink-0" title="Print Script">

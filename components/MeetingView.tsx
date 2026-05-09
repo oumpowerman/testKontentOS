@@ -46,6 +46,9 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
     const [sheets, setSheets] = useState<MeetingNoteSheet[]>([]); // New Sheets State
     const [decisions, setDecisions] = useState(''); // New Decisions State
     const [attendees, setAttendees] = useState<string[]>([]);
+    const [attendance, setAttendance] = useState<Record<string, any>>({});
+    const [startTime, setStartTime] = useState('09:00');
+    const [endTime, setEndTime] = useState('10:00');
 
     // --- Custom Note Modal State ---
     const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
@@ -71,6 +74,9 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
             // Force cast for flexibility if legacy data exists
             setCategory((selectedMeeting.category as MeetingCategory) || 'GENERAL');
             setAttendees(selectedMeeting.attendees);
+            setAttendance(selectedMeeting.attendance || {});
+            setStartTime(selectedMeeting.startTime || '09:00');
+            setEndTime(selectedMeeting.endTime || '10:00');
             setProjectTags(selectedMeeting.tags || []); 
         }
     }, [selectedMeeting]);
@@ -199,6 +205,32 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
         handleUpdate('attendees', newAttendees);
     };
 
+    const handleUpdateAttendees = (newAttendees: string[]) => {
+        // Find newly invited people to set default RSVP status
+        const currentData = { ...(selectedMeeting?.attendance || {}) } as Record<string, any>;
+        const updatedAttendance: Record<string, any> = {};
+        
+        newAttendees.forEach(id => {
+            updatedAttendance[id] = currentData[id] || 'INVITED';
+        });
+
+        setAttendees(newAttendees);
+        setAttendance(updatedAttendance);
+        
+        // Update both fields in DB
+        updateMeeting(selectedId!, { 
+            attendees: newAttendees,
+            attendance: updatedAttendance
+        });
+    };
+
+    const handleUpdateRSVP = (userId: string, status: 'CONFIRMED' | 'DECLINED' | 'PRESENT' | 'ABSENT' | 'INVITED') => {
+        if (!selectedId) return;
+        const updatedAttendance = { ...attendance, [userId]: status };
+        setAttendance(updatedAttendance);
+        handleUpdate('attendance', updatedAttendance);
+    };
+
     return (
         <div className="flex flex-col h-[calc(100vh-64px)] md:h-[calc(100vh-80px)] animate-in fade-in duration-500 overflow-hidden pb-2 md:pb-6 relative isolate">
             
@@ -270,6 +302,7 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
                                 searchQuery={searchQuery}
                                 setSearchQuery={setSearchQuery}
                                 masterOptions={masterOptions}
+                                users={users}
                             />
                             
                             {/* Collapse Button (Inside) */}
@@ -308,7 +341,11 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
                             date={date} setDate={setDate}
                             category={category} setCategory={setCategory}
                             projectTags={projectTags} setProjectTags={setProjectTags}
-                            attendees={attendees} onToggleAttendee={handleToggleAttendee}
+                            attendees={attendees} onUpdateAttendees={handleUpdateAttendees}
+                            attendance={attendance} onUpdateRSVP={handleUpdateRSVP}
+                            startTime={startTime} setStartTime={setStartTime}
+                            endTime={endTime} setEndTime={setEndTime}
+                            currentUser={currentUser}
                             content={content} setContent={setContent}
                             sheets={sheets} setSheets={setSheets} // PASS SHEETS
                             decisions={decisions} setDecisions={setDecisions} 

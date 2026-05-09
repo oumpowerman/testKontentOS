@@ -12,6 +12,12 @@ export const DrawingExtension = Node.create({
     return {
       lines: {
         default: '[]',
+        parseHTML: element => element.getAttribute('data-lines'),
+        renderHTML: attributes => {
+          return {
+            'data-lines': attributes.lines,
+          }
+        },
       },
       width: {
         default: 400,

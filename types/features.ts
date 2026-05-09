@@ -253,11 +253,14 @@ export interface MeetingLog {
     id: string;
     title: string;
     date: Date;
+    startTime?: string; // HH:mm
+    endTime?: string;   // HH:mm
     content: string;
     sheets?: MeetingNoteSheet[];
     decisions?: string; 
     category: MeetingCategory; 
     attendees: string[];
+    attendance?: Record<string, 'INVITED' | 'CONFIRMED' | 'DECLINED' | 'PRESENT' | 'ABSENT'>;
     tags: string[];
     createdAt: Date;
     updatedAt: Date;

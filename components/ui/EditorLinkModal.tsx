@@ -37,7 +37,7 @@ const EditorLinkModal: React.FC<EditorLinkModalProps> = ({
     const modalContent = (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
+                <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 pointer-events-none">
                     {/* Backdrop */}
                     <motion.div 
                         initial={{ opacity: 0 }}
@@ -55,7 +55,7 @@ const EditorLinkModal: React.FC<EditorLinkModalProps> = ({
                         className="bg-white w-full max-w-sm rounded-3xl shadow-2xl border border-indigo-50 overflow-hidden relative z-10 pointer-events-auto"
                     >
                         <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-                            <h3 className="font-black text-gray-800 flex items-center gap-2 text-sm uppercase tracking-tight">
+                            <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm uppercase tracking-tight">
                                 <LinkIcon className="w-4 h-4 text-indigo-500" /> 
                                 {initialUrl ? 'แก้ไขลิงก์' : 'ใส่ลิงก์'}
                             </h3>
@@ -96,14 +96,14 @@ const EditorLinkModal: React.FC<EditorLinkModalProps> = ({
                                     whileTap={{ scale: 0.95 }}
                                     type="button"
                                     onClick={onClose}
-                                    className="flex-1 py-3 text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-2xl text-sm font-black transition-all"
+                                    className="flex-1 py-3 text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-2xl text-sm font-bold transition-all"
                                 >
                                     ยกเลิก
                                 </motion.button>
                                 <motion.button 
                                     whileTap={{ scale: 0.95 }}
                                     type="submit"
-                                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-black shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-2 active:scale-95"
+                                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-2 active:scale-95"
                                 >
                                     <Check className="w-4 h-4" /> บันทึก
                                 </motion.button>

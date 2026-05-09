@@ -19,6 +19,10 @@ interface UserSessionContextType {
     fetchProfile: () => Promise<User | null>;
     updateProfile: (updates: Partial<User>, avatarFile?: File) => Promise<boolean>;
     
+    // Data Actions
+    refreshAttendance: () => Promise<void>;
+    refreshLeaves: () => Promise<void>;
+    
     // Team Actions
     fetchTeamMembers: () => Promise<void>;
     approveMember: (userId: string) => Promise<void>;
@@ -328,6 +332,43 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
         }
     };
 
+    // --- DATA ACTIONS ---
+    const refreshAttendance = async () => {
+        if (!sessionUser?.id || !currentUserProfile) return;
+        try {
+            const today = new Date();
+            const thirtyDaysAgo = format(subDays(today, 30), 'yyyy-MM-dd');
+            const isAdmin = currentUserProfile.role === 'ADMIN';
+
+            let query = supabase.from('attendance_logs').select('*').gte('date', thirtyDaysAgo);
+            if (!isAdmin) query = query.eq('user_id', sessionUser.id);
+
+            const { data, error } = await query;
+            if (error) throw error;
+            if (data) setAttendanceLogs(data.map(mapAttendanceLog));
+        } catch (error) {
+            console.error("Error refreshing attendance:", error);
+        }
+    };
+
+    const refreshLeaves = async () => {
+        if (!sessionUser?.id || !currentUserProfile) return;
+        try {
+            const today = new Date();
+            const sixtyDaysAgo = format(subDays(today, 60), 'yyyy-MM-dd');
+            const isAdmin = currentUserProfile.role === 'ADMIN';
+
+            let query = supabase.from('leave_requests').select('*').gte('end_date', sixtyDaysAgo);
+            if (!isAdmin) query = query.eq('user_id', sessionUser.id);
+
+            const { data, error } = await query;
+            if (error) throw error;
+            if (data) setLeaveRequests(data.map(mapLeaveRequest));
+        } catch (error) {
+            console.error("Error refreshing leaves:", error);
+        }
+    };
+
     // --- TEAM ACTIONS (From useTeam) ---
     const fetchTeamMembers = async () => {
         // Handled by initial fetch and realtime
@@ -466,6 +507,8 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
         leaveRequests,
         fetchProfile,
         updateProfile,
+        refreshAttendance,
+        refreshLeaves,
         fetchTeamMembers,
         approveMember,
         removeMember,

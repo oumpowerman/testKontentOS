@@ -90,13 +90,21 @@ const DrawingComponent: React.FC<NodeViewProps> = ({ node, updateAttributes, sel
     setCurrentStroke(null);
   };
 
-  const undo = useCallback(() => {
+  const undo = useCallback((e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (strokes.length === 0) return;
     const newStrokes = strokes.slice(0, -1);
     updateAttributes({ lines: JSON.stringify(newStrokes) });
   }, [strokes, updateAttributes]);
 
-  const clear = useCallback(() => {
+  const clear = useCallback((e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     updateAttributes({ lines: '[]' });
   }, [updateAttributes]);
 
@@ -138,10 +146,18 @@ const DrawingComponent: React.FC<NodeViewProps> = ({ node, updateAttributes, sel
             />
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={undo} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all" title="Undo">
+            <button 
+              onClick={(e) => undo(e)} 
+              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all" 
+              title="Undo"
+            >
               <Undo2 className="w-4 h-4" />
             </button>
-            <button onClick={clear} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-50 rounded-lg transition-all" title="Clear">
+            <button 
+              onClick={(e) => clear(e)} 
+              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-50 rounded-lg transition-all" 
+              title="Clear"
+            >
               <Trash2 className="w-4 h-4" />
             </button>
           </div>

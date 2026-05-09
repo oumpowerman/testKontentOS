@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Search, Calendar, ChevronLeft, ChevronRight, CheckCircle2, ArrowUpRight, MonitorPlay, CheckSquare } from 'lucide-react';
 import { Task, Channel } from '../../../../types';
-import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { format, isWithinInterval, startOfDay, endOfDay, subDays } from 'date-fns';
 import { STATUS_COLORS } from '../../../../constants';
 
 interface DoneHistoryModalProps {
@@ -16,29 +16,83 @@ interface DoneHistoryModalProps {
 const ITEMS_PER_PAGE = 10;
 
 const DoneHistoryModal: React.FC<DoneHistoryModalProps> = ({ isOpen, onClose, tasks, onOpenTask }) => {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const defaultSearch = '';
+    const today = new Date();
+    // Default to current month
+    const firstDay = format(new Date(today.getFullYear(), today.getMonth(), 1), 'yyyy-MM-dd');
+    const lastDay = format(new Date(today.getFullYear(), today.getMonth() + 1, 0), 'yyyy-MM-dd');
+
+    const [searchQuery, setSearchQuery] = useState(defaultSearch);
+    const [startDate, setStartDate] = useState(firstDay);
+    const [endDate, setEndDate] = useState(lastDay);
     const [currentPage, setCurrentPage] = useState(1);
 
+    // Quick Filter Actions
+    const setPast7Days = () => {
+        setStartDate(format(subDays(new Date(), 7), 'yyyy-MM-dd'));
+        setEndDate(format(new Date(), 'yyyy-MM-dd'));
+        setCurrentPage(1);
+    };
+
+    const setThisMonth = () => {
+        setStartDate(firstDay);
+        setEndDate(lastDay);
+        setCurrentPage(1);
+    };
+
+    const setLastMonth = () => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        const f = format(new Date(d.getFullYear(), d.getMonth(), 1), 'yyyy-MM-dd');
+        const l = format(new Date(d.getFullYear(), d.getMonth() + 1, 0), 'yyyy-MM-dd');
+        setStartDate(f);
+        setEndDate(l);
+        setCurrentPage(1);
+    };
+
+    const clearAllFilters = () => {
+        setSearchQuery('');
+        setStartDate('');
+        setEndDate('');
+        setCurrentPage(1);
+    };
+
     // Filter Logic
-    const filteredTasks = useMemo(() => {
-        return tasks.filter(task => {
+    const { filteredTasks, summary } = useMemo(() => {
+        const filtered = tasks.filter(task => {
             // 1. Search
             const matchSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
             
             // 2. Date Range (Based on End Date / Completed Date)
             let matchDate = true;
-            if (startDate && endDate) {
+            if (startDate || endDate) {
                 const taskDate = new Date(task.endDate);
-                matchDate = isWithinInterval(taskDate, {
-                    start: startOfDay(new Date(startDate)),
-                    end: endOfDay(new Date(endDate))
-                });
+                const s = startDate ? startOfDay(new Date(startDate)) : null;
+                const e = endDate ? endOfDay(new Date(endDate)) : null;
+
+                if (s && e) {
+                    matchDate = isWithinInterval(taskDate, { start: s, end: e });
+                } else if (s) {
+                    matchDate = taskDate >= s;
+                } else if (e) {
+                    matchDate = taskDate <= e;
+                }
             }
 
             return matchSearch && matchDate;
         }).sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime()); // Newest first
+
+        const totalTasks = filtered.filter(t => t.type !== 'CONTENT').length;
+        const totalContent = filtered.filter(t => t.type === 'CONTENT').length;
+
+        return { 
+            filteredTasks: filtered, 
+            summary: {
+                total: filtered.length,
+                tasks: totalTasks,
+                content: totalContent
+            }
+        };
     }, [tasks, searchQuery, startDate, endDate]);
 
     // Pagination Logic
@@ -57,7 +111,7 @@ const DoneHistoryModal: React.FC<DoneHistoryModalProps> = ({ isOpen, onClose, ta
                         <CheckCircle2 className="w-40 h-40" />
                     </div>
                     <div className="relative z-10">
-                        <h2 className="text-2xl font-black flex items-center gap-3">
+                        <h2 className="text-2xl font-bold flex items-center gap-3">
                             <CheckCircle2 className="w-8 h-8 text-emerald-200" />
                             ทำเนียบงานเสร็จ (Done History)
                         </h2>
@@ -69,43 +123,90 @@ const DoneHistoryModal: React.FC<DoneHistoryModalProps> = ({ isOpen, onClose, ta
                 </div>
 
                 {/* Filters */}
-                <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between shrink-0">
-                    <div className="relative flex-1 w-full">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input 
-                            type="text" 
-                            placeholder="ค้นหาชื่องาน..." 
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none"
-                            value={searchQuery}
-                            onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                        />
-                    </div>
-                    
-                    <div className="flex items-center gap-2 w-full md:w-auto">
-                        <div className="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-2 gap-2">
-                            <Calendar className="w-4 h-4 text-gray-400" />
+                <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex flex-col gap-4 shrink-0">
+                    <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                        <div className="relative flex-1 w-full">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input 
-                                type="date" 
-                                className="text-xs font-bold text-gray-600 outline-none bg-transparent"
-                                value={startDate}
-                                onChange={e => { setStartDate(e.target.value); setCurrentPage(1); }}
-                            />
-                            <span className="text-gray-300">-</span>
-                            <input 
-                                type="date" 
-                                className="text-xs font-bold text-gray-600 outline-none bg-transparent"
-                                value={endDate}
-                                onChange={e => { setEndDate(e.target.value); setCurrentPage(1); }}
+                                type="text" 
+                                placeholder="ค้นหาชื่องาน..." 
+                                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none"
+                                value={searchQuery}
+                                onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                             />
                         </div>
-                        {(startDate || endDate || searchQuery) && (
-                            <button 
-                                onClick={() => { setSearchQuery(''); setStartDate(''); setEndDate(''); }}
-                                className="px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg transition-colors whitespace-nowrap"
-                            >
-                                ล้างตัวกรอง
-                            </button>
-                        )}
+                        
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                            <div className="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-2 gap-2 shadow-sm">
+                                <Calendar className="w-4 h-4 text-emerald-500" />
+                                <input 
+                                    type="date" 
+                                    className="text-xs font-bold text-gray-600 outline-none bg-transparent"
+                                    value={startDate}
+                                    onChange={e => { setStartDate(e.target.value); setCurrentPage(1); }}
+                                />
+                                <span className="text-gray-300">-</span>
+                                <input 
+                                    type="date" 
+                                    className="text-xs font-bold text-gray-600 outline-none bg-transparent"
+                                    value={endDate}
+                                    onChange={e => { setEndDate(e.target.value); setCurrentPage(1); }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mr-2">Quick Filters:</span>
+                        <button 
+                            onClick={setPast7Days}
+                            className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-gray-600 hover:border-emerald-300 hover:text-emerald-600 transition-all shadow-sm"
+                        >
+                            7 วันล่าสุด
+                        </button>
+                        <button 
+                            onClick={setThisMonth}
+                            className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-gray-600 hover:border-emerald-300 hover:text-emerald-600 transition-all shadow-sm"
+                        >
+                            เดือนนี้
+                        </button>
+                        <button 
+                            onClick={setLastMonth}
+                            className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-gray-600 hover:border-emerald-300 hover:text-emerald-600 transition-all shadow-sm"
+                        >
+                            เดือนที่แล้ว
+                        </button>
+                        <button 
+                            onClick={clearAllFilters}
+                            className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[12px] font-medium hover:bg-rose-600 hover:text-white transition-all ml-auto"
+                        >
+                            ล้างทั้งหมด
+                        </button>
+                    </div>
+                </div>
+                
+                {/* Summary Overview */}
+                <div className="px-6 py-4 bg-white grid grid-cols-3 gap-3 shrink-0 border-b border-gray-50">
+                    <div className="bg-emerald-50/50 p-4 rounded-3xl border border-emerald-100 flex flex-col items-center justify-center text-center">
+                        <span className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-widest mb-1">Total Accomplished</span>
+                        <div className="flex items-end gap-1">
+                            <span className="text-2xl font-bold text-emerald-700">{summary.total}</span>
+                            <span className="text-[10px] font-bold text-emerald-600/60 mb-1">งาน</span>
+                        </div>
+                    </div>
+                    <div className="bg-blue-50/50 p-4 rounded-3xl border border-blue-100 flex flex-col items-center justify-center text-center">
+                        <span className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest mb-1">General Tasks</span>
+                        <div className="flex items-end gap-1">
+                            <span className="text-2xl font-bold text-blue-700">{summary.tasks}</span>
+                            <span className="text-[10px] font-bold text-blue-600/60 mb-1">ชิ้น</span>
+                        </div>
+                    </div>
+                    <div className="bg-purple-50/50 p-4 rounded-3xl border border-purple-100 flex flex-col items-center justify-center text-center">
+                        <span className="text-[10px] font-bold text-purple-600/70 uppercase tracking-widest mb-1">Content Works</span>
+                        <div className="flex items-end gap-1">
+                            <span className="text-2xl font-bold text-purple-700">{summary.content}</span>
+                            <span className="text-[10px] font-bold text-purple-600/60 mb-1">คลิป</span>
+                        </div>
                     </div>
                 </div>
 

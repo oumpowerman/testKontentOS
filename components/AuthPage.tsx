@@ -14,11 +14,12 @@ interface AuthPageProps {
 }
 
 const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER' | 'FORGOT' | 'UPDATE'>('LOGIN');
   
   // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
@@ -40,12 +41,25 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
   // Status State
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false);
   
   // Success Modal State
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  const isLogin = authMode === 'LOGIN';
+  const isRegister = authMode === 'REGISTER';
+  const isForgot = authMode === 'FORGOT';
+  const isUpdate = authMode === 'UPDATE';
+
   const [animKey, setAnimKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Check if we are in recovery mode (user clicked email link)
+    if (window.location.hash.includes('type=recovery')) {
+        setAuthMode('UPDATE');
+    }
+}, []);
 
   useEffect(() => {
     const fetchPositions = async () => {
@@ -63,18 +77,19 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
     fetchPositions();
   }, []);
 
-  const toggleMode = (mode: 'LOGIN' | 'REGISTER') => {
-      const targetIsLogin = mode === 'LOGIN';
-      if (isLogin === targetIsLogin) return;
-      setIsLogin(targetIsLogin);
+  const toggleMode = (mode: 'LOGIN' | 'REGISTER' | 'FORGOT' | 'UPDATE') => {
+      if (authMode === mode) return;
+      setAuthMode(mode);
       setErrorMsg(null);
+      setResetSent(false);
       setAnimKey(prev => prev + 1); 
   };
 
   const handleCloseSuccessModal = () => {
       setShowSuccessModal(false);
-      setIsLogin(true);
+      setAuthMode('LOGIN');
       setPassword(''); 
+      setConfirmPassword('');
       setErrorMsg(null);
       setPosition('');
       setPhone('');
@@ -135,13 +150,31 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
     setErrorMsg(null);
 
     try {
-        if (isLogin) {
+        if (authMode === 'LOGIN') {
             const { error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
             if (error) throw error;
             onLoginSuccess(); 
+        } else if (authMode === 'FORGOT') {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/`,
+            });
+            if (error) throw error;
+            setResetSent(true);
+        } else if (authMode === 'UPDATE') {
+            if (password !== confirmPassword) {
+                throw new Error('รหัสผ่านไม่ตรงกัน');
+            }
+            if (password.length < 6) {
+                throw new Error('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+            }
+            const { error } = await supabase.auth.updateUser({
+                password: password
+            });
+            if (error) throw error;
+            setShowSuccessModal(true);
         } else {
             // 1. Validation
             if (!avatarFile) {
@@ -236,7 +269,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
       )}
 
       {/* Background Decor */}
-      <div className={`absolute top-0 left-0 w-full h-full bg-gradient-to-br transition-all duration-1000 ${isLogin ? 'from-blue-50 to-white' : 'from-pink-50 to-white'}`}></div>
+      <div className={`absolute top-0 left-0 w-full h-full bg-gradient-to-br transition-all duration-1000 ${authMode === 'LOGIN' ? 'from-blue-50 to-white' : authMode === 'REGISTER' ? 'from-pink-50 to-white' : 'from-indigo-50 to-white'}`}></div>
       <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-gradient-to-tr from-purple-200/40 to-blue-200/40 rounded-full blur-3xl animate-float"></div>
       <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-gradient-to-tr from-yellow-100/40 to-pink-200/40 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
 
@@ -256,15 +289,17 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
         {/* --- ARTWORK SIDE --- */}
         <div className={`
             hidden md:flex md:w-5/12 relative flex-col items-center justify-center text-white p-12 overflow-hidden transition-all duration-700
-            ${isLogin 
+            ${authMode === 'LOGIN' 
                 ? 'bg-gradient-to-br from-[#4f46e5] to-[#818cf8]' 
-                : 'bg-gradient-to-br from-[#db2777] to-[#f472b6]'}
+                : authMode === 'REGISTER'
+                ? 'bg-gradient-to-br from-[#db2777] to-[#f472b6]'
+                : 'bg-gradient-to-br from-[#0f172a] to-[#334155]'}
         `}>
              <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 4px 4px, white 2px, transparent 0)', backgroundSize: '40px 40px' }}></div>
              
              <AnimatePresence mode="wait">
                 <motion.div 
-                    key={isLogin ? 'login' : 'register'}
+                    key={authMode}
                     initial={{ opacity: 0, y: 20, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -283,16 +318,20 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
                         }}
                         className="w-28 h-28 bg-white/20 rounded-[2rem] flex items-center justify-center mb-8 backdrop-blur-md shadow-xl ring-2 ring-white/30"
                     >
-                        {isLogin ? <Sparkles className="w-14 h-14 text-white drop-shadow-md" /> : <Rocket className="w-14 h-14 text-white drop-shadow-md" />}
+                        {authMode === 'LOGIN' ? <Sparkles className="w-14 h-14 text-white drop-shadow-md" /> : authMode === 'FORGOT' || authMode === 'UPDATE' ? <Lock className="w-14 h-14 text-white drop-shadow-md" /> : <Rocket className="w-14 h-14 text-white drop-shadow-md" />}
                     </motion.div>
                     
                     <h2 className="text-4xl font-black mb-4 leading-tight drop-shadow-sm tracking-tight">
                         ContentOS
                     </h2>
                     <p className="text-white/90 text-lg leading-relaxed mb-10 font-medium max-w-xs">
-                        {isLogin 
+                        {authMode === 'LOGIN' 
                             ? "ระบบจัดการงานคอนเทนต์ สำหรับทีมครีเอเตอร์ยุคใหม่"
-                            : "สมัครสมาชิกเพื่อเริ่มจัดการงาน และ Workload ทีมของคุณ"
+                            : authMode === 'REGISTER'
+                            ? "สมัครสมาชิกเพื่อเริ่มจัดการงาน และ Workload ทีมของคุณ"
+                            : authMode === 'FORGOT'
+                            ? "ไม่ต้องกังวล เราจะช่วยคุณกู้คืนบัญชีเอง"
+                            : "ตั้งรหัสผ่านใหม่ที่จำง่ายแต่ปลอดภัยนะครับ"
                         }
                     </p>
                 </motion.div>
@@ -324,10 +363,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
             <div className="max-w-md mx-auto w-full flex-1 flex flex-col justify-center">
                 <AnimatePresence mode="wait">
                     <motion.div 
-                        key={isLogin ? 'login-form' : 'reg-form'}
-                        initial={{ opacity: 0, x: isLogin ? -10 : 10 }}
+                        key={authMode}
+                        initial={{ opacity: 0, x: isLogin || isForgot ? -10 : 10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: isLogin ? 10 : -10 }}
+                        exit={{ opacity: 0, x: isLogin || isForgot ? 10 : -10 }}
                         transition={{ duration: 0.35, ease: "easeOut" }}
                     >
                         <div className="mb-6 text-center md:text-left">
@@ -337,7 +376,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
                                 transition={{ delay: 0.1 }}
                                 className="text-3xl font-black mb-2 text-slate-800"
                             >
-                                {isLogin ? 'ยินดีต้อนรับกลับ! 👋' : 'สร้างบัญชีใหม่ ✨'}
+                                {isLogin ? 'ยินดีต้อนรับกลับ! 👋' : isRegister ? 'สร้างบัญชีใหม่ ✨' : isForgot ? 'กู้คืนรหัสผ่าน 🛡️' : 'ตั้งรหัสผ่านใหม่ 🔒'}
                             </motion.h3>
                             <motion.p 
                                 initial={{ opacity: 0, y: 10 }}
@@ -345,10 +384,33 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
                                 transition={{ delay: 0.2 }}
                                 className="text-slate-500 font-medium"
                             >
-                                {isLogin ? 'กรอกข้อมูลเพื่อเข้าสู่ระบบจัดการงาน' : 'กรอกข้อมูลตำแหน่งงานเพื่อเข้าร่วมทีม'}
+                                {isLogin ? 'กรอกข้อมูลเพื่อเข้าสู่ระบบจัดการงาน' : isRegister ? 'กรอกข้อมูลตำแหน่งงานเพื่อเข้าร่วมทีม' : isForgot ? 'กรอกอีเมลเพื่อรับลิงก์สำหรับเปลี่ยนรหัสผ่าน' : 'กรุณากรอกรหัสผ่านใหม่ที่ต้องการใช้งาน'}
                             </motion.p>
                         </div>
 
+                {resetSent ? (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-emerald-50 border-2 border-emerald-100 p-8 rounded-[2rem] text-center"
+                    >
+                        <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <Mail className="w-8 h-8 text-emerald-600" />
+                        </div>
+                        <h4 className="text-xl font-black text-slate-800 mb-2">ส่งลิงก์กู้คืนแล้ว!</h4>
+                        <p className="text-slate-500 text-sm font-medium mb-6">
+                            กรุณาตรวจสอบกล่องจดหมายของคุณ (รวมถึง Junk/Smap) และคลิกลิงก์เพื่อตั้งรหัสผ่านใหม่
+                        </p>
+                        <button 
+                            type="button"
+                            onClick={() => toggleMode('LOGIN')}
+                            className="text-emerald-600 font-black text-sm uppercase tracking-widest hover:underline"
+                        >
+                            กลับไปหน้าเข้าสู่ระบบ
+                        </button>
+                    </motion.div>
+                ) : (
+                    <>
                 {errorMsg && (
                     <div className="mb-6 p-4 rounded-2xl bg-red-50 border-2 border-red-100 flex items-start gap-3 text-red-500 shadow-sm">
                         <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -446,64 +508,98 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
                         </div>
                     )}
 
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-500 ml-1 uppercase">อีเมล *</label>
-                        <div className="relative group">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-                                <motion.div
-                                    animate={{ y: [0, -2, 0] }}
-                                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                                >
-                                    <Mail className={`w-5 h-5 text-slate-400 transition-colors ${isLogin ? 'group-focus-within:text-indigo-500' : 'group-focus-within:text-pink-500'}`} />
-                                </motion.div>
-                            </div>
-                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl outline-none transition-all font-bold text-slate-700 ${isLogin ? 'focus:border-indigo-400' : 'focus:border-pink-400'}`} placeholder="email@example.com" required />
-                        </div>
-                    </div>
-
-                    {!isLogin && (
+                    {authMode !== 'UPDATE' && (
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 ml-1 uppercase">เบอร์โทรศัพท์ *</label>
+                            <label className="text-xs font-bold text-slate-500 ml-1 uppercase">อีเมล *</label>
                             <div className="relative group">
-                                <Phone className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-pink-500 transition-colors" />
-                                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-pink-400 rounded-xl outline-none transition-all font-bold text-slate-700" placeholder="08x-xxx-xxxx" required={!isLogin} />
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                                    <motion.div
+                                        animate={{ y: [0, -2, 0] }}
+                                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                                    >
+                                        <Mail className={`w-5 h-5 text-slate-400 transition-colors ${authMode === 'LOGIN' || authMode === 'FORGOT' ? 'group-focus-within:text-indigo-500' : 'group-focus-within:text-pink-500'}`} />
+                                    </motion.div>
+                                </div>
+                                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl outline-none transition-all font-bold text-slate-700 ${authMode === 'LOGIN' || authMode === 'FORGOT' ? 'focus:border-indigo-400' : 'focus:border-pink-400'}`} placeholder="email@example.com" required />
                             </div>
                         </div>
                     )}
 
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-500 ml-1 uppercase">รหัสผ่าน *</label>
-                        <div className="relative group">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-                                <motion.div
-                                    animate={{ 
-                                        rotate: [0, 8, 0, -8, 0],
-                                        scale: [1, 1.1, 1]
-                                    }}
-                                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                                >
-                                    <Lock className={`w-5 h-5 text-slate-400 transition-colors ${isLogin ? 'group-focus-within:text-indigo-500' : 'group-focus-within:text-pink-500'}`} />
-                                </motion.div>
+                    {authMode === 'REGISTER' && (
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 ml-1 uppercase">เบอร์โทรศัพท์ *</label>
+                            <div className="relative group">
+                                <Phone className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-pink-500 transition-colors" />
+                                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-pink-400 rounded-xl outline-none transition-all font-bold text-slate-700" placeholder="08x-xxx-xxxx" required={authMode === 'REGISTER'} />
                             </div>
-                            <input 
-                                type={showPassword ? "text" : "password"} 
-                                value={password} 
-                                onChange={(e) => setPassword(e.target.value)} 
-                                className={`w-full pl-11 pr-12 py-3 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl outline-none transition-all font-bold text-slate-700 ${isLogin ? 'focus:border-indigo-400' : 'focus:border-pink-400'} [&::-ms-reveal]:hidden [&::-webkit-password-reveal-button]:hidden`} 
-                                placeholder="••••••••" 
-                                required 
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors outline-none focus:ring-0 z-20"
-                            >
-                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                            </button>
                         </div>
-                    </div>
+                    )}
 
-                    {!isLogin && (
+                    {authMode !== 'FORGOT' && (
+                        <div className="space-y-1">
+                            <div className="flex justify-between items-center ml-1">
+                                <label className="text-xs font-bold text-slate-500 uppercase">{authMode === 'UPDATE' ? 'รหัสผ่านใหม่ *' : 'รหัสผ่าน *'}</label>
+                                {authMode === 'LOGIN' && (
+                                    <button 
+                                        type="button" 
+                                        onClick={() => toggleMode('FORGOT')}
+                                        className="text-[10px] font-black text-indigo-500 hover:text-indigo-700 uppercase tracking-tighter"
+                                    >
+                                        ลืมรหัสผ่าน?
+                                    </button>
+                                )}
+                            </div>
+                            <div className="relative group">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                                    <motion.div
+                                        animate={{ 
+                                            rotate: [0, 8, 0, -8, 0],
+                                            scale: [1, 1.1, 1]
+                                        }}
+                                        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                                    >
+                                        <Lock className={`w-5 h-5 text-slate-400 transition-colors ${authMode === 'LOGIN' || authMode === 'UPDATE' ? 'group-focus-within:text-indigo-500' : 'group-focus-within:text-pink-500'}`} />
+                                    </motion.div>
+                                </div>
+                                <input 
+                                    type={showPassword ? "text" : "password"} 
+                                    value={password} 
+                                    onChange={(e) => setPassword(e.target.value)} 
+                                    className={`w-full pl-11 pr-12 py-3 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl outline-none transition-all font-bold text-slate-700 ${authMode === 'LOGIN' || authMode === 'UPDATE' ? 'focus:border-indigo-400' : 'focus:border-pink-400'} [&::-ms-reveal]:hidden [&::-webkit-password-reveal-button]:hidden`} 
+                                    placeholder="••••••••" 
+                                    required 
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors outline-none focus:ring-0 z-20"
+                                >
+                                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {authMode === 'UPDATE' && (
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 ml-1 uppercase">ยืนยันรหัสผ่านใหม่ *</label>
+                            <div className="relative group">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                                    <Lock className="w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                                </div>
+                                <input 
+                                    type="password" 
+                                    value={confirmPassword} 
+                                    onChange={(e) => setConfirmPassword(e.target.value)} 
+                                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-indigo-400 rounded-xl outline-none transition-all font-bold text-slate-700" 
+                                    placeholder="••••••••" 
+                                    required 
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {authMode === 'REGISTER' && (
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-slate-500 ml-1 uppercase">แนะนำตัว / ฝากถึงทีมงาน</label>
                             <div className="relative group">
@@ -517,13 +613,25 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
                         <button 
                             type="submit" 
                             disabled={isLoading || isConvertingImg}
-                            className={`w-full py-4 rounded-xl font-black text-white text-base shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${isLoading || isConvertingImg ? 'opacity-70 cursor-not-allowed' : ''} ${isLogin ? 'bg-gradient-to-r from-indigo-600 to-violet-600 shadow-indigo-200' : 'bg-gradient-to-r from-pink-500 to-rose-500 shadow-pink-200'}`}
+                            className={`w-full py-4 rounded-xl font-black text-white text-base shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${isLoading || isConvertingImg ? 'opacity-70 cursor-not-allowed' : ''} ${isLogin || isForgot || isUpdate ? 'bg-gradient-to-r from-indigo-600 to-violet-600 shadow-indigo-200' : 'bg-gradient-to-r from-pink-500 to-rose-500 shadow-pink-200'}`}
                         >
-                            {isLoading || isConvertingImg ? 'กำลังประมวลผล...' : isLogin ? 'เข้าสู่ระบบ (Login)' : 'ส่งใบสมัครสมาชิก'} 
+                            {isLoading || isConvertingImg ? 'กำลังประมวลผล...' : isLogin ? 'เข้าสู่ระบบ (Login)' : isForgot ? 'ส่งอีเมลกู้คืนรหัสผ่าน' : isUpdate ? 'อัปเดตรหัสผ่านใหม่' : 'ส่งใบสมัครสมาชิก'} 
                             {(!isLoading && !isConvertingImg) && <ArrowRight className="w-5 h-5" />}
                         </button>
                     </div>
+
+                    {isForgot && (
+                         <button 
+                            type="button"
+                            onClick={() => toggleMode('LOGIN')}
+                            className="w-full mt-4 text-center text-slate-400 font-bold text-sm hover:text-slate-600 transition-colors"
+                        >
+                            กลับไปหน้าเข้าสู่ระบบ
+                        </button>
+                    )}
                 </form>
+                    </>
+                )}
                     </motion.div>
                 </AnimatePresence>
             </div>
@@ -533,15 +641,22 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
       <SuccessModal 
         isOpen={showSuccessModal}
         onClose={handleCloseSuccessModal}
-        title="ส่งใบสมัครแล้ว! 🎉"
+        title={isUpdate ? "เปลี่ยนรหัสผ่านสำเร็จ! 🔐" : "ส่งใบสมัครแล้ว! 🎉"}
         description={
-            <>
-                เย้! เราได้รับข้อมูลของคุณแล้ว <br/>
-                <span className="text-gray-500 text-sm">พี่ Admin จะรีบตรวจความถูกต้องและอนุมัติให้โดยไว</span><br/>
-                <span className="text-pink-500 font-bold text-lg mt-2 block">รอก่อนนะคร้าบ!</span> 
-            </>
+            isUpdate ? (
+                <>
+                    รหัสผ่านของคุณถูกเปลี่ยนเรียบร้อยแล้ว <br/>
+                    <span className="text-gray-500 text-sm">คุณสามารถใช้รหัสผ่านใหม่เข้าสู่ระบบได้ทันที</span>
+                </>
+            ) : (
+                <>
+                    เย้! เราได้รับข้อมูลของคุณแล้ว <br/>
+                    <span className="text-gray-500 text-sm">พี่ Admin จะรีบตรวจความถูกต้องและอนุมัติให้โดยไว</span><br/>
+                    <span className="text-pink-500 font-bold text-lg mt-2 block">รอก่อนนะคร้าบ!</span> 
+                </>
+            )
         }
-        buttonText="กลับไปหน้าล็อกอิน"
+        buttonText={isUpdate ? "ไปหน้าล็อกอิน" : "กลับไปหน้าล็อกอิน"}
       />
     </div>
   );

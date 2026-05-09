@@ -3,6 +3,7 @@ import { Star } from 'lucide-react';
 import { Difficulty } from '../../../types';
 import { DIFFICULTY_LABELS } from '../../../constants';
 import { calculateTaskXP } from '../../../lib/gameLogic';
+import { useGameConfig } from '../../../context/GameConfigContext';
 
 interface GTGamificationProps {
     difficulty: Difficulty;
@@ -12,7 +13,8 @@ interface GTGamificationProps {
 }
 
 const GTGamification: React.FC<GTGamificationProps> = ({ difficulty, setDifficulty, estimatedHours, setEstimatedHours }) => {
-    const totalProjectedXP = calculateTaskXP({ difficulty, estimatedHours }).total;
+    const { config } = useGameConfig();
+    const totalProjectedXP = calculateTaskXP({ difficulty, estimatedHours }, undefined, config).total;
 
     return (
         <div className="bg-emerald-50/50 p-5 rounded-[2rem] border border-emerald-100 relative overflow-hidden">

@@ -3,7 +3,10 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Channel, User, MasterOption } from '../types';
 import { format, endOfWeek, eachDayOfInterval, isSameWeek, isToday, addWeeks, differenceInCalendarDays } from 'date-fns';
-import { ChevronLeft, ChevronRight, Check, X, ClipboardList } from 'lucide-react';
+import { 
+  ChevronLeft, ChevronRight, Check, X, ClipboardList, 
+  History as HistoryIcon 
+} from 'lucide-react';
 import MentorTip from './MentorTip';
 import { useRewards } from '../hooks/useRewards';
 import MemberManagementModal from './member-management'; 
@@ -17,6 +20,7 @@ import TeamHeader from './team/TeamHeader';
 import TeamPoolRow from './team/TeamPoolRow';
 import TeamMemberRow from './team/TeamMemberRow';
 import MyWorkloadModal from './team/MyWorkloadModal'; 
+import WorkHistoryModal from './team/WorkHistoryModal';
 import MobileTeamList from './team/MobileTeamList'; 
 import TeamToolbar from './team/TeamToolbar'; // NEW
 import TeamPagination from './team/TeamPagination'; // NEW
@@ -78,6 +82,7 @@ const TeamView: React.FC<TeamViewProps> = ({
   
   // --- UI CONTROLS ---
   const [isWorkloadModalOpen, setIsWorkloadModalOpen] = useState(false);
+  const [isWorkHistoryOpen, setIsWorkHistoryOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
@@ -380,23 +385,36 @@ const TeamView: React.FC<TeamViewProps> = ({
                   </div>
                   
                   {/* View Controls & Filter Toolbar */}
-                  <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
-                       <TeamToolbar 
-                          viewScope={viewScope} setViewScope={setViewScope}
-                          searchQuery={searchQuery} setSearchQuery={setSearchQuery}
-                          selectedPosition={selectedPosition} setSelectedPosition={setSelectedPosition}
-                          availablePositions={availablePositions}
-                          onReset={resetFilters}
-                       />
+                  <div className="flex flex-col md:flex-row flex-wrap xl:flex-nowrap gap-3 w-full xl:w-auto items-center">
+                       <div className="flex-1 w-full md:w-auto overflow-x-auto no-scrollbar">
+                           <TeamToolbar 
+                              viewScope={viewScope} setViewScope={setViewScope}
+                              searchQuery={searchQuery} setSearchQuery={setSearchQuery}
+                              selectedPosition={selectedPosition} setSelectedPosition={setSelectedPosition}
+                              availablePositions={availablePositions}
+                              onReset={resetFilters}
+                           />
+                       </div>
                        
                        {/* My Tasks Button */}
-                       <button 
-                          onClick={() => setIsWorkloadModalOpen(true)}
-                          className="flex items-center gap-2 px-4 py-3 rounded-2xl text-xs font-bold transition-all bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 shadow-sm shrink-0 justify-center"
-                      >
-                          <ClipboardList className="w-4 h-4" />
-                          <span className="hidden sm:inline">My Tasks</span>
-                      </button>
+                       <div className="flex gap-2 w-full md:w-auto shrink-0">
+                            <button 
+                                onClick={() => setIsWorkloadModalOpen(true)}
+                                className="flex-1 md:flex-none flex items-center gap-2 px-4 py-3 rounded-2xl text-xs font-bold transition-all bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 shadow-sm justify-center min-w-fit"
+                            >
+                                <ClipboardList className="w-4 h-4" />
+                                <span className="hidden sm:inline">My Tasks</span>
+                            </button>
+
+                            <button 
+                                onClick={() => setIsWorkHistoryOpen(true)}
+                                className="flex-1 md:flex-none flex items-center gap-2 px-4 py-3 rounded-2xl text-xs font-bold transition-all bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 shadow-sm justify-center group min-w-fit"
+                            >
+                                <HistoryIcon className="w-4 h-4 group-hover:rotate-[-45deg] transition-transform" />
+                                <span className="hidden xl:inline">Work History</span>
+                                <span className="xl:hidden hidden sm:inline">History</span>
+                            </button>
+                       </div>
                   </div>
                 </div>
 
@@ -501,6 +519,21 @@ const TeamView: React.FC<TeamViewProps> = ({
                 isOpen={isWorkloadModalOpen}
                 onClose={() => setIsWorkloadModalOpen(false)}
                 tasks={tasks}
+                currentUser={currentUser}
+                channels={channels}
+                onOpenTask={onEditTask}
+                onOpenHistory={() => {
+                    setIsWorkloadModalOpen(false);
+                    setIsWorkHistoryOpen(true);
+                }}
+            />
+        )}
+
+        {/* WORK HISTORY MODAL */}
+        {currentUser && (
+            <WorkHistoryModal
+                isOpen={isWorkHistoryOpen}
+                onClose={() => setIsWorkHistoryOpen(false)}
                 currentUser={currentUser}
                 channels={channels}
                 onOpenTask={onEditTask}

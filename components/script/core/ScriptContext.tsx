@@ -27,7 +27,7 @@ export const ScriptProvider: React.FC<ScriptProviderProps> = ({
     children, script, users, channels, masterOptions, currentUser, onClose, onSave, onGenerateAI, onPromote, initialSearchQuery 
 }) => {
     const { showToast } = useToast();
-    const { showConfirm } = useGlobalDialog();
+    const { showConfirm, showAlert } = useGlobalDialog();
     
     const { comments, addComment: addCommentHook, resolveComment: resolveCommentHook, deleteComment: deleteCommentHook } = useScriptComments(script.id);
 
@@ -280,15 +280,30 @@ export const ScriptProvider: React.FC<ScriptProviderProps> = ({
     };
 
     const handleGenerateAIWrapper = async (prompt: string, type: 'HOOK' | 'OUTLINE' | 'FULL') => {
-        if (isReadOnly) return;
-        setIsGenerating(true);
-        const result = await onGenerateAI(prompt || title, type);
-        if (result) {
-            setContent(prev => prev + "<br/><br/>" + result);
-            setIsAIOpen(false);
-            isDirtyRef.current = true;
+        if (isReadOnly) {
+            showAlert("ไม่สามารถใช้งาน AI ได้ขณะที่อยู่ในโหมดอ่านอย่างเดียว (Locked by other)", "แจ้งเตือน");
+            return;
         }
-        setIsGenerating(false);
+
+        setIsGenerating(true);
+        try {
+            const result = await onGenerateAI(prompt || title, type);
+            if (result) {
+                setContent(prev => prev + "<br/><br/>" + result);
+                setIsAIOpen(false);
+                isDirtyRef.current = true;
+                showToast("AI ทำงานสำเร็จแล้ว! ✨", "success");
+            } else {
+                // If result is null, onGenerateAI might have already shown a toast, 
+                // but let's make it more obvious with a Global Alert if needed or just handle the flow.
+                showAlert("AI ไม่สามารถประมวลผลได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง หรือตรวจสอบ API Key", "AI Generation Failed");
+            }
+        } catch (error: any) {
+            console.error("AI Generation Context Error:", error);
+            showAlert(`เกิดข้อผิดพลาดในการเรียกใช้งาน AI: ${error.message || 'Unknown error'}`, "Error");
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const handleInsertCharacter = (charName: string) => {

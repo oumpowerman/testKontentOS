@@ -119,9 +119,20 @@ export const DEFAULT_GAME_CONFIG = {
     }
 };
 
+// --- CONFIG MERGE HELPERS ---
+const getConfigSection = (config: any, section: string, fallback: any) => {
+    const userSection = config?.[section];
+    if (!userSection) return fallback;
+    // Simple shallow merge for the section
+    return { ...fallback, ...userSection };
+};
+
 export const calculateLevel = (xp: number, config: any = DEFAULT_GAME_CONFIG): number => {
+    const levelling = getConfigSection(config, 'LEVELING_SYSTEM', DEFAULT_GAME_CONFIG.LEVELING_SYSTEM);
+    const globals = getConfigSection(config, 'GLOBAL_MULTIPLIERS', DEFAULT_GAME_CONFIG.GLOBAL_MULTIPLIERS);
+    
     // Prefer LEVELING_SYSTEM, fallback to GLOBAL_MULTIPLIERS, then default
-    const base = config.LEVELING_SYSTEM?.base_xp_per_level || config.GLOBAL_MULTIPLIERS?.BASE_XP_PER_LEVEL || 1000;
+    const base = levelling?.base_xp_per_level || globals?.BASE_XP_PER_LEVEL || 1000;
     return Math.floor(xp / base) + 1;
 };
 
@@ -143,9 +154,8 @@ export interface TaskXPBreakdown {
 }
 
 export const calculateTaskXP = (task: any, completionDate?: Date, config: any = DEFAULT_GAME_CONFIG): TaskXPBreakdown => {
-    const cfg = config || DEFAULT_GAME_CONFIG;
-    const diffXP = cfg.DIFFICULTY_XP || DEFAULT_GAME_CONFIG.DIFFICULTY_XP;
-    const globals = cfg.GLOBAL_MULTIPLIERS || DEFAULT_GAME_CONFIG.GLOBAL_MULTIPLIERS;
+    const diffXP = getConfigSection(config, 'DIFFICULTY_XP', DEFAULT_GAME_CONFIG.DIFFICULTY_XP);
+    const globals = getConfigSection(config, 'GLOBAL_MULTIPLIERS', DEFAULT_GAME_CONFIG.GLOBAL_MULTIPLIERS);
 
     const difficulty = (task.difficulty || 'MEDIUM') as Difficulty;
     const estimatedHours = task.estimatedHours || 0;
@@ -179,21 +189,22 @@ export const calculateTaskXP = (task: any, completionDate?: Date, config: any = 
 };
 
 export const evaluateAction = (action: GameActionType, context: any, config: any = DEFAULT_GAME_CONFIG): GameActionResult => {
-    // Ensure config exists, else fallback
     const cfg = config || DEFAULT_GAME_CONFIG;
-    const diffXP = cfg.DIFFICULTY_XP || DEFAULT_GAME_CONFIG.DIFFICULTY_XP;
-    const penalties = cfg.PENALTY_RATES || DEFAULT_GAME_CONFIG.PENALTY_RATES;
-    const attendanceRules = cfg.ATTENDANCE_RULES || DEFAULT_GAME_CONFIG.ATTENDANCE_RULES;
-    const globals = cfg.GLOBAL_MULTIPLIERS || DEFAULT_GAME_CONFIG.GLOBAL_MULTIPLIERS;
-    const kpiRewards = cfg.KPI_REWARDS || DEFAULT_GAME_CONFIG.KPI_REWARDS;
+    const diffXP = getConfigSection(cfg, 'DIFFICULTY_XP', DEFAULT_GAME_CONFIG.DIFFICULTY_XP);
+    const penalties = getConfigSection(cfg, 'PENALTY_RATES', DEFAULT_GAME_CONFIG.PENALTY_RATES);
+    const attendanceRules = getConfigSection(cfg, 'ATTENDANCE_RULES', DEFAULT_GAME_CONFIG.ATTENDANCE_RULES);
+    const globals = getConfigSection(cfg, 'GLOBAL_MULTIPLIERS', DEFAULT_GAME_CONFIG.GLOBAL_MULTIPLIERS);
+    const kpiRewards = getConfigSection(cfg, 'KPI_REWARDS', DEFAULT_GAME_CONFIG.KPI_REWARDS);
 
     switch (action) {
         case 'TASK_COMPLETE': {
-            const { title } = context;
+            const { title, manualBonus } = context;
             const taskName = title || 'งาน';
             
             const breakdown = calculateTaskXP(context, context.completionDate, cfg);
-            const xp = breakdown.total;
+            const baseXP = breakdown.total;
+            const adjustment = Number(manualBonus || 0);
+            const xp = Math.max(0, baseXP + adjustment);
 
             const isEarly = breakdown.early > 0;
             let coins = globals.COIN_TASK || 10;
@@ -206,7 +217,7 @@ export const evaluateAction = (action: GameActionType, context: any, config: any
                 hp: 0,
                 coins,
                 message: isEarly ? `🚀 ส่งงานไวสุดยอด!: ${taskName}` : `✅ ปิดงานสำเร็จ: ${taskName}`,
-                details: `+${xp} XP, +${coins} JP`
+                details: `+${xp} XP (${baseXP}${adjustment >= 0 ? '+' : ''}${adjustment}), +${coins} JP`
             };
         }
 

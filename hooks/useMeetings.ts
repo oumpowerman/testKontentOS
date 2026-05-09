@@ -16,12 +16,15 @@ export const useMeetings = () => {
     const mapMeeting = (m: any): MeetingLog => ({
         id: m.id,
         title: m.title,
-        date: new Date(m.date),
+        date: m.date ? new Date(m.date) : new Date(),
+        startTime: m.start_time || '',
+        endTime: m.end_time || '',
         content: m.content || '',
         sheets: m.sheets || [],
-        decisions: m.decisions || '', // Map decisions
+        decisions: m.decisions || '',
         category: (m.category as MeetingCategory) || 'GENERAL',
         attendees: m.attendees || [],
+        attendance: m.attendance || {},
         tags: m.tags || [],
         agenda: m.agenda || [], 
         assets: m.assets || [],
@@ -55,11 +58,13 @@ export const useMeetings = () => {
         const channel = supabase.channel('realtime-meetings')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'meeting_logs' }, (payload) => {
                 if (payload.eventType === 'INSERT') {
-                    // Handled optimistically in createMeeting, but fetch to be safe/sync with others
-                    // Check if already exists to avoid duplication from optimistic update
                     setMeetings(prev => {
                         if (prev.some(m => m.id === payload.new.id)) return prev;
-                        return [mapMeeting(payload.new), ...prev].sort((a, b) => b.date.getTime() - a.date.getTime());
+                        return [mapMeeting(payload.new), ...prev].sort((a, b) => {
+                            const dateA = new Date(a.date).getTime();
+                            const dateB = new Date(b.date).getTime();
+                            return dateB - dateA;
+                        });
                     });
                 } else if (payload.eventType === 'UPDATE') {
                     setMeetings(prev => prev.map(m => m.id === payload.new.id ? mapMeeting(payload.new) : m));
@@ -73,18 +78,19 @@ export const useMeetings = () => {
 
     const createMeeting = async (title: string, date: Date, userId: string) => {
         try {
-            // FIX Timezone: Use format from date-fns to get 'YYYY-MM-DD' in local time
-            // This prevents UTC conversion shifting the day back
             const dateStr = format(date, 'yyyy-MM-dd');
 
             const payload = {
                 title,
-                date: dateStr, // Send as string "2023-10-26"
+                date: dateStr,
+                start_time: '09:00',
+                end_time: '10:00',
                 content: '',
                 decisions: '',
                 author_id: userId,
                 category: 'GENERAL',
                 attendees: [],
+                attendance: {},
                 tags: [],
                 agenda: [],
                 assets: []
@@ -93,7 +99,6 @@ export const useMeetings = () => {
             const { data, error } = await supabase.from('meeting_logs').insert(payload).select().single();
             if (error) throw error;
             
-            // FIX Refresh: Update state immediately so UI reflects change
             if (data) {
                 const newMeeting = mapMeeting(data);
                 setMeetings(prev => [newMeeting, ...prev]);
@@ -112,28 +117,28 @@ export const useMeetings = () => {
             const payload: any = {
                 updated_at: new Date().toISOString()
             };
-            if (updates.title) payload.title = updates.title;
-            if (updates.content) payload.content = updates.content;
-            if (updates.sheets) payload.sheets = updates.sheets;
-            if (updates.decisions) payload.decisions = updates.decisions; // Add logic
+            if (updates.title !== undefined) payload.title = updates.title;
+            if (updates.content !== undefined) payload.content = updates.content;
+            if (updates.sheets !== undefined) payload.sheets = updates.sheets;
+            if (updates.decisions !== undefined) payload.decisions = updates.decisions;
+            if (updates.startTime !== undefined) payload.start_time = updates.startTime;
+            if (updates.endTime !== undefined) payload.end_time = updates.endTime;
+            if (updates.attendance !== undefined) payload.attendance = updates.attendance;
             
             // Fix Date update with validation
             if (updates.date) {
                 const d = new Date(updates.date);
                 if (isValid(d)) {
                     payload.date = format(d, 'yyyy-MM-dd');
-                } else {
-                    console.warn("Invalid date passed to updateMeeting", updates.date);
-                    // Do not update date if invalid
                 }
             }
             
-            if (updates.attendees) payload.attendees = updates.attendees;
-            if (updates.tags) payload.tags = updates.tags;
-            if (updates.category) payload.category = updates.category;
+            if (updates.attendees !== undefined) payload.attendees = updates.attendees;
+            if (updates.tags !== undefined) payload.tags = updates.tags;
+            if (updates.category !== undefined) payload.category = updates.category;
             
-            if (updates.agenda) payload.agenda = updates.agenda;
-            if (updates.assets) payload.assets = updates.assets;
+            if (updates.agenda !== undefined) payload.agenda = updates.agenda;
+            if (updates.assets !== undefined) payload.assets = updates.assets;
 
             const { error } = await supabase.from('meeting_logs').update(payload).eq('id', id);
             if (error) throw error;

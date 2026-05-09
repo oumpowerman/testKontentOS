@@ -136,7 +136,7 @@ const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ isOpen, onClose, on
     const modalContent = (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
+                <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 pointer-events-none">
                     {/* Backdrop */}
                     <motion.div 
                         initial={{ opacity: 0 }}
@@ -155,7 +155,7 @@ const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ isOpen, onClose, on
                     >
                         {/* Header */}
                         <div className="px-8 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                            <h3 className="font-black text-gray-800 flex items-center gap-2 text-sm uppercase tracking-tight">
+                            <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm uppercase tracking-tight">
                                 <ImageIcon className="w-5 h-5 text-indigo-500" />
                                 เพิ่มรูปภาพ
                             </h3>
@@ -168,14 +168,14 @@ const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ isOpen, onClose, on
                         <div className="flex p-2 bg-gray-100/50 mx-8 mt-8 rounded-2xl">
                             <button 
                                 onClick={() => setActiveTab('upload')}
-                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all ${activeTab === 'upload' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'upload' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                             >
                                 <Upload className="w-4 h-4" />
                                 อัปโหลด
                             </button>
                             <button 
                                 onClick={() => setActiveTab('url')}
-                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all ${activeTab === 'url' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'url' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                             >
                                 <LinkIcon className="w-4 h-4" />
                                 ลิงก์ URL
@@ -202,7 +202,7 @@ const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ isOpen, onClose, on
                                                 <Cloud className="w-10 h-10 text-indigo-500" />
                                             </div>
                                             <div className="text-center">
-                                                <p className="font-black text-gray-800">เชื่อมต่อ Google Drive</p>
+                                                <p className="font-bold text-gray-800">เชื่อมต่อ Google Drive</p>
                                                 <p className="text-xs text-gray-500 mt-2 max-w-[240px] mx-auto leading-relaxed">
                                                     เราจะเก็บรูปภาพของคุณไว้ใน Google Drive เพื่อความรวดเร็วและประหยัดพื้นที่
                                                 </p>
@@ -252,13 +252,13 @@ const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ isOpen, onClose, on
                                         <div className="p-5 bg-amber-50 rounded-[1.5rem] border border-amber-100 flex items-start gap-4">
                                             <AlertCircle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
                                             <div>
-                                                <p className="text-xs font-black text-amber-800 uppercase tracking-wider">แนะนำ: เชื่อมต่อ Google Drive</p>
+                                                <p className="text-xs font-bold text-amber-800 uppercase tracking-wider">แนะนำ: เชื่อมต่อ Google Drive</p>
                                                 <p className="text-[11px] text-amber-700 mt-1 leading-relaxed">
                                                     หากไม่เชื่อมต่อ ระบบจะใช้ Supabase หรือ Base64 แทน ซึ่งอาจทำให้บทความโหลดช้าลง
                                                 </p>
                                                 <button 
                                                     onClick={handleConnect}
-                                                    className="mt-2 text-[11px] font-black text-indigo-600 hover:underline"
+                                                    className="mt-2 text-[11px] font-bold text-indigo-600 hover:underline"
                                                 >
                                                     เชื่อมต่อตอนนี้เลย →
                                                 </button>
@@ -283,7 +283,7 @@ const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ isOpen, onClose, on
                                         whileTap={{ scale: 0.95 }}
                                         type="submit"
                                         disabled={!url.trim()}
-                                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white rounded-2xl font-black shadow-xl shadow-indigo-100 transition-all flex items-center justify-center gap-2"
+                                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white rounded-2xl font-bold shadow-xl shadow-indigo-100 transition-all flex items-center justify-center gap-2"
                                     >
                                         <Check className="w-5 h-5" />
                                         แทรกรูปภาพ
@@ -295,7 +295,7 @@ const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ isOpen, onClose, on
                         <div className="px-8 pb-8">
                             <button 
                                 onClick={onClose}
-                                className="w-full py-4 text-gray-400 hover:text-gray-600 font-black text-sm transition-colors uppercase tracking-widest"
+                                className="w-full py-4 text-gray-400 hover:text-gray-600 font-bold text-sm transition-colors uppercase tracking-widest"
                             >
                                 ยกเลิก
                             </button>

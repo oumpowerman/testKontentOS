@@ -29,6 +29,9 @@ import { format } from 'date-fns';
 import WikiAIDialog from './tools/WikiAIDialog';
 import RichTextEditor from '../ui/RichTextEditor';
 
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
+import { useToast } from '../../context/ToastContext';
+
 interface WikiNodeEditorProps {
     isOpen: boolean;
     onClose: () => void;
@@ -106,6 +109,9 @@ const WikiNodeEditorContent: React.FC<WikiNodeEditorProps> = ({ onClose, node, o
         }
     };
 
+    const { showAlert } = useGlobalDialog();
+    const { showToast } = useToast();
+
     const handleAIGenerate = async (prompt: string, type: 'OUTLINE' | 'SOP' | 'FULL') => {
         if (!onGenerateAI || isGenerating) return;
         setIsGenerating(true);
@@ -114,7 +120,14 @@ const WikiNodeEditorContent: React.FC<WikiNodeEditorProps> = ({ onClose, node, o
             if (result) {
                 setContent(prev => prev ? `${prev}\n\n${result}` : result);
                 setActiveTab('EDIT');
+                showToast("AI เขียนเนื้อหาให้เรียบร้อยแล้ว ✨", "success");
+                setIsAIDialogOpen(false);
+            } else {
+                showAlert("AI ไม่สามารถสร้างเนื้อหาได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง", "AI Error");
             }
+        } catch (error: any) {
+            console.error("Wiki AI Error:", error);
+            showAlert(`เกิดข้อผิดพลาด: ${error.message || 'ไม่เลือก API หรือเกิดปัญหาการเชื่อมต่อ'}`, "AI Generation Failed");
         } finally {
             setIsGenerating(false);
         }

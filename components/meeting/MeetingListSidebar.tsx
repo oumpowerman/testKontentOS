@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { MeetingLog, MeetingCategory, MasterOption } from '../../types';
+import { MeetingLog, MeetingCategory, MasterOption, User } from '../../types';
 import { Search, Trash2, Clock, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Hash, Sparkles, Filter, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { format, endOfMonth, eachDayOfInterval, isToday, addMonths, isFuture, isSameDay, isSameMonth } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,12 +14,13 @@ interface MeetingListSidebarProps {
     setSearchQuery: (val: string) => void;
     currentUser?: any; 
     masterOptions: MasterOption[]; // New Prop
+    users: User[];
 }
 
 type ViewTab = 'UPCOMING' | 'HISTORY';
 
 const MeetingListSidebar: React.FC<MeetingListSidebarProps> = React.memo(({
-    meetings, selectedId, onSelect, onDelete, searchQuery, setSearchQuery, currentUser, masterOptions
+    meetings, selectedId, onSelect, onDelete, searchQuery, setSearchQuery, currentUser, masterOptions, users
 }) => {
     // --- State ---
     const [viewTab, setViewTab] = useState<ViewTab>('UPCOMING');
@@ -161,9 +162,20 @@ const MeetingListSidebar: React.FC<MeetingListSidebarProps> = React.memo(({
                             {/* Attendees */}
                             {meeting.attendees.length > 0 && (
                                 <div className="flex -space-x-1.5">
-                                    {meeting.attendees.slice(0,3).map((_, i) => (
-                                        <div key={i} className="w-5 h-5 rounded-full bg-slate-200 border-2 border-white shadow-sm"></div>
-                                    ))}
+                                    {meeting.attendees.slice(0,3).map((uid, i) => {
+                                        const user = users.find(u => u.id === uid);
+                                        return (
+                                            <div key={i} className="w-5 h-5 rounded-full bg-slate-100 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
+                                                {user?.avatarUrl ? (
+                                                    <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-[6px] font-black text-slate-400 capitalize">
+                                                        {user?.name?.charAt(0) || '?'}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                     {meeting.attendees.length > 3 && <div className="text-[8px] text-slate-400 font-bold ml-2">+{meeting.attendees.length - 3}</div>}
                                 </div>
                             )}

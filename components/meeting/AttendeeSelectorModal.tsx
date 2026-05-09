@@ -97,7 +97,7 @@ const AttendeeSelectorModal: React.FC<AttendeeSelectorModalProps> = ({
                 <div className="px-6 py-5 border-b border-gray-100 bg-white flex flex-col gap-4">
                     <div className="flex justify-between items-center">
                         <div>
-                            <h3 className="text-xl font-black text-gray-800 flex items-center gap-2">
+                            <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                 <Users className="w-6 h-6 text-indigo-600" />
                                 เลือกผู้เข้าร่วมประชุม
                             </h3>
@@ -207,7 +207,7 @@ const AttendeeSelectorModal: React.FC<AttendeeSelectorModalProps> = ({
                 <div className="p-4 border-t border-gray-100 bg-white flex justify-between items-center shrink-0 z-20">
                     <div className="flex items-center gap-2">
                          <span className="text-xs font-bold text-gray-500">เลือกแล้ว:</span>
-                         <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-black">
+                         <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold">
                             {localSelected.length} คน
                          </span>
                          {localSelected.length > 0 && (

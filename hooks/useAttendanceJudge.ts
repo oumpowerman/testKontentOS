@@ -96,7 +96,8 @@ export const useAttendanceJudge = (
             const attendance = attendanceLogs.find(log => log.date === checkDateStr);
 
             // 4. ถ้าไม่มี Log เลย หรือมี Log แต่สถานะไม่ใช่การทำงาน/ลา
-            if (!attendance) {
+            // แก้ไข: เพิ่มการเช็คว่าถ้ามี check_in_time อยู่แล้ว ห้ามเปลี่ยนเป็น ABSENT
+            if (!attendance || (!attendance.checkInTime && attendance.status === 'ABSENT')) {
                  // เช็คว่าเคยโดนหักคะแนน Absent ของวันนี้ไปหรือยัง (กันหักซ้ำ)
                  const absentLockKey = `ABSENT-${checkDateStr}`;
 
@@ -106,20 +107,35 @@ export const useAttendanceJudge = (
 
                      if (alreadyPenalized) {
                          // ถ้ามี Penalty ใน Log แล้วแต่ไม่มี Attendance Log (อาจจะเกิด Error ตอน Insert)
-                         // ให้สร้าง Attendance Log ให้สมบูรณ์เพื่อหยุด Loop
-                         await supabase.from('attendance_logs').upsert({
-                             user_id: currentUser.id,
-                             date: checkDateStr,
-                             status: 'ABSENT',
-                             work_type: 'OFFICE',
-                             note: '[SYSTEM] Auto-marked as Absent (Log Recovery)'
-                         }, { onConflict: 'user_id, date' });
+                         // ให้สร้าง Attendance Log ให้สมบูรณ์เพื่อหยุด Loop เฉพาะกรณีที่ไม่มีเวลาเข้างานจริงๆ
+                         if (!attendance || !attendance.checkInTime) {
+                            await supabase.from('attendance_logs').upsert({
+                                user_id: currentUser.id,
+                                date: checkDateStr,
+                                status: 'ABSENT',
+                                work_type: 'OFFICE',
+                                note: '[SYSTEM] Auto-marked as Absent (Log Recovery)'
+                            }, { onConflict: 'user_id, date' });
+                         }
                          continue;
                      }
 
                      isProcessingRef.current.add(absentLockKey);
 
                      try {
+                         // ตรวจสอบอีกครั้งใน DB ว่าไม่มีเช็คอินจริงๆ ใช่ไหม ก่อนจะเขียนทับเป็น ABSENT
+                         const { data: dbCheck } = await supabase
+                            .from('attendance_logs')
+                            .select('check_in_time')
+                            .eq('user_id', currentUser.id)
+                            .eq('date', checkDateStr)
+                            .maybeSingle();
+                         
+                         if (dbCheck?.check_in_time) {
+                             console.log(`[AutoJudge] Aborting ABSENT for ${checkDateStr} - Check-in time detected in DB`);
+                             continue;
+                         }
+
                          // Insert/Upsert Absent Log and get the ID
                          const { data: newLog, error: insertError } = await supabase.from('attendance_logs').upsert({
                              user_id: currentUser.id,

@@ -96,7 +96,7 @@ const ChatPreview: React.FC<ChatPreviewProps> = ({ content, isOpen, onClose, cha
         <div className="w-full md:w-1/2 bg-[#eef2f6] border-l border-white/50 flex flex-col h-full overflow-hidden absolute md:relative z-20 top-0 animate-in slide-in-from-right-10 duration-300 shadow-2xl md:shadow-none">
             {/* Header */}
             <div className="px-6 py-4 bg-white/80 backdrop-blur-md border-b border-gray-200 flex justify-between items-center shadow-sm z-10 shrink-0">
-                <h3 className="font-black text-gray-700 flex items-center tracking-tight">
+                <h3 className="font-bold text-gray-700 flex items-center tracking-tight">
                     <span className="bg-indigo-100 text-indigo-600 p-1.5 rounded-xl mr-3">
                         <MessageCircle className="w-5 h-5" />
                     </span>
@@ -111,7 +111,7 @@ const ChatPreview: React.FC<ChatPreviewProps> = ({ content, isOpen, onClose, cha
                             title="สลับคนพูดอยู่ขวา (Cycle Right Character)"
                         >
                             <ArrowRightLeft className="w-3.5 h-3.5" />
-                            <span className="text-[9px] font-black uppercase">
+                            <span className="text-[12px] font-bold uppercase">
                                 {activeRightChar || 'สลับฝั่ง'}
                             </span>
                         </button>
@@ -136,8 +136,8 @@ const ChatPreview: React.FC<ChatPreviewProps> = ({ content, isOpen, onClose, cha
                     if (isNarrator) {
                         return (
                             <div key={idx} className="flex flex-col items-center my-6 opacity-80 animate-in fade-in zoom-in-95 duration-500">
-                                <span className="text-[9px] text-gray-400 font-mono mb-1">#{bubble.lineIndex}</span>
-                                <span className="text-xs font-bold text-gray-500 italic bg-gray-200/50 backdrop-blur-sm px-4 py-1.5 rounded-full border border-gray-200 shadow-sm">
+                                <span className="text-[12px] text-gray-400 font-bold mb-1">#{bubble.lineIndex}</span>
+                                <span className="text-sm font-bold text-gray-500 italic bg-gray-200/50 backdrop-blur-sm px-4 py-1.5 rounded-full border border-gray-200 shadow-sm">
                                     {bubble.text}
                                 </span>
                             </div>
@@ -150,15 +150,15 @@ const ChatPreview: React.FC<ChatPreviewProps> = ({ content, isOpen, onClose, cha
                     return (
                         <div key={idx} className={`flex gap-3 ${isRight ? 'flex-row-reverse' : 'flex-row'} animate-in slide-in-from-bottom-2 fade-in duration-300`} style={{ animationDelay: `${idx * 50}ms` }}>
                             {/* Avatar */}
-                            <div className={`w-8 h-8 rounded-full ${avatarColor} flex items-center justify-center text-white text-xs font-black shadow-md border-2 border-white shrink-0`}>
+                            <div className={`w-8 h-8 rounded-full ${avatarColor} flex items-center justify-center text-white text-xs font-bold shadow-md border-2 border-white shrink-0`}>
                                 {bubble.speaker.charAt(0)}
                             </div>
 
                             <div className={`flex flex-col ${isRight ? 'items-end' : 'items-start'} max-w-[75%]`}>
                                 <div className="flex items-center gap-2 mb-1 px-1">
-                                    {isRight && <span className="text-[9px] text-gray-300 font-mono">#{bubble.lineIndex}</span>}
-                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">{bubble.speaker}</span>
-                                    {!isRight && <span className="text-[9px] text-gray-300 font-mono">#{bubble.lineIndex}</span>}
+                                    {isRight && <span className="text-[12px] text-gray-300 font-bold">#{bubble.lineIndex}</span>}
+                                    <span className="text-[12px] text-gray-400 font-bold uppercase tracking-wide">{bubble.speaker}</span>
+                                    {!isRight && <span className="text-[12px] text-gray-300 font-bold">#{bubble.lineIndex}</span>}
                                 </div>
                                 <div className={`
                                     px-4 py-3 text-sm shadow-sm whitespace-pre-wrap leading-relaxed

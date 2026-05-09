@@ -30,6 +30,7 @@ export const useQualityActions = () => {
                 // Prepare context for Engine
                 const engineContext = {
                     ...task,
+                    manualBonus,
                     // Use submissionDate if provided, for accurate Early Bonus calculation
                     completionDate: submissionDate || new Date()
                 };

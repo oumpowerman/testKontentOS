@@ -6,8 +6,9 @@ import { mapAttendanceLog } from './shared';
 import { useUserSession } from '../../context/UserSessionContext';
 
 export const useAttendanceStatus = (userId: string) => {
-    const { attendanceLogs } = useUserSession();
+    const { attendanceLogs, refreshAttendance } = useUserSession();
     const todayDateStr = format(new Date(), 'yyyy-MM-dd');
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const { todayLog, outdatedLogs } = useMemo(() => {
         if (!userId || !attendanceLogs) return { todayLog: null, outdatedLogs: [] };
@@ -36,6 +37,11 @@ export const useAttendanceStatus = (userId: string) => {
         return { todayLog: currentTodayLog, outdatedLogs: currentOutdatedLogs };
     }, [userId, attendanceLogs, todayDateStr]);
 
-    // We don't need isLoading or refresh anymore since it's driven by context
-    return { todayLog, outdatedLogs, isLoading: false, refresh: () => {} };
+    const refresh = useCallback(async () => {
+        setIsRefreshing(true);
+        await refreshAttendance();
+        setIsRefreshing(false);
+    }, [refreshAttendance]);
+
+    return { todayLog, outdatedLogs, isLoading: isRefreshing, refresh };
 };
