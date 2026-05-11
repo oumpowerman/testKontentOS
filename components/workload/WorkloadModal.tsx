@@ -84,7 +84,7 @@ const WorkloadModal: React.FC<WorkloadModalProps> = ({ isOpen, onClose, tasks, u
                             <BatteryCharging className="w-6 h-6 text-yellow-400" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-black tracking-tight">Workload Monitor</h2>
+                            <h2 className="text-xl font-bold tracking-tight">Workload Monitor</h2>
                             <p className="text-slate-400 text-xs font-medium">เช็คปริมาณงานและสุขภาพทีม</p>
                         </div>
                     </div>

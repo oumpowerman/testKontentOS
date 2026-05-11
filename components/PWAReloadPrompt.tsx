@@ -43,7 +43,7 @@ function PWAReloadPrompt() {
                     <RefreshCw className={`w-6 h-6 ${needRefresh ? 'animate-spin-slow' : ''}`} />
                   </div>
                   <div className="pr-2">
-                    <h4 className="text-slate-900 font-black text-lg sm:text-xl tracking-tight leading-tight">
+                    <h4 className="text-slate-900 font-bold text-lg sm:text-xl tracking-tight leading-tight">
                       {offlineReady ? 'พร้อมใช้งานออฟไลน์!' : 'พบเวอร์ชันใหม่! 🚀'}
                     </h4>
                     <p className="text-slate-500 text-xs sm:text-sm font-medium mt-1 leading-relaxed">
@@ -68,14 +68,14 @@ function PWAReloadPrompt() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => updateServiceWorker(true)}
-                      className="flex-[2] flex items-center justify-center gap-2 py-3.5 bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-200 hover:shadow-indigo-300 transition-all border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1"
+                      className="flex-[2] flex items-center justify-center gap-2 py-3.5 bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-2xl font-medium text-sm shadow-xl shadow-indigo-200 hover:shadow-indigo-300 transition-all border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1"
                     >
                       <RefreshCw className="w-4 h-4" />
                       อัปเดตเดี๋ยวนี้
                     </motion.button>
                     <button
                       onClick={close}
-                      className="flex-1 py-3.5 bg-slate-50 text-slate-500 rounded-2xl font-bold text-sm hover:bg-slate-100 transition-all"
+                      className="flex-1 py-3.5 bg-slate-50 text-slate-500 rounded-2xl font-medium text-sm hover:bg-slate-100 transition-all"
                     >
                       ไว้ก่อน
                     </button>
@@ -85,7 +85,7 @@ function PWAReloadPrompt() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={close}
-                    className="w-full py-3.5 bg-emerald-50 text-emerald-600 rounded-2xl font-black text-sm border-2 border-emerald-100 hover:bg-emerald-100 transition-all active:scale-95"
+                    className="w-full py-3.5 bg-emerald-50 text-emerald-600 rounded-2xl font-medium text-sm border-2 border-emerald-100 hover:bg-emerald-100 transition-all active:scale-95"
                   >
                     รับทราบ
                   </motion.button>

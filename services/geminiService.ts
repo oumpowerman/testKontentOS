@@ -79,3 +79,42 @@ export const extractContentAnalyticsFromImage = async (base64Image: string) => {
         throw error;
     }
 };
+
+export const validateApiKey = async (): Promise<{ isValid: boolean; error?: string }> => {
+    if (!process.env.GEMINI_API_KEY) {
+        return { isValid: false, error: "Missing API Key" };
+    }
+
+    try {
+        // Lightweight attempt to check if the connection and key are valid
+        // using generateContent with a tiny prompt
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: "Hi",
+        });
+
+        if (response && response.text) {
+            return { isValid: true };
+        }
+        return { isValid: false, error: "Empty response from AI" };
+    } catch (error: any) {
+        console.error("Gemini Validation Error:", error);
+        
+        let errorMessage = "AI Connection Failed";
+        
+        if (error?.message?.includes("API key not valid")) {
+            errorMessage = "Invalid API Key";
+        } else if (error?.message?.includes("quota") || error?.status === 429) {
+            errorMessage = "Quota Exceeded";
+        } else if (error?.status === 403) {
+            errorMessage = "Key Permission Denied";
+        } else if (error?.message?.includes("fetch") || !navigator.onLine) {
+            errorMessage = "Network Offline";
+        }
+
+        return { 
+            isValid: false, 
+            error: errorMessage 
+        };
+    }
+};
