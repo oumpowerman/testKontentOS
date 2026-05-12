@@ -119,8 +119,13 @@ export const useAttendanceJudge = (
             const attendance = attendanceLogs.find(log => log.date === checkDateStr);
 
             // 4. ถ้าไม่มี Log เลย หรือมี Log แต่สถานะไม่ใช่การทำงาน/ลา
-            // แก้ไข: เพิ่มการเช็คว่าถ้ามี check_in_time อยู่แล้ว ห้ามเปลี่ยนเป็น ABSENT
-            if (!attendance || (!attendance.checkInTime && attendance.status === 'ABSENT')) {
+            // แก้ไข: ป้องกันการเขียนทับสถานะที่ถูกต้องอยู่แล้ว (เช่น WORKING, COMPLETED, PENDING_VERIFY, ACTION_REQUIRED)
+            const isPossiblyAbsent = !attendance || (attendance.status === 'ABSENT' && !attendance.checkInTime);
+            
+            // หากมี Log อยู่แล้วและสถานะไม่ใช่ ABSENT ห้ามทำอะไรทั้งสิ้น (เพื่อความปลอดภัย)
+            const hasValidWorkStatus = attendance && !['ABSENT'].includes(attendance.status);
+
+            if (isPossiblyAbsent && !hasValidWorkStatus) {
                  // เช็คว่าเคยโดนหักคะแนน Absent ของวันนี้ไปหรือยัง (กันหักซ้ำ)
                  const absentLockKey = `ABSENT-${checkDateStr}`;
 
@@ -129,33 +134,31 @@ export const useAttendanceJudge = (
                      const alreadyPenalized = await hasPenaltyInLogs('ATTENDANCE_ABSENT', `ABSENT:${checkDateStr}`);
 
                      if (alreadyPenalized) {
-                         // ถ้ามี Penalty ใน Log แล้วแต่ไม่มี Attendance Log (อาจจะเกิด Error ตอน Insert)
-                         // ให้สร้าง Attendance Log ให้สมบูรณ์เพื่อหยุด Loop เฉพาะกรณีที่ไม่มีเวลาเข้างานจริงๆ
-                         if (!attendance || !attendance.checkInTime) {
-                            await supabase.from('attendance_logs').upsert({
-                                user_id: currentUser.id,
-                                date: checkDateStr,
-                                status: 'ABSENT',
-                                work_type: 'OFFICE',
-                                note: '[SYSTEM] Auto-marked as Absent (Log Recovery)'
-                            }, { onConflict: 'user_id, date' });
-                         }
+                         // ถ้ามี Penalty ใน Log แล้วแต่ไม่มี Attendance Log ในเครื่อง (แต่เราต้องเช็ค DB ก่อนเผื่อมีคนแก้)
+                         // เพื่อความปลอดภัย: ห้าม Upsert ทับมั่วซั่วถ้าเราไม่แน่ใจว่าใน DB มีของดีอยู่ไหม
                          continue;
                      }
 
                      isProcessingRef.current.add(absentLockKey);
 
                      try {
-                         // ตรวจสอบอีกครั้งใน DB ว่าไม่มีเช็คอินจริงๆ ใช่ไหม ก่อนจะเขียนทับเป็น ABSENT
-                         const { data: dbCheck } = await supabase
+                         // ตรวจสอบอีกครั้งใน DB ว่าไม่มีเช็คอินจริงๆ ใช่ไหม และสถานะไม่ใช่สถานะปกป้อง ก่อนจะเขียนทับเป็น ABSENT
+                         const { data: dbCheck, error: dbError } = await supabase
                             .from('attendance_logs')
-                            .select('check_in_time')
+                            .select('id, check_in_time, status')
                             .eq('user_id', currentUser.id)
                             .eq('date', checkDateStr)
                             .maybeSingle();
                          
-                         if (dbCheck?.check_in_time) {
-                             console.log(`[AutoJudge] Aborting ABSENT for ${checkDateStr} - Check-in time detected in DB`);
+                         // ถ้ามี Error หรือพบข้อมูลที่ไม่ควรทับ ให้ยกเลิกการหักคะแนน
+                         if (dbError) {
+                            console.error(`[AutoJudge] DB Error checking ${checkDateStr}:`, dbError);
+                            isProcessingRef.current.delete(absentLockKey);
+                            continue;
+                         }
+
+                         if (dbCheck && (dbCheck.check_in_time || !['ABSENT'].includes(dbCheck.status))) {
+                             console.log(`[AutoJudge] Aborting ABSENT for ${checkDateStr} - Valid record detected in DB (Status: ${dbCheck.status})`);
                              continue;
                          }
 
@@ -185,8 +188,6 @@ export const useAttendanceJudge = (
                          console.error("[AutoJudge] Error in absent processing:", err);
                          isProcessingRef.current.delete(absentLockKey);
                      }
-                     
-                     // Note: We don't delete from isProcessingRef here to prevent re-processing in the same session
                  }
             }
         }

@@ -256,20 +256,9 @@ const GeneralTaskInputs: React.FC<GeneralTaskInputsProps> = ({
         }
 
         try {
-            // 1. Create Review Record directly here to include new fields
-            const { error: reviewError } = await supabase.from('task_reviews').insert({
-                task_id: initialData.id,
-                round: nextRound,
-                scheduled_at: new Date().toISOString(),
-                status: 'PENDING',
-                reviewer_id: null,
-                submission_notes: submissionNotes || null,
-                submission_asset_url: assets.length > 0 ? assets[assets.length - 1].url : null
-            });
-            if (reviewError) throw reviewError;
-
-            // 2. Update Task Status & Log
-            const updatedTask = await sendToQC(initialData, currentUser!);
+            // Updated: Pass submission notes and assets directly to sendToQC to avoid double insertion
+            const submissionAssetUrl = assets.length > 0 ? assets[assets.length - 1].url : undefined;
+            const updatedTask = await sendToQC(initialData, currentUser!, submissionNotes || undefined, submissionAssetUrl);
             
             setStatus(updatedTask.status);
             onSave(updatedTask);

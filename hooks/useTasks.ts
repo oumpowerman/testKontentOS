@@ -457,7 +457,7 @@ export const useTasks = (setIsModalOpen?: (isOpen: boolean) => void) => {
         }
     };
 
-    const handleSendToQC = async (task: Task, currentUser: User) => {
+    const handleSendToQC = async (task: Task, currentUser: User, submissionNotes?: string, submissionAssetUrl?: string) => {
         const currentRoundCount = task.reviews?.length || 0;
         const nextRound = currentRoundCount + 1;
 
@@ -474,7 +474,9 @@ export const useTasks = (setIsModalOpen?: (isOpen: boolean) => void) => {
             round: nextRound,
             scheduled_at: new Date().toISOString(),
             status: 'PENDING',
-            reviewer_id: null
+            reviewer_id: null,
+            submission_notes: submissionNotes || null,
+            submission_asset_url: submissionAssetUrl || null
         });
         if (reviewError) throw reviewError;
 
