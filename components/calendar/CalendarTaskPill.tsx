@@ -104,7 +104,7 @@ const CalendarTaskPill: React.FC<CalendarTaskPillProps> = ({
                 
                 switch (chip.type) {
                     case 'CHANNEL': return t.channelId === chip.value;
-                    case 'FORMAT': return t.contentFormat === chip.value;
+                    case 'FORMAT': return t.contentFormats && t.contentFormats.includes(chip.value);
                     case 'STATUS': return t.status === chip.value;
                     case 'PILLAR': return t.pillar === chip.value;
                     default: return false;

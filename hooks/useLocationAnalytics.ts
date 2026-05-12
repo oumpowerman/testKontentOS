@@ -39,7 +39,7 @@ export const useLocationAnalytics = (rangeType: DateRangeType, customStart?: Dat
             // Fetch Content Usage
             const { data, error } = await supabase
                 .from('contents')
-                .select('id, title, shoot_date, shoot_location, status, content_format')
+                .select('id, title, shoot_date, shoot_location, status, content_formats')
                 .not('shoot_location', 'is', null)
                 .not('shoot_date', 'is', null)
                 .order('shoot_date', { ascending: false });
@@ -124,7 +124,7 @@ export const useLocationAnalytics = (rangeType: DateRangeType, customStart?: Dat
                     id: item.id, 
                     title: item.title, 
                     status: item.status, 
-                    format: item.content_format
+                    format: item.content_formats && item.content_formats.length > 0 ? item.content_formats[0] : null
                 });
                 stats[normalizeKey].totalClips += 1;
             }

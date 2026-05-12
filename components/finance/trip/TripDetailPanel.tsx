@@ -379,7 +379,7 @@ const TripDetailPanel: React.FC<Props> = ({ trip, onClose, onRefresh, onUpdate, 
                                         <div className="min-w-0">
                                             <p className="font-bold text-slate-800 text-base truncate">{content.title}</p>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[10px] text-teal-600 bg-white px-2 py-0.5 rounded-lg border border-teal-100 font-bold">{content.content_format || 'General'}</span>
+                                                <span className="text-[10px] text-teal-600 bg-white px-2 py-0.5 rounded-lg border border-teal-100 font-bold">{content.content_formats && content.content_formats.length > 0 ? content.content_formats[0] : 'General'}</span>
                                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${content.status === 'DONE' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>{content.status}</span>
                                             </div>
                                         </div>

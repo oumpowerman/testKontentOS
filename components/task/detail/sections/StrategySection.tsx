@@ -78,9 +78,7 @@ const StrategySection: React.FC<StrategySectionProps> = ({ task }) => {
                                 </span>
                             ))
                         ) : (
-                            <span key={task.contentFormat} className="px-4 py-2 bg-amber-50 text-amber-500 rounded-xl text-sm font-semibold border border-amber-100 shadow-sm">
-                                {getOptionLabel(task.contentFormat, 'FORMAT')}
-                            </span>
+                            <span className="text-slate-400 text-sm font-medium italic">Unspecified</span>
                         )}
                     </div>
                 </motion.div>

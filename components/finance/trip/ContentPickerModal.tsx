@@ -31,7 +31,10 @@ const ContentPickerModal: React.FC<ContentPickerModalProps> = ({
             if (searchQuery && !t.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
             
             // 2. Format
-            if (filterFormat !== 'ALL' && t.contentFormat !== filterFormat) return false;
+            if (filterFormat !== 'ALL') {
+                const formats = t.contentFormats || [];
+                if (!formats.includes(filterFormat)) return false;
+            }
 
             // 3. Time
             if (filterTime === 'RECENT') {
@@ -194,9 +197,9 @@ const ContentPickerModal: React.FC<ContentPickerModalProps> = ({
                                             </div>
 
                                             <div>
-                                                {task.contentFormat && (
+                                                {task.contentFormats && task.contentFormats.length > 0 && (
                                                     <span className="inline-block text-[9px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md mb-2">
-                                                        {task.contentFormat}
+                                                        {task.contentFormats[0]}
                                                     </span>
                                                 )}
                                                 <h4 className={`font-bold text-sm line-clamp-3 leading-relaxed ${isSelected ? 'text-indigo-900' : 'text-slate-700'}`}>

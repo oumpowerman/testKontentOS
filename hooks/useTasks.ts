@@ -35,8 +35,7 @@ const TASK_FIELD_META: Record<string, { label: string; type: 'TEXT' | 'DATE' | '
 
     // Content Specific
     channelId: { label: 'ช่องทาง', type: 'CHANNEL' },
-    contentFormat: { label: 'รูปแบบ', type: 'MASTER' },
-    contentFormats: { label: 'รูปแบบ (หลาย)', type: 'ARRAY' },
+    contentFormats: { label: 'รูปแบบ', type: 'ARRAY' },
     pillar: { label: 'แกนเนื้อหา', type: 'MASTER' },
     category: { label: 'หมวดหมู่', type: 'MASTER' },
     targetPlatforms: { label: 'แพลตฟอร์ม', type: 'ARRAY' },
@@ -236,7 +235,6 @@ export const useTasks = (setIsModalOpen?: (isOpen: boolean) => void) => {
 
         const contentPayload = isContent ? {
             pillar: taskToSave.pillar,
-            content_format: taskToSave.contentFormat || (taskToSave.contentFormats && taskToSave.contentFormats.length > 0 ? taskToSave.contentFormats[0] : null),
             content_formats: taskToSave.contentFormats || [],
             category: taskToSave.category || null,
             remark: taskToSave.remark || null,

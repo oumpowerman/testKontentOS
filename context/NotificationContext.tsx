@@ -255,8 +255,19 @@ export const NotificationProvider: React.FC<{ currentUser: User | null, children
     };
 
     const dismissNotification = async (id: string) => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
-        if (!id.includes('_')) { // Only delete real DB rows
+        // Optimistically remove from local state
+        if (id.startsWith('leave_')) {
+            const leaveId = id.replace('leave_', '');
+            setLeaveRequests(prev => prev.filter(r => r.id !== leaveId));
+        } else if (id.startsWith('deadline_')) {
+            const deadlineId = id.replace('deadline_', '');
+            setDeadlineRequests(prev => prev.filter(r => r.id !== deadlineId));
+        } else {
+            setNotifications(prev => prev.filter(n => n.id !== id));
+        }
+
+        // Persistent removal (only for DB-stored notifications)
+        if (!id.includes('_')) { 
             await supabase.from('notifications').delete().eq('id', id);
         }
     };

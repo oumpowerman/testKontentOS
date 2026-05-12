@@ -50,7 +50,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
         channelId, setChannelId,
         targetPlatforms,
         pillar, setPillar,
-        contentFormat, setContentFormat,
         contentFormats, setContentFormats,
         category, setCategory,
         ideaOwnerIds, setIdeaOwnerIds,

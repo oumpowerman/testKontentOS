@@ -101,7 +101,6 @@ export interface Task {
     channelId?: string;
     targetPlatforms?: Platform[];
     pillar?: ContentPillar | string;
-    contentFormat?: ContentFormat | string; // Legacy single format
     contentFormats?: (ContentFormat | string)[]; // New multi-format support
     category?: string;
     isUnscheduled?: boolean;
@@ -133,6 +132,7 @@ export interface Task {
     // Production
     shootDate?: Date;
     shootLocation?: string;
+    shootTripId?: string; // New
     shootTimeStart?: string; // New
     shootTimeEnd?: string;   // New
     shootNotes?: string;     // New

@@ -255,7 +255,7 @@ const BoardView: React.FC<BoardViewProps> = ({
                                         {columnTasks.map((task, index) => {
                                             const channel = getChannelInfo(task.channelId);
                                             const avatar = getAssigneeAvatar(task.assigneeIds.length > 0 ? task.assigneeIds : task.ideaOwnerIds);
-                                            const formatLabel = task.contentFormat ? getOptionLabel(task.contentFormat, 'FORMAT') : null;
+                                            const formatLabel = task.contentFormats && task.contentFormats.length > 0 ? getOptionLabel(task.contentFormats[0], 'FORMAT') : null;
                                             const cardStyle = getCardBgTint(statusColor, task.id);
                                             
                                             return (

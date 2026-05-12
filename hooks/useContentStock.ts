@@ -63,8 +63,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         
         targetPlatforms: Array.isArray(data.target_platform) ? data.target_platform : [],
         pillar: data.pillar,
-        contentFormat: data.content_format,
-        contentFormats: Array.isArray(data.content_formats) ? data.content_formats : (data.content_format ? [data.content_format] : []),
+        contentFormats: data.content_formats || [],
         category: data.category,
         isUnscheduled: data.is_unscheduled,
         
@@ -235,7 +234,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         if (currentFilters.channelId !== 'ALL' && task.channelId !== currentFilters.channelId) return false;
         
         if (currentFilters.format.length > 0) {
-            const taskFormats = task.contentFormats || (task.contentFormat ? [task.contentFormat] : []);
+            const taskFormats = task.contentFormats || [];
             const hasMatch = taskFormats.some(f => currentFilters.format.includes(f));
             if (!hasMatch) return false;
         }

@@ -58,11 +58,9 @@ const ContentForm: React.FC<ContentFormProps> = ({
         endDate, setEndDate,
         isStock, setIsStock,
         status, setStatus,
-        priority, setPriority,
         channelId, setChannelId,
         targetPlatforms, 
         pillar, setPillar,
-        contentFormat, setContentFormat,
         contentFormats, setContentFormats,
         category, setCategory,
         publishedLinks, handleLinkChange,
@@ -296,17 +294,13 @@ const ContentForm: React.FC<ContentFormProps> = ({
                 title,
                 description,
                 status: targetStatus,
-                priority,
                 startDate: new Date(startDate),
                 endDate: new Date(endDate),
                 assigneeIds,
                 // Add new review to array to block duplicate button clicks if re-opened
                 reviews: [...(initialData.reviews || []), newOptimisticReview as any],
                 // ...
-                assigneeType: initialData.assigneeType || 'TEAM',
                 targetPosition: initialData.targetPosition,
-                difficulty: initialData.difficulty || 'MEDIUM',
-                estimatedHours: initialData.estimatedHours || 0,
                 assets,
                 showOnBoard: true 
             };
@@ -419,7 +413,6 @@ const ContentForm: React.FC<ContentFormProps> = ({
 
                             {/* 6. Format & Pillar */}
                             <CFCategorization 
-                                contentFormat={contentFormat} setContentFormat={setContentFormat}
                                 contentFormats={contentFormats} setContentFormats={setContentFormats}
                                 pillar={pillar} setPillar={setPillar}
                                 category={category} setCategory={setCategory}

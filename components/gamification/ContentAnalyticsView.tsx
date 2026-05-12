@@ -14,6 +14,9 @@ import AnalyticsCharts from '../analytics/dashboard/AnalyticsCharts';
 import AnalyticsListTable from '../analytics/dashboard/AnalyticsListTable';
 import PendingActionsAlert from '../analytics/dashboard/PendingActionsAlert';
 import AnalyticsEntryModal from './AnalyticsEntryModal';
+import TaskModal from '../TaskModal';
+import { useTeam } from '../../hooks/useTeam';
+import { useTasks } from '../../hooks/useTasks';
 
 interface ContentWithAnalytics extends Task {
     analytics?: ContentAnalytics[];
@@ -21,6 +24,8 @@ interface ContentWithAnalytics extends Task {
 
 const ContentAnalyticsView: React.FC = () => {
     const { channels } = useChannels();
+    const { allUsers: users } = useTeam();
+    const { handleSaveTask, handleDeleteTask } = useTasks();
     const [data, setData] = useState<ContentWithAnalytics[]>([]);
     const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -29,6 +34,7 @@ const ContentAnalyticsView: React.FC = () => {
     const [channelFilter, setChannelFilter] = useState('ALL');
     const [timeRange, setTimeRange] = useState('90'); // Default to 90 days
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [detailTask, setDetailTask] = useState<Task | null>(null);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -107,20 +113,35 @@ const ContentAnalyticsView: React.FC = () => {
                 };
             });
 
-            // 4. Scan for pending entries
-            const eightDaysAgo = subDays(new Date(), 8);
+            // 4. Scan for pending entries (Targeting the 7-day reporting threshold)
+            const sevenDaysAgo = subDays(new Date(), 7);
+            const fortyFiveDaysAgo = subDays(new Date(), 45); // Keep a generous backlog
+            
             const pending = enrichedData.filter((item: any) => {
-                // Triple-Check: Must be scheduled, in terminal status, and within timeframe
+                // Triple-Check: Must be scheduled and in terminal status (Posted/Done)
                 const currentStatus = (item.status || '').toUpperCase();
                 const isActuallyPosted = !item.isUnscheduled && (
                     currentStatus.includes('DONE') || 
-                    ['PUBLISHED', 'FINAL', 'POSTED'].includes(currentStatus)
+                    ['PUBLISHED', 'FINAL', 'POSTED', 'COMPLETE', 'COMPLETED'].includes(currentStatus)
                 );
                 if (!isActuallyPosted) return false;
 
                 const publishDate = item.endDate;
                 const hasAnalytics = item.analytics && item.analytics.length > 0;
-                return publishDate && isAfter(publishDate, eightDaysAgo) && !hasAnalytics;
+                
+                // Show items that have reached the 7-day mark but are not too old to be irrelevant
+                // Logic: publishDate <= sevenDaysAgo AND publishDate >= fortyFiveDaysAgo
+                const isReachedReportingMark = publishDate && !isAfter(publishDate, sevenDaysAgo);
+                const isNotTooOld = publishDate && isAfter(publishDate, fortyFiveDaysAgo);
+                
+                return isReachedReportingMark && isNotTooOld && !hasAnalytics;
+            }).sort((a, b) => {
+                // "ยิ่งเป็น 7 วันพอดียิ่งสำคัญมากสุด" (The closer it is to exactly 7 days, the higher the priority)
+                // Since we already filtered for age >= 7 days (date <= sevenDaysAgo),
+                // the most recent date is the one closest to the 7-day mark.
+                const timeA = a.endDate ? new Date(a.endDate).getTime() : 0;
+                const timeB = b.endDate ? new Date(b.endDate).getTime() : 0;
+                return timeB - timeA; // Descending order = most recent first
             });
 
             setData(enrichedData as any);
@@ -252,7 +273,7 @@ const ContentAnalyticsView: React.FC = () => {
                     >
                         <PendingActionsAlert 
                             pendingTasks={pendingTasks} 
-                            onAction={(task) => setSelectedTask(task)} 
+                            onAction={(task) => setDetailTask(task)} 
                         />
                     </motion.div>
                 )}
@@ -303,6 +324,30 @@ const ContentAnalyticsView: React.FC = () => {
                     onSave={() => {
                         fetchData(); // Refresh on save
                     }}
+                />
+            )}
+
+            {detailTask && (
+                <TaskModal 
+                    isOpen={!!detailTask}
+                    onClose={() => setDetailTask(null)}
+                    initialData={detailTask}
+                    channels={channels}
+                    users={users}
+                    onSave={async (t) => {
+                        await handleSaveTask(t, detailTask);
+                        fetchData();
+                    }}
+                    onUpdate={async (t) => {
+                        await handleSaveTask(t, detailTask);
+                        fetchData();
+                    }}
+                    onDelete={async (id) => {
+                        await handleDeleteTask(id);
+                        setDetailTask(null);
+                        fetchData();
+                    }}
+                    initialContentTab="INSIGHT"
                 />
             )}
         </div>

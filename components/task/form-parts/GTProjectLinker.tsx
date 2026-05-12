@@ -68,14 +68,14 @@ const GTProjectLinker: React.FC<Props> = ({ projectId, setProjectId, projects, c
             const fetchSingle = async () => {
                 const { data } = await supabase
                     .from('contents')
-                    .select('id, title, status, content_format')
+                    .select('id, title, status, content_formats')
                     .eq('id', projectId)
                     .single();
                 
                 if (data) {
                     setResolvedParent({
                         ...data,
-                        contentFormat: data.content_format
+                        contentFormats: data.content_formats || []
                     } as unknown as Task);
                 }
             };
@@ -91,7 +91,7 @@ const GTProjectLinker: React.FC<Props> = ({ projectId, setProjectId, projects, c
         try {
             let query = supabase
                 .from('contents')
-                .select('id, title, status, channel_id, created_at, content_format')
+                .select('id, title, status, channel_id, created_at, content_formats')
                 .order('created_at', { ascending: false });
 
             // Apply Filters
@@ -102,7 +102,7 @@ const GTProjectLinker: React.FC<Props> = ({ projectId, setProjectId, projects, c
                 query = query.eq('channel_id', selectedChannel);
             }
             if (selectedFormat !== 'ALL') {
-                query = query.eq('content_format', selectedFormat);
+                query = query.overlaps('content_formats', [selectedFormat]);
             }
 
             // Pagination Range
@@ -118,9 +118,9 @@ const GTProjectLinker: React.FC<Props> = ({ projectId, setProjectId, projects, c
                     title: d.title,
                     status: d.status,
                     channelId: d.channel_id,
-                    contentFormat: d.content_format,
+                    contentFormats: d.content_formats || [],
                     createdAt: d.created_at
-                })) as Task[];
+                })) as unknown as Task[];
                 
                 if (isLoadMore) {
                     setRemoteProjects(prev => [...prev, ...mapped]);
@@ -211,9 +211,9 @@ const GTProjectLinker: React.FC<Props> = ({ projectId, setProjectId, projects, c
                                 <span className={`text-[8px] px-1.5 py-0.5 rounded border font-bold uppercase ${STATUS_COLORS[resolvedParent.status as Status] || 'bg-gray-100 text-gray-500'}`}>
                                     {getStatusLabel(resolvedParent.status)}
                                 </span>
-                                {resolvedParent.contentFormat && (
+                                {resolvedParent.contentFormats && resolvedParent.contentFormats.length > 0 && (
                                     <span className="text-[8px] px-1.5 py-0.5 rounded border border-purple-100 bg-purple-50 text-purple-600 font-bold uppercase">
-                                        {getFormatLabel(resolvedParent.contentFormat)}
+                                        {getFormatLabel(resolvedParent.contentFormats[0])}
                                     </span>
                                 )}
                             </div>
@@ -385,9 +385,9 @@ const GTProjectLinker: React.FC<Props> = ({ projectId, setProjectId, projects, c
                                                         <span className={`text-[9px] px-2 py-0.5 rounded-md font-bold uppercase border ${STATUS_COLORS[proj.status as Status] || 'bg-gray-100 text-gray-500'}`}>
                                                             {getStatusLabel(proj.status)}
                                                         </span>
-                                                        {proj.contentFormat && (
+                                                        {proj.contentFormats && proj.contentFormats.length > 0 && (
                                                             <span className="text-[9px] px-2 py-0.5 rounded-md font-bold uppercase border bg-purple-50 text-purple-600 border-purple-100">
-                                                                {getFormatLabel(proj.contentFormat)}
+                                                                {getFormatLabel(proj.contentFormats[0])}
                                                             </span>
                                                         )}
                                                     </div>

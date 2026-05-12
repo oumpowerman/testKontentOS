@@ -204,7 +204,7 @@ export const useDashboardStats = (tasks: Task[], currentUser: User) => {
                     return (config.statusKeys || []).includes(t.status || '');
                 } 
                 else if (config.filterType === 'FORMAT') {
-                    const formats = t.contentFormats || (t.contentFormat ? [t.contentFormat] : []);
+                    const formats = t.contentFormats || [];
                     return (config.statusKeys || []).some(key => formats.includes(key));
                 }
                 else if (config.filterType === 'PILLAR') {

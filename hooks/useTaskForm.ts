@@ -31,7 +31,6 @@ export const useTaskForm = ({ initialData, selectedDate, channels, lockedType, m
     const [channelId, setChannelId] = useState<string>('');
     const [targetPlatforms, setTargetPlatforms] = useState<Platform[]>(['YOUTUBE', 'FACEBOOK', 'TIKTOK', 'INSTAGRAM']);
     const [pillar, setPillar] = useState<string>('');
-    const [contentFormat, setContentFormat] = useState<string>(''); // Legacy
     const [contentFormats, setContentFormats] = useState<string[]>([]); // New Multi
     const [category, setCategory] = useState('');
     
@@ -97,11 +96,9 @@ export const useTaskForm = ({ initialData, selectedDate, channels, lockedType, m
             
             // Handle Legacy vs Multi
             if (initialData.contentFormats && Array.isArray(initialData.contentFormats)) {
-                setContentFormats(initialData.contentFormats);
-                setContentFormat(initialData.contentFormats[0] || '');
+                setContentFormats(initialData.contentFormats as string[]);
             } else {
-                setContentFormat(initialData.contentFormat || '');
-                setContentFormats(initialData.contentFormat ? [initialData.contentFormat] : []);
+                setContentFormats([]);
             }
             
             setCategory(initialData.category || '');
@@ -142,7 +139,6 @@ export const useTaskForm = ({ initialData, selectedDate, channels, lockedType, m
             setPillar(pillarOptions.find(o => o.isDefault)?.key || '');
             
             const defaultFormat = formatOptions.find(o => o.isDefault)?.key || '';
-            setContentFormat(defaultFormat);
             setContentFormats(defaultFormat ? [defaultFormat] : []);
             
             const defaultCat = categoryOptions.find(o => o.isDefault);
@@ -225,7 +221,6 @@ export const useTaskForm = ({ initialData, selectedDate, channels, lockedType, m
                 channelId,
                 targetPlatforms,
                 pillar: pillar as ContentPillar,
-                contentFormat: contentFormats[0] || contentFormat as ContentFormat, // Fallback for legacy
                 contentFormats: contentFormats, // New Multi
                 category,
                 ideaOwnerIds,
@@ -281,7 +276,6 @@ export const useTaskForm = ({ initialData, selectedDate, channels, lockedType, m
         channelId, setChannelId,
         targetPlatforms, 
         pillar, setPillar,
-        contentFormat, setContentFormat,
         contentFormats, setContentFormats,
         category, setCategory,
         ideaOwnerIds, setIdeaOwnerIds,

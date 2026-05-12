@@ -148,7 +148,7 @@ export const parseContentStockCSV = async (
                         end_date: targetDate.toISOString(),
                         is_unscheduled: isUnscheduled,
                         priority: 'MEDIUM',
-                        content_format: contentFormat,
+                        content_formats: contentFormat ? [contentFormat] : [],
                         pillar: pillar,
                         category: category,
                         remark: colMap.remark > -1 ? cols[colMap.remark] : '',

@@ -36,7 +36,7 @@ export const useSidebarBadges = (currentUser: User) => {
             let qgCount = 0;
             const { data: qgData } = await supabase
                 .from('task_reviews')
-                .select('id, task:tasks!inner(assignee_ids, idea_owner_ids, editor_ids)', { count: 'exact', head: false })
+                .select('id, task:tasks(assignee_ids), content:contents(assignee_ids, idea_owner_ids, editor_ids)', { count: 'exact', head: false })
                 .eq('status', 'PENDING');
             
             if (qgData) {
@@ -45,10 +45,11 @@ export const useSidebarBadges = (currentUser: User) => {
                 } else {
                     qgCount = qgData.filter((r: any) => {
                          const t = r.task;
-                         if (!t) return false;
-                         return (t.assignee_ids || []).includes(currentUser.id) || 
-                                (t.idea_owner_ids || []).includes(currentUser.id) ||
-                                (t.editor_ids || []).includes(currentUser.id);
+                         const c = r.content;
+                         return (t?.assignee_ids || []).includes(currentUser.id) || 
+                                (c?.assignee_ids || []).includes(currentUser.id) || 
+                                (c?.idea_owner_ids || []).includes(currentUser.id) ||
+                                (c?.editor_ids || []).includes(currentUser.id);
                     }).length;
                 }
             }

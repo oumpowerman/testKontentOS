@@ -43,7 +43,7 @@ export const isTaskMatchingQuest = (task: Task, quest: WeeklyQuest): boolean => 
 
     // 6. Format Match (Multi-format support)
     if (quest.targetFormat && quest.targetFormat.length > 0) {
-        const taskFormats = task.contentFormats || (task.contentFormat ? [task.contentFormat] : []);
+        const taskFormats = task.contentFormats || [];
         const hasMatch = taskFormats.some(f => quest.targetFormat?.includes(f));
         if (!hasMatch) return false;
     }

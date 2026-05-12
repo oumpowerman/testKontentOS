@@ -31,7 +31,7 @@ const SidebarBadge: React.FC<SidebarBadgeProps> = ({ view, currentUser, collapse
                     case 'QUALITY_GATE': {
                         const { data } = await supabase
                             .from('task_reviews')
-                            .select('id, task:tasks!inner(assignee_ids, idea_owner_ids, editor_ids)')
+                            .select('id, task:tasks(assignee_ids), content:contents(assignee_ids, idea_owner_ids, editor_ids)')
                             .eq('status', 'PENDING');
                         
                         if (data) {
@@ -40,9 +40,11 @@ const SidebarBadge: React.FC<SidebarBadgeProps> = ({ view, currentUser, collapse
                             } else {
                                 const filtered = data.filter((r: any) => {
                                     const t = r.task;
+                                    const c = r.content;
                                     return (t?.assignee_ids || []).includes(currentUser.id) || 
-                                           (t?.idea_owner_ids || []).includes(currentUser.id) ||
-                                           (t?.editor_ids || []).includes(currentUser.id);
+                                           (c?.assignee_ids || []).includes(currentUser.id) || 
+                                           (c?.idea_owner_ids || []).includes(currentUser.id) ||
+                                           (c?.editor_ids || []).includes(currentUser.id);
                                 });
                                 setInternalCount(filtered.length);
                             }

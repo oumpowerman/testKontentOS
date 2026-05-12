@@ -244,9 +244,9 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({ task, users, masterOptio
                 </div>
 
                 {/* Additional badge for Content Format if available */}
-                {task.contentFormat && (
+                {task.contentFormats && task.contentFormats.length > 0 && (
                     <span className={`text-[8px] px-1.5 py-0.5 rounded border font-bold ${typeConfig.badgeTheme} max-w-[80px] truncate`}>
-                        {task.contentFormat}
+                        {task.contentFormats[0]}
                     </span>
                 )}
 
@@ -261,7 +261,7 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({ task, users, masterOptio
                         </button>
                     )}
 
-                    {columnType !== 'DONE' && columnType !== 'WAITING' && !task.contentFormat && (
+                    {columnType !== 'DONE' && columnType !== 'WAITING' && (!task.contentFormats || task.contentFormats.length === 0) && (
                         <div className={`p-1 rounded-full transition-colors ${columnType === 'DOING' ? 'bg-indigo-50 text-indigo-500' : 'bg-gray-50 text-gray-300'}`}>
                             <ArrowRight className="w-3 h-3" />
                         </div>

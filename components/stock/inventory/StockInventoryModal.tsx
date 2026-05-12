@@ -41,9 +41,9 @@ const StockInventoryModal: React.FC<StockInventoryModalProps> = ({ isOpen, onClo
                     pillar: d.pillar,
                     category: d.category,
                     status: d.status,
-                    contentFormat: d.content_format,
+                    contentFormats: d.content_formats || [],
                     createdAt: d.created_at ? new Date(d.created_at) : undefined
-                } as Task));
+                } as unknown as Task));
                 setStockTasks(mapped);
             }
         } catch (err) {

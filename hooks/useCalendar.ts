@@ -115,7 +115,7 @@ export const useCalendar = ({ tasks, userId, onMoveTask }: UseCalendarProps) => 
         switch (chip.type) {
             case 'CHANNEL': return t.channelId === chip.value;
             case 'FORMAT': {
-                const formats = t.contentFormats || (t.contentFormat ? [t.contentFormat] : []);
+                const formats = t.contentFormats || [];
                 return formats.includes(chip.value);
             }
             case 'STATUS': return t.status === chip.value;

@@ -34,6 +34,7 @@ interface TaskModalProps {
   onOpenTask?: (task: Task, currentViewMode?: string) => void;
   hasHistory?: boolean;
   initialViewMode?: string | null;
+  initialContentTab?: 'CONTENT' | 'INSIGHT';
 }
 
 // --- 🎨 UI CONFIGURATION: Contextual Themes ---
@@ -48,7 +49,7 @@ const TAB_CONFIGS: Record<string, { color: string, icon: any, label: string }> =
 };
 
 const TaskModal: React.FC<TaskModalProps> = ({ 
-    isOpen, onClose, onSave, onUpdate, onDelete, initialData, selectedDate, channels, users, lockedType, masterOptions = [], currentUser, projects = [], onOpenTask, hasHistory, initialViewMode 
+    isOpen, onClose, onSave, onUpdate, onDelete, initialData, selectedDate, channels, users, lockedType, masterOptions = [], currentUser, projects = [], onOpenTask, hasHistory, initialViewMode, initialContentTab = 'CONTENT'
 }) => {
   const { fetchTaskById, setTasks } = useTaskContext();
 
@@ -539,6 +540,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                                 onEdit={() => setMode('EDIT')}
                                 onDelete={onDelete ? () => onDelete(taskData.id) : undefined}
                                 onClose={onClose}
+                                initialTab={initialContentTab}
                             />
                         ) : (
                             <TaskDetail 

@@ -56,25 +56,37 @@ const NotificationPopover: React.FC<NotificationPopoverProps> = ({
         }
     };
     
+    const [isActionLoading, setIsActionLoading] = useState<string | null>(null);
+
     const handleAction = async (id: string, action: 'APPROVE' | 'REJECT') => {
+        // Optimistic UI: Dismiss immediately for snappiness
+        if (onDismiss) onDismiss(id);
+        
+        setIsActionLoading(id);
+
         if (id.startsWith('leave_')) {
             const leaveId = id.replace('leave_', '');
             const request = leaveRequests.find(r => r.id === leaveId);
             
-            if (action === 'APPROVE') {
-                if (request && onApproveLeave) {
-                    await onApproveLeave(request);
+            try {
+                if (action === 'APPROVE') {
+                    if (request && onApproveLeave) {
+                        await onApproveLeave(request);
+                    }
+                } else {
+                    if (onRejectLeave) {
+                        await onRejectLeave(leaveId, 'Rejected via notification');
+                    }
                 }
-            } else {
-                if (onRejectLeave) {
-                    await onRejectLeave(leaveId, 'Rejected via notification');
-                }
+            } catch (err) {
+                console.error("Action failed:", err);
+            } finally {
+                setIsActionLoading(null);
             }
         } else {
+            setIsActionLoading(null);
             await showAlert(`${action} Notification ${id} (Mock Action)`);
         }
-        
-        if (onDismiss) onDismiss(id);
     };
 
     if (!isOpen) return null;

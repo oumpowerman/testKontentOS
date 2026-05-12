@@ -57,7 +57,6 @@ export const useStockSync = (
                     globalMatch.status !== localTask.status ||
                     globalMatch.channelId !== localTask.channelId ||
                     globalMatch.remark !== localTask.remark ||
-                    globalMatch.contentFormat !== localTask.contentFormat ||
                     globalMatch.pillar !== localTask.pillar ||
                     globalMatch.category !== localTask.category ||
                     globalMatch.isUnscheduled !== localTask.isUnscheduled ||

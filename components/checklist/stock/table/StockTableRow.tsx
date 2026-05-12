@@ -193,7 +193,7 @@ const StockTableRow = React.memo(React.forwardRef<HTMLTableRowElement, StockTabl
                             )}
                         </div>
                     ) : (
-                        task.contentFormat && <span className="text-[9px] text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100 font-bold flex items-center">{getFormatLabel(task.contentFormat)}</span>
+                        null
                     )}
                     {task.pillar && <span className="text-[9px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 font-bold flex items-center">{getPillarLabel(task.pillar)}</span>}
                     {task.category && <span className="text-[9px] text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100 font-bold flex items-center"><Tag className="w-2.5 h-2.5 mr-1 opacity-50" />{getCategoryLabel(task.category)}</span>}

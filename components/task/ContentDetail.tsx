@@ -19,13 +19,14 @@ interface ContentDetailProps {
     onEdit: () => void;
     onDelete?: () => void;
     onClose: () => void;
+    initialTab?: 'CONTENT' | 'INSIGHT';
 }
 
 const ContentDetail: React.FC<ContentDetailProps> = ({ 
-    task, users, channels, onEdit, onDelete, onClose 
+    task, users, channels, onEdit, onDelete, onClose, initialTab = 'CONTENT'
 }) => {
     const [isHeaderExpanded, setIsHeaderExpanded] = React.useState(false);
-    const [activeTab, setActiveTab] = React.useState<'CONTENT' | 'INSIGHT'>('CONTENT');
+    const [activeTab, setActiveTab] = React.useState<'CONTENT' | 'INSIGHT'>(initialTab);
 
     const containerVariants = {
         hidden: { opacity: 0, y: 15 },

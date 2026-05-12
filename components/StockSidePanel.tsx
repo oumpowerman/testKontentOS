@@ -66,7 +66,10 @@ const StockSidePanel: React.FC<StockSidePanelProps> = ({
             // 3. Multi-Select Filters
             if (filters.channels.length > 0 && !filters.channels.includes(t.channelId || '')) return false;
             if (filters.statuses.length > 0 && !filters.statuses.includes(t.status as string)) return false;
-            if (filters.formats.length > 0 && !filters.formats.includes(t.contentFormat || '')) return false;
+            if (filters.formats.length > 0) {
+                const formats = t.contentFormats || [];
+                if (!filters.formats.some(f => formats.includes(f))) return false;
+            }
             if (filters.pillars.length > 0 && !filters.pillars.includes(t.pillar || '')) return false;
             if (filters.categories.length > 0 && !filters.categories.includes(t.category || '')) return false;
 
@@ -233,8 +236,8 @@ const StockSidePanel: React.FC<StockSidePanelProps> = ({
                                             {/* Footer Row */}
                                             <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-1">
                                                 <div className="flex items-center gap-1 text-[10px] text-gray-400 font-medium">
-                                                    {task.contentFormat ? (
-                                                        <span className="bg-gray-100 px-1.5 rounded">{task.contentFormat}</span>
+                                                    {task.contentFormats && task.contentFormats.length > 0 ? (
+                                                        <span className="bg-gray-100 px-1.5 rounded">{task.contentFormats[0]}</span>
                                                     ) : (
                                                         <>
                                                             <LayoutTemplate className="w-3 h-3" />

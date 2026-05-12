@@ -110,8 +110,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             priority: data.priority,
             tags: data.tags || [],
             pillar: data.pillar,
-            contentFormat: data.content_format || data.contentFormat,
-            contentFormats: Array.isArray(data.content_formats) ? data.content_formats : (data.content_format ? [data.content_format] : []),
+            contentFormats: data.content_formats || [],
             category: data.category,
             remark: data.remark,
             startDate: new Date(startDateVal),
@@ -137,6 +136,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             publishedLinks: data.published_links || {},
             shootDate: data.shoot_date ? new Date(data.shoot_date) : undefined,
             shootLocation: data.shoot_location || undefined,
+            shootTripId: data.shoot_trip_id || undefined,
             localPath: data.local_path || undefined,
             driveLabel: data.drive_label || undefined,
             isInShootQueue: data.is_in_shoot_queue || data.isInShootQueue || false,
@@ -171,18 +171,17 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // 🚀 STRATEGY: Select only essential fields for Board/Calendar (Reduce payload size by ~70%)
         const contentFields = `
-            id, title, status, priority, pillar, category, content_format, content_formats, 
-            start_date, end_date, channel_id, created_at, updated_at, is_unscheduled, 
-            target_platform, assignee_ids, idea_owner_ids, editor_ids, target_position, 
-            shoot_date, is_in_shoot_queue, is_soft_finished, sla_revert_count,
-            difficulty, assignee_type,
+            id, title, description, status, pillar, category, content_formats, 
+            start_date, end_date, channel_id, created_at, updated_at, is_unscheduled, remark,
+            target_platform, assignee_ids, idea_owner_ids, editor_ids, shoot_trip_id,
+            shoot_date, is_in_shoot_queue, is_soft_finished, sla_revert_count, 
             task_reviews(id, round, status, is_completed)
         `.replace(/\s+/g, '');
 
         const taskFields = `
-            id, title, status, priority, pillar, category, channel_id, start_date, end_date, created_at, updated_at, 
-            assignee_ids, content_id, show_on_board, target_position, roadmap_id, script_id, is_unscheduled,
-            sla_revert_count, difficulty, assignee_type, content_format,
+            id, title, status, priority, start_date, end_date, created_at, updated_at, 
+            assignee_ids, content_id, show_on_board, target_position, roadmap_id, 
+            sla_revert_count, difficulty, assignee_type, estimated_hours,
             contents(title), task_reviews(id, round, status, is_completed)
         `.replace(/\s+/g, '');
 

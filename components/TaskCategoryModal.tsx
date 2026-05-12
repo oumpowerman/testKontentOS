@@ -132,14 +132,14 @@ const TaskCategoryModal: React.FC<TaskCategoryModalProps> = ({
                                                 </span>
                                             );
                                         })()}
-                                        {task.contentFormat && (() => {
-                                            const f = task.contentFormat.toString().toUpperCase();
+                                        {task.contentFormats && task.contentFormats.length > 0 && (() => {
+                                            const f = task.contentFormats[0].toString().toUpperCase();
                                             const masterFormat = masterOptions.find(opt => 
                                                 opt.type === 'FORMAT' && opt.key.toUpperCase() === f
                                             );
                                             return (
                                                 <span className="px-2 py-0.5 rounded text-[10px] font-bold border border-indigo-100 bg-indigo-50 text-indigo-600">
-                                                    {masterFormat?.label || task.contentFormat}
+                                                    {masterFormat?.label || task.contentFormats[0]}
                                                 </span>
                                             );
                                         })()}

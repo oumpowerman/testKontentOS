@@ -174,7 +174,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
             const { data: tripsData, error } = await supabase
                 .from('shoot_trips')
-                .select(`*, finance_transactions (id, amount, net_amount, type, category_key, name), contents (id, title, content_format, status, shoot_date, shoot_location)`)
+                .select(`*, finance_transactions (id, amount, net_amount, type, category_key, name), contents (id, title, content_formats, status, shoot_date, shoot_location)`)
                 .order('date', { ascending: false });
 
             if (error) throw error;
@@ -202,7 +202,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
             const { data: unlinkedData } = await supabase
                 .from('contents')
-                .select('id, title, shoot_date, shoot_location, content_format, status')
+                .select('id, title, shoot_date, shoot_location, content_formats, status')
                 .is('shoot_trip_id', null)
                 .not('shoot_date', 'is', null)
                 .not('shoot_location', 'is', null);
@@ -230,7 +230,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                         id: c.id,
                         title: c.title,
                         status: c.status,
-                        contentFormat: c.content_format,
+                        contentFormats: c.content_formats || [],
                         type: 'CONTENT',
                         description: '',
                         priority: 'MEDIUM',

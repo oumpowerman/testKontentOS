@@ -26,7 +26,9 @@ export const useAttendanceJudge = (
             if (!matchUser) return false;
             
             const matchType = log.action_type === actionType;
-            const matchId = !targetId || log.related_id === targetId;
+            // Robust check: Log might store targetId as string or UUID depending on DB state
+            const logRelatedId = typeof log.related_id === 'string' ? log.related_id : JSON.stringify(log.related_id);
+            const matchId = !targetId || logRelatedId === targetId;
             const matchDesc = !descriptionMatch || (log.description && log.description.includes(descriptionMatch));
             return matchType && matchId && matchDesc;
         });
@@ -34,19 +36,19 @@ export const useAttendanceJudge = (
         if (localMatch) return true;
 
         // 2. If not in local logs (e.g. pushed out of last 100), check DB directly (Robust)
-        // Only if targetId exists, we can do a precise check
         if (targetId) {
             try {
                 const { data, error } = await supabase
                     .from('game_logs')
                     .select('id')
                     .eq('user_id', currentUser.id)
-                    .eq('related_id', targetId)
+                    .eq('related_id', targetId) // DB column is UUID, targetId from toValidUuid is UUID
                     .maybeSingle();
                 
                 if (data) return true;
+                if (error) console.error("[AttendanceJudge] DB Penalty Check Error:", error);
             } catch (err) {
-                console.error("[AttendanceJudge] DB Penalty Check Error:", err);
+                console.error("[AttendanceJudge] DB sync error for penalty:", err);
             }
         }
 
@@ -119,11 +121,15 @@ export const useAttendanceJudge = (
             const attendance = attendanceLogs.find(log => log.date === checkDateStr);
 
             // 4. ถ้าไม่มี Log เลย หรือมี Log แต่สถานะไม่ใช่การทำงาน/ลา
-            // แก้ไข: ป้องกันการเขียนทับสถานะที่ถูกต้องอยู่แล้ว (เช่น WORKING, COMPLETED, PENDING_VERIFY, ACTION_REQUIRED)
-            const isPossiblyAbsent = !attendance || (attendance.status === 'ABSENT' && !attendance.checkInTime);
+            // 🔒 [STRICT GUARD] ป้องกันการเขียนทับสถานะที่ถูกต้องอยู่แล้ว (เช่น WORKING, COMPLETED, PENDING_VERIFY)
+            // หากมี checkInTime อยู่แล้ว ห้ามระบุว่าเป็น ABSENT เด็ดขาด
+            const isPossiblyAbsent = !attendance || (attendance.status?.toUpperCase() === 'ABSENT' && !attendance.checkInTime);
             
-            // หากมี Log อยู่แล้วและสถานะไม่ใช่ ABSENT ห้ามทำอะไรทั้งสิ้น (เพื่อความปลอดภัย)
-            const hasValidWorkStatus = attendance && !['ABSENT'].includes(attendance.status);
+            // หากมี Log อยู่ในเครื่องแล้วและมีเวลาเข้างาน หรือสถานะไม่ใช่ ABSENT ห้ามทำอะไรทั้งสิ้น
+            const hasValidWorkStatus = attendance && (
+                attendance.checkInTime || 
+                !['ABSENT'].includes(attendance.status?.toUpperCase())
+            );
 
             if (isPossiblyAbsent && !hasValidWorkStatus) {
                  // เช็คว่าเคยโดนหักคะแนน Absent ของวันนี้ไปหรือยัง (กันหักซ้ำ)
@@ -134,15 +140,14 @@ export const useAttendanceJudge = (
                      const alreadyPenalized = await hasPenaltyInLogs('ATTENDANCE_ABSENT', `ABSENT:${checkDateStr}`);
 
                      if (alreadyPenalized) {
-                         // ถ้ามี Penalty ใน Log แล้วแต่ไม่มี Attendance Log ในเครื่อง (แต่เราต้องเช็ค DB ก่อนเผื่อมีคนแก้)
-                         // เพื่อความปลอดภัย: ห้าม Upsert ทับมั่วซั่วถ้าเราไม่แน่ใจว่าใน DB มีของดีอยู่ไหม
+                         // ถ้ามี Penalty ใน Log แล้ว ห้ามเขียนทับข้อมูลมั่วซั่ว
                          continue;
                      }
 
                      isProcessingRef.current.add(absentLockKey);
 
                      try {
-                         // ตรวจสอบอีกครั้งใน DB ว่าไม่มีเช็คอินจริงๆ ใช่ไหม และสถานะไม่ใช่สถานะปกป้อง ก่อนจะเขียนทับเป็น ABSENT
+                         // 🔥 [FINAL GUARD] ตรวจสอบอีกครั้งใน DB ว่าไม่มีเช็คอินจริงๆ ใช่ไหม และสถานะไม่ใช่สถานะปกป้อง ก่อนจะเขียนทับเป็น ABSENT
                          const { data: dbCheck, error: dbError } = await supabase
                             .from('attendance_logs')
                             .select('id, check_in_time, status')
@@ -157,8 +162,12 @@ export const useAttendanceJudge = (
                             continue;
                          }
 
-                         if (dbCheck && (dbCheck.check_in_time || !['ABSENT'].includes(dbCheck.status))) {
-                             console.log(`[AutoJudge] Aborting ABSENT for ${checkDateStr} - Valid record detected in DB (Status: ${dbCheck.status})`);
+                         const dbStatus = dbCheck?.status?.toUpperCase() || '';
+                         const hasTimeInDB = !!dbCheck?.check_in_time;
+                         const isValidStatusInDB = dbCheck && !['ABSENT'].includes(dbStatus);
+
+                         if (dbCheck && (hasTimeInDB || isValidStatusInDB)) {
+                             console.log(`[AutoJudge] ABORT: Valid record found in DB for ${checkDateStr} (Status: ${dbStatus}, HasTime: ${hasTimeInDB})`);
                              continue;
                          }
 

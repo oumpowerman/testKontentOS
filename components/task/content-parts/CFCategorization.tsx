@@ -4,8 +4,6 @@ import { MasterOption } from '../../../types';
 import OptionSelectionModal from '../../ui/OptionSelectionModal';
 
 interface CFCategorizationProps {
-    contentFormat: string;
-    setContentFormat: (val: string) => void;
     contentFormats: string[];
     setContentFormats: (val: string[]) => void;
     pillar: string;
@@ -18,7 +16,7 @@ interface CFCategorizationProps {
 }
 
 const CFCategorization: React.FC<CFCategorizationProps> = ({ 
-    contentFormat, setContentFormat, contentFormats, setContentFormats, pillar, setPillar, category, setCategory,
+    contentFormats, setContentFormats, pillar, setPillar, category, setCategory,
     formatOptions, pillarOptions, categoryOptions
 }) => {
     const [activeModal, setActiveModal] = useState<'FORMAT' | 'PILLAR' | 'CATEGORY' | null>(null);

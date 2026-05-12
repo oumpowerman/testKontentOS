@@ -244,9 +244,9 @@ const DoneHistoryModal: React.FC<DoneHistoryModalProps> = ({ isOpen, onClose, ta
                                                     <Calendar className="w-3 h-3 mr-1" />
                                                     {format(new Date(task.endDate), 'd MMM yyyy')}
                                                 </span>
-                                                {task.contentFormat && (
+                                                {task.contentFormats && task.contentFormats.length > 0 && (
                                                     <span className="bg-purple-50 text-purple-600 px-2 py-0.5 rounded border border-purple-100 font-bold">
-                                                        {task.contentFormat}
+                                                        {task.contentFormats[0]}
                                                     </span>
                                                 )}
                                                 {!isContent && (

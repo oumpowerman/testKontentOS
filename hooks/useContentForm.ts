@@ -23,14 +23,12 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
     const [endDate, setEndDate] = useState('');
     const [isStock, setIsStock] = useState(false);
     const [status, setStatus] = useState<string>(''); 
-    const [priority, setPriority] = useState<Priority>('MEDIUM');
     const [tags, setTags] = useState<string[]>([]);
     
     // Content Specifics
     const [channelId, setChannelId] = useState<string>('');
     const [targetPlatforms, setTargetPlatforms] = useState<Platform[]>(['YOUTUBE', 'FACEBOOK', 'TIKTOK', 'INSTAGRAM']);
     const [pillar, setPillar] = useState<string>('');
-    const [contentFormat, setContentFormat] = useState<string>(''); // Legacy
     const [contentFormats, setContentFormats] = useState<string[]>([]); // New Multi
     const [category, setCategory] = useState('');
     const [publishedLinks, setPublishedLinks] = useState<Record<string, string>>({}); 
@@ -48,8 +46,7 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
     
     // Other
     const [assets, setAssets] = useState<TaskAsset[]>([]);
-    const [performance, setPerformance] = useState<TaskPerformance | undefined>(undefined);
-    
+        
     // Script Integration
     const [scriptId, setScriptId] = useState<string | undefined>(undefined);
     
@@ -72,7 +69,6 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
             setEndDate(initialData.endDate ? format(initialData.endDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
             setIsStock(!!initialData.isUnscheduled);
             setStatus(initialData.status);
-            setPriority(initialData.priority);
             setTags(initialData.tags || []);
             
             setChannelId(initialData.channelId || '');
@@ -82,11 +78,9 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
             
             // Handle Legacy vs Multi
             if (initialData.contentFormats && Array.isArray(initialData.contentFormats)) {
-                setContentFormats(initialData.contentFormats);
-                setContentFormat(initialData.contentFormats[0] || '');
+                setContentFormats(initialData.contentFormats as string[]);
             } else {
-                setContentFormat(initialData.contentFormat || '');
-                setContentFormats(initialData.contentFormat ? [initialData.contentFormat] : []);
+                setContentFormats([]);
             }
             
             setCategory(initialData.category || '');
@@ -103,7 +97,6 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
             setAssigneeIds(initialData.assigneeIds || []);
             
             setAssets(initialData.assets || []);
-            setPerformance(initialData.performance);
             setScriptId(initialData.scriptId); // Link script
         } else {
             // Defaults for New Content
@@ -118,8 +111,7 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
             // DYNAMIC DEFAULT STATUS: Take the first one from sorted list
             const defaultStatus = statusOptions.find(o => o.isDefault)?.key || (statusOptions.length > 0 ? statusOptions[0].key : 'TODO');
             setStatus(defaultStatus);
-            
-            setPriority('MEDIUM');
+        
             setTags(sourceScript?.tags || []);
             
             if (sourceScript?.channelId) setChannelId(sourceScript.channelId);
@@ -130,7 +122,6 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
             setPillar(pillarOptions.find(o => o.isDefault)?.key || '');
             
             const defaultFormat = formatOptions.find(o => o.isDefault)?.key || '';
-            setContentFormat(defaultFormat);
             setContentFormats(defaultFormat ? [defaultFormat] : []);
             
             const defaultCat = sourceScript?.category || categoryOptions.find(o => o.isDefault)?.key || '';
@@ -146,7 +137,6 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
             setEditorIds([]);
             setAssigneeIds([]);
             setAssets([]);
-            setPerformance(undefined);
             setPublishedLinks({});
             setScriptId(sourceScript?.id); // Linkage
         }
@@ -195,7 +185,7 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
                 description,
                 remark,
                 status: status as Status,
-                priority,
+                priority: 'MEDIUM', //
                 tags,
                 
                 // Dates
@@ -207,7 +197,6 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
                 channelId,
                 targetPlatforms: targetPlatforms, // Array format is key for Quest Matching
                 pillar: pillar as ContentPillar,
-                contentFormat: contentFormats[0] || contentFormat as ContentFormat, // Fallback for legacy
                 contentFormats: contentFormats, // New Multi
                 category,
                 publishedLinks,
@@ -224,17 +213,11 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
                 assigneeIds, // Support
 
                 // Assets & Script
-                assets,
-                performance,
+                assets,   
                 scriptId, // Linkage
-                
-                // Defaults
-                difficulty: 'MEDIUM',
-                estimatedHours: 0,
-                assigneeType: 'TEAM'
             };
 
-            await onSave(newTask); // Wait for save (usually async in parent wrapper)
+            await onSave(newTask as Task); // Wait for save (usually async in parent wrapper)
         } catch (err) {
             console.error(err);
             setError('Save failed');
@@ -267,12 +250,10 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
         endDate, setEndDate,
         isStock, setIsStock,
         status, setStatus,
-        priority, setPriority,
         
         channelId, setChannelId,
         targetPlatforms, 
         pillar, setPillar,
-        contentFormat, setContentFormat,
         contentFormats, setContentFormats,
         category, setCategory,
         publishedLinks, handleLinkChange,
@@ -286,7 +267,6 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
         editorIds, setEditorIds,
         assigneeIds, setAssigneeIds,
         assets, 
-        performance,
         scriptId, setScriptId,
 
         error,

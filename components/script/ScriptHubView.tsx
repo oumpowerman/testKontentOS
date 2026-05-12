@@ -315,7 +315,7 @@ const ScriptHubView: React.FC<ScriptHubViewProps> = ({ currentUser, users, initi
             start_date: contentTask.startDate,
             end_date: contentTask.endDate,
             target_platform: contentTask.targetPlatforms,
-            content_format: contentTask.contentFormat,
+            content_formats: contentTask.contentFormats,
             pillar: contentTask.pillar,
             category: contentTask.category,
             is_unscheduled: contentTask.isUnscheduled,
