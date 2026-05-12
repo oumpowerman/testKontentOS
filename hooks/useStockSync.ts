@@ -84,11 +84,9 @@ export const useStockSync = (
                      console.log(`[StockSync] Updating local item: ${localTask.id}`);
                      updateLocalItem(globalMatch);
                 }
-            } else {
-                // Item exists locally but NOT globally -> It was DELETED from TaskContext
-                console.log(`[StockSync] Deleting local item (not in global): ${localTask.id}`);
-                updateLocalItem({ id: localTask.id } as Task, true);
             }
+            // Logic for deleting items not in globalTasks was removed because globalTasks 
+            // is a sliding window cache (TaskContext) and may not contain all paginated items.
         });
 
         // 2. Sync Additions (Iterate Global List)

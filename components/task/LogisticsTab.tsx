@@ -9,7 +9,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../../context/ToastContext';
 import { supabase } from '../../lib/supabase';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
-import TaskDetail from './TaskDetail';
 
 interface LogisticsTabProps {
     parentTask: Task;
@@ -46,7 +45,6 @@ const LogisticsTab: React.FC<LogisticsTabProps> = ({ parentTask, users, currentU
 
     // Action Modal State
     const [actionTask, setActionTask] = useState<Task | null>(null);
-    const [detailTask, setDetailTask] = useState<Task | null>(null);
     const [adminPassReason, setAdminPassReason] = useState('');
     const [isActionProcessing, setIsActionProcessing] = useState(false);
 
@@ -402,7 +400,7 @@ const LogisticsTab: React.FC<LogisticsTabProps> = ({ parentTask, users, currentU
                                 
                                 <div className="flex-1 min-w-0 pointer-events-auto">
                                     <button 
-                                        onClick={() => setDetailTask(task)}
+                                        onClick={() => onOpenTask ? onOpenTask(task, 'DETAILS') : showToast('ไม่สามารถเปิดรายละเอียดได้ในขณะนี้', 'warning')}
                                         className={`text-sm font-medium text-left hover:text-indigo-600 transition-colors ${isDone ? 'line-through text-gray-500' : 'text-gray-800'}`}
                                     >
                                         {task.title}
@@ -437,7 +435,7 @@ const LogisticsTab: React.FC<LogisticsTabProps> = ({ parentTask, users, currentU
                                     {/* Action Buttons */}
                                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button 
-                                            onClick={() => setDetailTask(task)}
+                                            onClick={() => onOpenTask ? onOpenTask(task, 'DETAILS') : showToast('ไม่สามารถเปิดรายละเอียดได้ในขณะนี้', 'warning')}
                                             className="p-1 sm:p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                                             title="ดูรายละเอียด"
                                         >
@@ -471,7 +469,7 @@ const LogisticsTab: React.FC<LogisticsTabProps> = ({ parentTask, users, currentU
             {/* --- USER PICKER MODAL (SMART) --- */}
             <AnimatePresence>
                 {isAssigneeModalOpen && createPortal(
-                    <div className="fixed inset-0 z-[15000] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[20000] flex items-center justify-center p-4">
                         <motion.div 
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -567,7 +565,7 @@ const LogisticsTab: React.FC<LogisticsTabProps> = ({ parentTask, users, currentU
 
                 {/* --- ACTION MODAL (MOVED TO PORTAL) --- */}
                 {actionTask && createPortal(
-                    <div className="fixed inset-0 z-[15000] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[20000] flex items-center justify-center p-4">
                         <motion.div 
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -632,52 +630,6 @@ const LogisticsTab: React.FC<LogisticsTabProps> = ({ parentTask, users, currentU
                     document.body
                 )}
 
-                {/* --- SUB-TASK DETAIL MODAL --- */}
-                {detailTask && createPortal(
-                    <div className="fixed inset-0 z-[15000] flex items-center justify-center sm:p-4">
-                        <motion.div 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-indigo-950/40 backdrop-blur-md" 
-                            onClick={() => setDetailTask(null)} 
-                        />
-                        <motion.div 
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="bg-white w-full sm:max-w-4xl h-full sm:h-[85vh] sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col relative border-0 sm:border-4 border-white ring-0 sm:ring-1 ring-black/5"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="flex-1 overflow-hidden">
-                                <TaskDetail 
-                                    task={detailTask}
-                                    users={users}
-                                    masterOptions={masterOptions}
-                                    onEdit={() => {
-                                        if (onOpenTask) {
-                                            onOpenTask(detailTask);
-                                            setDetailTask(null);
-                                        } else {
-                                            showToast('กรุณาแก้ไขรายละเอียดผ่านหน้าหลักของรายการนี้', 'info');
-                                        }
-                                    }}
-                                    onClose={() => setDetailTask(null)}
-                                    onOpenTask={onOpenTask}
-                                />
-                            </div>
-                            
-                            {/* Internal Close Button (Floating) */}
-                            <button 
-                                onClick={() => setDetailTask(null)}
-                                className="absolute top-4 sm:top-6 right-4 sm:right-8 z-50 p-2 sm:p-3 bg-white/80 backdrop-blur-md border border-slate-100 rounded-full text-slate-400 hover:text-rose-500 hover:bg-white shadow-xl transition-all group"
-                            >
-                                <X className="w-6 h-6 group-hover:rotate-90 transition-transform" />
-                            </button>
-                        </motion.div>
-                    </div>,
-                    document.body
-                )}
             </AnimatePresence>
         </div>
     );

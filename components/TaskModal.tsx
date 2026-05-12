@@ -86,9 +86,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
               setActiveTab(initialData.type || 'CONTENT');
               setMode('VIEW');
 
-              // 🚀 LAZY LOADING LOGIC:
-              // If the data is "partial" (from search/board/calendar list), fetch the full detail
-              if ((initialData as any)._isPartial) {
+              // 🚀 LAZY LOADING LOGIC (STABILIZED):
+              // Only fetch if it's partial AND we haven't already fetched it for this ID
+              if ((initialData as any)._isPartial && detailedData?.id !== initialData.id) {
                   const loadDetails = async () => {
                       setIsLoadingDetails(true);
                       console.log(`🔍 [TaskModal] Lazy loading full data for ${initialData.type}: ${initialData.id}`);
@@ -101,7 +101,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       setIsLoadingDetails(false);
                   };
                   loadDetails();
-              } else {
+              } else if (!(initialData as any)._isPartial) {
+                  // If it's already full data, just ensure detailedData is null to use initialData
                   setDetailedData(null);
                   setIsLoadingDetails(false);
               }
@@ -116,7 +117,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
               }
           }
       }
-  }, [isOpen, initialData, lockedType, initialViewMode, fetchTaskById, setTasks]);
+  }, [isOpen, initialData?.id, initialData?.type, lockedType, initialViewMode, fetchTaskById, setTasks, detailedData?.id]);
 
   // Use detailedData if available, otherwise fallback to initialData
   const taskData = detailedData || initialData;
@@ -143,7 +144,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const modalContent = (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-0 sm:p-4 md:p-6 lg:p-8 font-kanit overflow-hidden">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-0 sm:p-4 md:p-6 lg:p-8 font-kanit overflow-hidden">
           {/* Backdrop */}
           <motion.div 
             initial={{ opacity: 0 }}
@@ -151,7 +152,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             onClick={onClose}
-            className="absolute inset-0 bg-indigo-950/60 backdrop-blur-md"
+            className="absolute inset-0 bg-indigo-950/80 backdrop-blur-md"
           />
 
           {/* Modal Container */}
@@ -174,9 +175,24 @@ const TaskModal: React.FC<TaskModalProps> = ({
         
         {/* --- DYNAMIC HEADER --- */}
         <div className={`
-            px-4 sm:px-8 py-2.5 sm:py-5 border-b flex justify-between items-center shrink-0 transition-colors duration-500
+            relative px-4 sm:px-8 py-2.5 sm:py-5 border-b flex justify-between items-center shrink-0 transition-colors duration-500
             bg-${themeColor}-50/50 border-${themeColor}-100
         `}>
+            {/* Top Sync Indicator */}
+            <AnimatePresence>
+                {isLoadingDetails && (
+                    <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 32 }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="absolute inset-x-0 -top-[0px] z-[100] bg-white border-b border-indigo-100 flex items-center justify-center overflow-hidden"
+                    >
+                        <div className="flex items-center gap-2 text-[10px] font-black text-indigo-500 tracking-[0.2em] uppercase">
+                            <Loader2 className="w-3 h-3 animate-spin"/> Syncing Rich Content...
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
             <div className="flex items-center gap-3 sm:gap-5">
                 {(viewMode !== 'DETAILS' || hasHistory) && (
                     <button 
@@ -214,10 +230,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
                             </span>
                             {taskData && <span className="text-[9px] sm:text-[10px] text-gray-400 font-mono truncate">ID: {taskData.id.slice(0,8)}</span>}
                             {isLoadingDetails && (
-                                <span className="flex items-center gap-1 text-[10px] text-indigo-500 font-bold animate-pulse">
-                                    <Loader2 className="w-3 h-3 animate-spin"/> LOADING DETAILS...
-                                </span>
-                            )}
+                        <div className="flex items-center gap-1.5 text-[10px] text-indigo-500 font-bold tracking-wider">
+                            <Loader2 className="w-3 h-3 animate-spin"/> SYNCING...
+                        </div>
+                    )}
                         </div>
                     )}
                 </div>
@@ -493,7 +509,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                         currentUser={currentUser}
                         masterOptions={masterOptions}
                         onUpdate={onUpdate}
-                        onOpenTask={(t) => onOpenTask && onOpenTask(t, viewMode)}
+                        onOpenTask={(t, customMode) => onOpenTask && onOpenTask(t, customMode || viewMode)}
                      />
                 ) : viewMode === 'WIKI' ? (
                     <TaskWiki className="flex-1" />

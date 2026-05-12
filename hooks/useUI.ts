@@ -57,7 +57,7 @@ export const useUI = () => {
             setTaskStack(prev => [...prev, { task: editingTask, viewMode: currentViewMode }]);
         }
         setEditingTask(t); 
-        setInitialViewMode(null); // Default for new navigation
+        setInitialViewMode(currentViewMode || null); 
         setSelectedDate(null);
         setLockedTaskType(null); // Unlock when editing existing (usually)
         setIsModalOpen(true); 
