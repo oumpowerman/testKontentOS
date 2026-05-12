@@ -233,29 +233,42 @@ const GeneralTaskInputs: React.FC<GeneralTaskInputsProps> = ({
              return;
         }
 
-        setIsSendingQC(true);
-
         if (!initialData?.id) {
             await showAlert('กรุณาบันทึกงานครั้งแรกก่อนส่งตรวจครับ', 'แจ้งเตือน');
-            setIsSendingQC(false);
             return;
         }
 
-        const currentRoundCount = initialData.reviews?.length || 0;
-        const nextRound = currentRoundCount + 1;
-
-        const submissionNotes = await showPrompt(
-            `งานจะถูกเปลี่ยนสถานะเป็น "รอตรวจ (Waiting)" และส่งแจ้งเตือนให้หัวหน้าทราบ\n\nระบุหมายเหตุถึงผู้ตรวจ (ถ้ามี):`,
-            '',
-            `🚀 ยืนยันส่งตรวจ "Draft ${nextRound}"`
-        );
-
-        if (submissionNotes === null) {
-            setIsSendingQC(false);
-            return;
-        }
+        setIsSendingQC(true);
 
         try {
+            // 0. Fetch latest round from DB to show correct round in Prompt and prevent collisions
+            const { data: reviews } = await supabase
+                .from('task_reviews')
+                .select('round, status')
+                .eq('task_id', initialData.id)
+                .order('round', { ascending: false });
+
+            // 1. Check for pending review before even asking notes
+            if (reviews?.some(r => r.status === 'PENDING')) {
+                const pendingRound = reviews.find(r => r.status === 'PENDING')?.round;
+                await showAlert(`ตรวจพบรายการ "Draft ${pendingRound}" ที่รอการตรวจสอบอยู่แล้วในระบบ กรุณารอการตรวจสอบรอบนี้ให้เสร็จสิ้นก่อนครับ`, 'ไม่สามารถส่งงานได้');
+                setIsSendingQC(false);
+                return;
+            }
+
+            const nextRound = (reviews?.[0]?.round || 0) + 1;
+
+            const submissionNotes = await showPrompt(
+                `งานจะถูกเปลี่ยนสถานะเป็น "รอตรวจ (Waiting)" และส่งแจ้งเตือนให้หัวหน้าทราบ\n\nระบุหมายเหตุถึงผู้ตรวจ (ถ้ามี):`,
+                '',
+                `🚀 ยืนยันส่งตรวจ "Draft ${nextRound}"`
+            );
+
+            if (submissionNotes === null) {
+                setIsSendingQC(false);
+                return;
+            }
+
             // Updated: Pass submission notes and assets directly to sendToQC to avoid double insertion
             const submissionAssetUrl = assets.length > 0 ? assets[assets.length - 1].url : undefined;
             const updatedTask = await sendToQC(initialData, currentUser!, submissionNotes || undefined, submissionAssetUrl);

@@ -169,7 +169,7 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({ task, users, masterOptio
                 </span>
 
                 {/* SLA Revert Count Badge */}
-                {task.sla_revert_count && task.sla_revert_count > 0 && (
+                {task.sla_revert_count !== undefined && task.sla_revert_count > 0 && (
                     <div className={`flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full border ${
                         task.sla_revert_count >= 3 
                             ? 'text-rose-600 bg-rose-50 border-rose-200' 

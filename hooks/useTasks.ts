@@ -458,14 +458,26 @@ export const useTasks = (setIsModalOpen?: (isOpen: boolean) => void) => {
     };
 
     const handleSendToQC = async (task: Task, currentUser: User, submissionNotes?: string, submissionAssetUrl?: string) => {
-        const currentRoundCount = task.reviews?.length || 0;
-        const nextRound = currentRoundCount + 1;
+        // 0. Fetch latest state from DB to ensure round consistency and prevent double submission
+        // This is critical for resiliency against stale frontend state
+        const { data: dbReviews, error: fetchError } = await supabase
+            .from('task_reviews')
+            .select('round, status')
+            .eq('task_id', task.id)
+            .order('round', { ascending: false });
 
-        // 0. Check for existing pending review
-        const existingPendingReview = task.reviews?.find(r => r.status === 'PENDING');
-        if (existingPendingReview) {
-             throw new Error(`มีรายการ "Draft ${existingPendingReview.round}" รอตรวจอยู่แล้ว`);
+        if (fetchError) throw fetchError;
+
+        // 0.1 Check for existing pending review in DB
+        const hasPending = dbReviews?.some(r => r.status === 'PENDING');
+        if (hasPending) {
+             const pendingRound = dbReviews?.find(r => r.status === 'PENDING')?.round;
+             throw new Error(`ตวรจพบรายการ "Draft ${pendingRound}" ที่รอการตรวจสอบอยู่แล้วในระบบ กรุณารอการตรวจสอบรอบนี้ให้เสร็จสิ้นก่อนครับ`);
         }
+
+        // 0.2 Calculate correct next round from DB
+        const maxRoundInDB = dbReviews && dbReviews.length > 0 ? dbReviews[0].round : 0;
+        const nextRound = maxRoundInDB + 1;
 
         // 1. Insert Review Record
         const { error: reviewError } = await supabase.from('task_reviews').insert({
@@ -478,7 +490,14 @@ export const useTasks = (setIsModalOpen?: (isOpen: boolean) => void) => {
             submission_notes: submissionNotes || null,
             submission_asset_url: submissionAssetUrl || null
         });
-        if (reviewError) throw reviewError;
+
+        if (reviewError) {
+            // Handle unique constraint failure specifically if it still happens despite our check
+            if (reviewError.code === '23505') {
+                throw new Error('เกิดการส่งงานซ้ำซ้อนในเวลาเดียวกัน (Round Conflict) กรุณารีเฟรชและลองใหม่อีกครั้ง');
+            }
+            throw reviewError;
+        }
 
         // 2. Log Action
         await supabase.from('task_logs').insert({
