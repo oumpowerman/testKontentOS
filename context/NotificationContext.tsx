@@ -268,7 +268,14 @@ export const NotificationProvider: React.FC<{ currentUser: User | null, children
 
         // Persistent removal (only for DB-stored notifications)
         if (!id.includes('_')) { 
-            await supabase.from('notifications').delete().eq('id', id);
+            const { error } = await supabase.from('notifications').delete().eq('id', id);
+            if (error) {
+                console.error("dismissNotification DB Error:", error);
+                // Re-add to local state if DB deletion failed? Optional but safer for UI consistency
+                // setNotifications(prev => [itemToRemove, ...prev]);
+            } else {
+                console.log(`[NotificationContext] Notification ${id} deleted from DB`);
+            }
         }
     };
 
