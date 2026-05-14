@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { createPortal } from 'react-dom';
+import { motion } from 'framer-motion';
 import { X, Bell, Calendar, UserPlus, CheckCircle, Mail, Shield } from 'lucide-react';
 import { NotificationPreferences } from '../types';
 
@@ -17,8 +17,6 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
   preferences, 
   onUpdate 
 }) => {
-  if (!isOpen) return null;
-
   const handleToggle = (key: keyof NotificationPreferences) => {
     onUpdate({
       ...preferences,
@@ -60,9 +58,24 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
     </div>
   );
   
-  const modalContent = (
-    <div className="fixed inset-0 z-[4000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200 font-sans">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-gray-100 scale-100 animate-in zoom-in-95 duration-200">
+  return (
+        <div className="fixed inset-0 z-[4000] flex items-center justify-center p-4 font-sans overflow-hidden">
+          {/* Backdrop */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+          />
+
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15, filter: 'blur(8px)' }}
+            className="relative bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border-2 border-white"
+            onClick={(e) => e.stopPropagation()}
+          >
         
         {/* Header */}
         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-white">
@@ -141,11 +154,9 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
             ตั้งค่าจะมีผลทันทีหลังจากกดบันทึก
         </div>
 
-      </div>
+      </motion.div>
     </div>
   );
-
-  return createPortal(modalContent, document.body);
 };
 
 export default NotificationSettingsModal;

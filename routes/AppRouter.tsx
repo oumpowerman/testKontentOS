@@ -625,45 +625,50 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
   
           {/* --- GLOBAL MODALS --- */}
           <Suspense fallback={<TaskModalSkeleton />}>
-  
-              {isModalOpen && (
-                  <TaskModal
-                      isOpen={isModalOpen}
-                      onClose={closeModal}
-                      onSave={(t) => handleSaveTask(t)}
-                      onUpdate={(t) => handleSaveTask(t)} 
-                      onDelete={handleDeleteTask}
-                      initialData={editingTask}
-                      selectedDate={selectedDate}
-                      channels={channels}
-                      users={activeUsers}
-                      lockedType={lockedTaskType}
-                      masterOptions={masterOptions}
-                      currentUser={currentUserProfile}
-                      projects={tasks.filter(t => t.type === 'CONTENT')} 
-                      onOpenTask={handleOpenTaskById}
-                      hasHistory={taskStack.length > 0}
-                      initialViewMode={initialViewMode}
-                  />
-              )}
-  
-              {isProfileModalOpen && (
-                  <ProfileEditModal 
-                      isOpen={isProfileModalOpen}
-                      onClose={() => setIsProfileModalOpen(false)}
-                      user={currentUserProfile}
-                      onSave={updateProfile}
-                  />
-              )}
-  
-              {isNotifSettingsOpen && (
-                  <NotificationSettingsModal 
-                      isOpen={isNotifSettingsOpen}
-                      onClose={() => setIsNotifSettingsOpen(false)}
-                      preferences={notificationSettings}
-                      onUpdate={updateNotificationSettings}
-                  />
-              )}
+              <AnimatePresence mode="wait">
+                  {isModalOpen && (
+                      <TaskModal
+                          isOpen={isModalOpen}
+                          onClose={closeModal}
+                          onSave={(t) => handleSaveTask(t)}
+                          onUpdate={(t) => handleSaveTask(t)} 
+                          onDelete={handleDeleteTask}
+                          initialData={editingTask}
+                          selectedDate={selectedDate}
+                          channels={channels}
+                          users={activeUsers}
+                          lockedType={lockedTaskType}
+                          masterOptions={masterOptions}
+                          currentUser={currentUserProfile}
+                          projects={tasks.filter(t => t.type === 'CONTENT')} 
+                          onOpenTask={handleOpenTaskById}
+                          hasHistory={taskStack.length > 0}
+                          initialViewMode={initialViewMode}
+                      />
+                  )}
+              </AnimatePresence>
+
+              <AnimatePresence mode="wait">
+                  {isProfileModalOpen && (
+                      <ProfileEditModal 
+                          isOpen={isProfileModalOpen}
+                          onClose={() => setIsProfileModalOpen(false)}
+                          user={currentUserProfile}
+                          onSave={updateProfile}
+                      />
+                  )}
+              </AnimatePresence>
+
+              <AnimatePresence mode="wait">
+                  {isNotifSettingsOpen && (
+                      <NotificationSettingsModal 
+                          isOpen={isNotifSettingsOpen}
+                          onClose={() => setIsNotifSettingsOpen(false)}
+                          preferences={notificationSettings}
+                          onUpdate={updateNotificationSettings}
+                      />
+                  )}
+              </AnimatePresence>
           </Suspense>
           
           <NotificationPopover 

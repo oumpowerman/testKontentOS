@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
+import { motion } from 'framer-motion';
 import { X, Save, Loader2 } from 'lucide-react';
 import { User as UserType } from '../types';
 import ImageCropper from './ImageCropper';
@@ -50,10 +50,24 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, us
     isConvertingImg
   } = formState;
 
-  if (!isOpen) return null;
+  return (
+        <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 font-sans overflow-hidden">
+          {/* Backdrop */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-indigo-950/40 backdrop-blur-md"
+          />
 
-  const modalContent = (
-    <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-indigo-900/20 backdrop-blur-md p-4 animate-in fade-in duration-300 font-sans">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20, filter: 'blur(8px)' }}
+            className="bg-white/95 backdrop-blur-3xl w-full max-w-2xl rounded-[2.5rem] shadow-2xl shadow-indigo-500/20 overflow-hidden border border-white/60 max-h-[90vh] flex flex-col ring-1 ring-white/50 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
       
       {/* Image Cropper Modal */}
       {cropImageSrc && (
@@ -74,8 +88,6 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, us
           </div>
       )}
 
-      <div className="bg-white/95 backdrop-blur-3xl w-full max-w-2xl rounded-[2.5rem] shadow-2xl shadow-indigo-500/20 overflow-hidden border border-white/60 scale-100 animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col ring-1 ring-white/50 relative">
-        
         {/* Pastel Background Decor */}
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-indigo-50/80 to-transparent pointer-events-none"></div>
         <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-100/50 rounded-full blur-3xl pointer-events-none"></div>
@@ -170,11 +182,9 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, us
                 )}
             </button>
         </div>
-      </div>
-    </div>
+    </motion.div>
+  </div>
   );
-
-  return createPortal(modalContent, document.body);
 };
 
 export default ProfileEditModal;

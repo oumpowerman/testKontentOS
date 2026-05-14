@@ -4,7 +4,7 @@ import { Task, ChipConfig, MasterOption, Channel } from '../../types';
 import { COLOR_THEMES } from '../../constants';
 import { TaskDisplayMode } from '../CalendarView';
 import { isBefore, startOfToday, differenceInDays } from 'date-fns';
-import { AlertCircle, Ghost, Clock8 } from 'lucide-react';
+import { AlertCircle, Ghost, Clock8, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface CalendarTaskPillProps {
@@ -62,11 +62,12 @@ const CalendarTaskPill: React.FC<CalendarTaskPillProps> = ({
         const currentStatus = (task.status || '').toUpperCase();
         const isTerminal = currentStatus.includes('DONE') || ['PUBLISHED', 'FINAL', 'POSTED'].includes(currentStatus);
         
-        if (task.type !== 'CONTENT' || task.isUnscheduled || !isTerminal || !task.endDate) return false;
+        // Only show overdue if it's content, terminal, has no analytics yet, and > 7 days since end date
+        if (task.type !== 'CONTENT' || task.isUnscheduled || !isTerminal || !task.endDate || task.hasAnalytics) return false;
         
         const endDateObj = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
         return differenceInDays(startOfToday(), endDateObj) >= 7;
-    }, [task.type, task.status, task.endDate, task.isUnscheduled]);
+    }, [task.type, task.status, task.endDate, task.isUnscheduled, task.hasAnalytics]);
 
     // Helper to get styling for the main card container
     const getTaskStyle = (t: Task) => {
@@ -164,6 +165,18 @@ const CalendarTaskPill: React.FC<CalendarTaskPillProps> = ({
 
     // --- RENDER LOGIC BASED ON DISPLAY MODE ---
     const renderContent = () => {
+        const hasAnalyticsIndicator = task.hasAnalytics && (
+            <motion.div 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                whileHover={{ scale: 1.2, rotate: 15 }}
+                className="shrink-0 flex items-center justify-center w-4 h-4 bg-purple-100 rounded-full border border-purple-200"
+                title="Performance Data Entry Complete ✨"
+            >
+                <Zap className="w-2.5 h-2.5 text-purple-600 fill-purple-600" />
+            </motion.div>
+        );
+
         const overdueIndicator = isOverdue && (
             <motion.div 
                 animate={isCriticalOverdue ? { 
@@ -189,6 +202,7 @@ const CalendarTaskPill: React.FC<CalendarTaskPillProps> = ({
                     <div className="flex items-center gap-1 overflow-hidden w-full">
                         {overdueIndicator}
                         {isInsightOverdue && <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />}
+                        {hasAnalyticsIndicator}
                         <span className="truncate flex-1 font-bold">{task.title}</span>
                     </div>
                 );
@@ -197,6 +211,7 @@ const CalendarTaskPill: React.FC<CalendarTaskPillProps> = ({
                     <div className="flex items-center gap-2 overflow-hidden w-full">
                          {isOverdue ? overdueIndicator : <div className={`w-2 h-2 rounded-full shrink-0 ${getTaskDotClass(task)}`}></div>}
                          {isInsightOverdue && <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />}
+                         {hasAnalyticsIndicator}
                          <span className="truncate flex-1 font-bold">{task.title}</span>
                     </div>
                 );
@@ -205,6 +220,7 @@ const CalendarTaskPill: React.FC<CalendarTaskPillProps> = ({
                      <div className="flex items-center gap-1.5 overflow-hidden w-full">
                          {isOverdue ? overdueIndicator : (statusEmoji && <span className="text-[12px] shrink-0">{statusEmoji}</span>)}
                          {isInsightOverdue && <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />}
+                         {hasAnalyticsIndicator}
                          <span className="truncate flex-1 font-bold">{task.title}</span>
                     </div>
                 );
@@ -220,6 +236,7 @@ const CalendarTaskPill: React.FC<CalendarTaskPillProps> = ({
                             </div>
                         )}
                         <span className="truncate flex-1 font-bold">{task.title}</span>
+                        {hasAnalyticsIndicator}
                         {statusLabel && (
                             <span className={`
                                 text-[9px] font-black uppercase tracking-wider shrink-0 px-2 py-0.5 rounded-md border

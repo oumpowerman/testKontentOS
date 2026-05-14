@@ -95,7 +95,7 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
 
             const { data, error } = await supabase
                 .from('content_analytics')
-                .insert([{
+                .upsert([{
                     content_id: analyticsData.contentId,
                     platform: analyticsData.platform,
                     views: analyticsData.views,
@@ -107,7 +107,9 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
                     avg_watch_time: analyticsData.avgWatchTime,
                     reach: analyticsData.reach,
                     captured_at: new Date().toISOString()
-                }])
+                }], { 
+                    onConflict: 'content_id' 
+                })
                 .select()
                 .single();
 
@@ -209,7 +211,7 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-10">
                         {/* Views */}
                         <div className="space-y-3">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                 <TrendingUp className="w-3.5 h-3.5" /> ยอดการเข้าชมรวม (Views)
                             </label>
                             <input 
@@ -224,7 +226,7 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
 
                         {/* Reach */}
                         <div className="space-y-3">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                 <Target className="w-3.5 h-3.5" /> การเข้าถึง (Reach)
                             </label>
                             <input 
@@ -239,7 +241,7 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
 
                         {/* Likes */}
                         <div className="space-y-3">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                 <Heart className="w-3.5 h-3.5 text-red-400" /> ยอดถูกใจ (Likes)
                             </label>
                             <input 
@@ -254,7 +256,7 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
 
                         {/* Comments */}
                         <div className="space-y-3">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                 <MessageSquare className="w-3.5 h-3.5 text-blue-400" /> คอมเมนต์ (Comments)
                             </label>
                             <input 
@@ -269,7 +271,7 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
 
                         {/* Shares */}
                         <div className="space-y-3">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                 <Share2 className="w-3.5 h-3.5 text-emerald-400" /> ยอดแชร์ (Shares)
                             </label>
                             <input 
@@ -284,7 +286,7 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
 
                         {/* Saves */}
                         <div className="space-y-3">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                 <Bookmark className="w-3.5 h-3.5 text-amber-500" /> การบันทึก (Saves)
                             </label>
                             <input 
@@ -304,14 +306,14 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
                     <button 
                         type="button"
                         onClick={onClose}
-                        className="flex-1 py-4 text-slate-500 text-xs font-bold uppercase tracking-widest hover:text-slate-700 transition-colors"
+                        className="flex-1 py-4 text-slate-500 text-xs font-medium uppercase tracking-widest hover:text-slate-700 transition-colors"
                     >
                         ยกเลิก
                     </button>
                     <button 
                         onClick={handleSubmit}
                         disabled={isSaving}
-                        className="flex-[2] py-4 bg-indigo-600 text-white text-xs font-bold uppercase tracking-[0.2em] rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-900 transition-all shadow-xl shadow-indigo-200 active:scale-95 disabled:opacity-50"
+                        className="flex-[2] py-4 bg-indigo-600 text-white text-sm font-medium uppercase tracking-[0.2em] rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-900 transition-all shadow-xl shadow-indigo-200 active:scale-95 disabled:opacity-50"
                     >
                         {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                         ยืนยันการบันทึกสถิติ

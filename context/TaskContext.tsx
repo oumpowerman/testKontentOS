@@ -153,6 +153,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             sla_revert_count: data.sla_revert_count,
             is_penalized: data.is_penalized,
             last_penalized_at: data.last_penalized_at ? new Date(data.last_penalized_at) : undefined,
+            hasAnalytics: !!data.content_analytics && (Array.isArray(data.content_analytics) ? data.content_analytics.length > 0 : !!data.content_analytics.id),
             _isPartial: isPartial
         } as any;
     }, []);
@@ -179,7 +180,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             start_date, end_date, channel_id, created_at, updated_at, is_unscheduled, remark,
             target_platform, assignee_ids, idea_owner_ids, editor_ids, shoot_trip_id,
             shoot_date, is_in_shoot_queue, is_soft_finished, sla_revert_count, 
-            task_reviews(id, round, status, is_completed)
+            task_reviews(id, round, status, is_completed),
+            content_analytics(id)
         `.replace(/\s+/g, '');
 
         const taskFields = `
@@ -234,7 +236,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [dateRange, isAllLoaded, mapSupabaseToTask]);
 
-    const fetchSubTasks = async (contentId: string): Promise<Task[]> => {
+    const fetchSubTasks = useCallback(async (contentId: string): Promise<Task[]> => {
         try {
             const { data, error } = await supabase
                 .from('tasks')
@@ -248,9 +250,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error('Fetch sub-tasks failed', err);
             return [];
         }
-    };
+    }, [mapSupabaseToTask]);
 
-    const fetchSubTasksCount = async (contentId: string): Promise<number> => {
+    const fetchSubTasksCount = useCallback(async (contentId: string): Promise<number> => {
         try {
             const { count, error } = await supabase
                 .from('tasks')
@@ -263,15 +265,15 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error('Fetch sub-tasks count failed', err);
             return 0;
         }
-    };
+    }, []);
 
-    const fetchTaskById = async (id: string, type: TaskType): Promise<Task | null> => {
+    const fetchTaskById = useCallback(async (id: string, type: TaskType): Promise<Task | null> => {
         try {
             const table = type === 'TASK' ? 'tasks' : 'contents';
             let query = supabase.from(table).select(
                 type === 'TASK' 
                     ? `*, contents (title), task_reviews(*)` 
-                    : `*, task_reviews(*)`
+                    : `*, task_reviews(*), content_analytics(id)`
             ).eq('id', id).single();
             
             const { data, error } = await query;
@@ -282,7 +284,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error(`[TaskContext] Failed to fetch single ${type}:`, err);
             return null;
         }
-    };
+    }, [mapSupabaseToTask]);
 
     const checkAndExpandRange = useCallback((targetDate: Date) => {
         if (isAllLoaded) return; 
@@ -330,7 +332,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     let query = supabase.from(table).select(
                         type === 'TASK' 
                             ? `*, contents (title), task_reviews(*)` 
-                            : `*, task_reviews(*)`
+                            : `*, task_reviews(*), content_analytics(id)`
                     ).eq('id', payload.new.id).single();
                     
                     const { data } = await query;
@@ -350,7 +352,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     let query = supabase.from(table).select(
                         type === 'TASK' 
                             ? `*, contents (title), task_reviews(*)` 
-                            : `*, task_reviews(*)`
+                            : `*, task_reviews(*), content_analytics(id)`
                     ).eq('id', payload.new.id).single();
                     
                     const { data } = await query;
@@ -396,7 +398,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const table = type === 'TASK' ? 'tasks' : 'contents';
                     
                     supabase.from(table).select(
-                        type === 'TASK' ? `*, contents (title), task_reviews(*)` : `*, task_reviews(*)`
+                        type === 'TASK' ? `*, contents (title), task_reviews(*)` : `*, task_reviews(*), content_analytics(id)`
                     ).eq('id', taskId).single().then(({ data }) => {
                         if (data) {
                             const updatedTask = mapSupabaseToTask(data, type);
@@ -404,6 +406,20 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         }
                     });
                     return prev;
+                });
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'content_analytics' }, (payload) => {
+                const newRecord = payload.new as { content_id?: string };
+                const oldRecord = payload.old as { content_id?: string };
+                const contentId = newRecord?.content_id || oldRecord?.content_id;
+                if (!contentId) return;
+
+                // When analytics change, re-fetch the content to update hasAnalytics status
+                supabase.from('contents').select(`*, task_reviews(*), content_analytics(id)`).eq('id', contentId).single().then(({ data }) => {
+                    if (data) {
+                        const updatedTask = mapSupabaseToTask(data, 'CONTENT');
+                        setTasks(current => current.map(t => t.id === updatedTask.id ? updatedTask : t));
+                    }
                 });
             })
             .subscribe((status) => {

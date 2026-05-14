@@ -68,7 +68,7 @@ const PlatformConfigModal: React.FC<PlatformConfigModalProps> = ({ isOpen, onClo
     if (!isOpen) return null;
 
     const modalContent = (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
             <motion.div 
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -82,7 +82,7 @@ const PlatformConfigModal: React.FC<PlatformConfigModalProps> = ({ isOpen, onClo
                             <Globe className="w-5 h-5 text-indigo-500" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-black text-slate-800 tracking-tight text-left">Platform Settings</h2>
+                            <h2 className="text-lg font-bold text-slate-800 tracking-tight text-left">Platform Settings</h2>
                             <p className="text-[10px] font-bold text-slate-400 text-left uppercase tracking-widest">Base URL Configuration</p>
                         </div>
                     </div>
@@ -95,7 +95,7 @@ const PlatformConfigModal: React.FC<PlatformConfigModalProps> = ({ isOpen, onClo
                 <div className="p-8 space-y-6 overflow-y-auto max-h-[60vh]">
                     <div className="bg-indigo-50/50 border border-indigo-100/50 p-4 rounded-2xl flex gap-3">
                         <Info className="w-5 h-5 text-indigo-400 shrink-0" />
-                        <p className="text-[11px] font-bold text-indigo-700/80 leading-relaxed text-left">
+                        <p className="text-[11px] font-medium text-indigo-700/80 leading-relaxed text-left">
                             ลิงก์เหล่านี้จะถูกใช้เป็น "ลิงก์สำรอง" เมื่อคุณกดไอคอนแพลตฟอร์มที่ยังไม่มีการแปะลิงก์งานที่เผยแพร่จริง ช่วยให้คุณเข้าถึงหน้า Upload ของแต่ละเจ้าได้ไวขึ้น
                         </p>
                     </div>
@@ -105,7 +105,7 @@ const PlatformConfigModal: React.FC<PlatformConfigModalProps> = ({ isOpen, onClo
                             const Icon = PLATFORM_ICONS[p as Platform] || Globe;
                             return (
                                 <div key={p} className="space-y-1.5 group">
-                                    <label className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">
+                                    <label className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">
                                         <Icon className="w-3 h-3 opacity-60 group-focus-within:opacity-100 transition-opacity" />
                                         {p} Upload URL
                                     </label>
@@ -126,14 +126,14 @@ const PlatformConfigModal: React.FC<PlatformConfigModalProps> = ({ isOpen, onClo
                 <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
                     <button 
                         onClick={onClose}
-                        className="flex-1 px-5 py-3.5 rounded-xl font-black text-slate-400 hover:text-slate-600 hover:bg-white transition-all text-xs uppercase"
+                        className="flex-1 px-5 py-3.5 rounded-xl font-medium text-slate-400 hover:text-slate-600 hover:bg-white transition-all text-xs uppercase"
                     >
                         ยกเลิก
                     </button>
                     <button 
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="flex-[1.5] px-5 py-3.5 rounded-xl bg-slate-800 font-black text-white hover:bg-slate-900 transition-all text-xs uppercase shadow-lg shadow-slate-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="flex-[1.5] px-5 py-3.5 rounded-xl bg-slate-800 font-bold text-white hover:bg-slate-900 transition-all text-xs uppercase shadow-lg shadow-slate-200 flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         {isSaving ? (
                             <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Task, User, TaskType, Script } from '../types';
 import { useTaskContext } from '../context/TaskContext';
 import { useScripts } from './useScripts';
@@ -49,41 +49,55 @@ export const useTaskModalState = ({
     }, []);
 
     // Sync state when modal opens or props change
+    const lastTaskIdRef = useRef<string | null>(null);
+    const wasOpenRef = useRef(false);
+
     useEffect(() => {
         if (isOpen) {
-            setViewMode((initialViewMode as any) || 'DETAILS');
-            setIsNavExpanded(false); // Default to collapsed as requested
-            if (initialData) {
-                setActiveTab(initialData.type || 'CONTENT');
-                setMode('VIEW');
+            const isNewTask = initialData?.id !== lastTaskIdRef.current;
+            const justOpened = !wasOpenRef.current;
 
-                // LAZY LOADING LOGIC
-                if ((initialData as any)._isPartial && detailedData?.id !== initialData.id) {
-                    const loadDetails = async () => {
-                        setIsLoadingDetails(true);
-                        console.log(`🔍 [TaskModal] Lazy loading full data for ${initialData.type}: ${initialData.id}`);
-                        const fullTask = await fetchTaskById(initialData.id, initialData.type);
-                        if (fullTask) {
-                            setDetailedData(fullTask);
-                            setTasks((prev: Task[]) => prev.map((t: Task) => t.id === fullTask.id ? fullTask : t));
-                        }
-                        setIsLoadingDetails(false);
-                    };
-                    loadDetails();
-                } else if (!(initialData as any)._isPartial) {
+            if (justOpened || isNewTask) {
+                setViewMode((initialViewMode as any) || 'DETAILS');
+                setIsNavExpanded(false); 
+                
+                if (initialData) {
+                    setActiveTab(initialData.type || 'CONTENT');
+                    setMode('VIEW');
+                } else {
+                    setMode('EDIT');
                     setDetailedData(null);
                     setIsLoadingDetails(false);
+                    if (lockedType) {
+                        setActiveTab(lockedType);
+                    } else {
+                        setActiveTab('CONTENT');
+                    }
                 }
-            } else {
-                setMode('EDIT');
-                setDetailedData(null);
-                setIsLoadingDetails(false);
-                if (lockedType) {
-                    setActiveTab(lockedType);
-                } else {
-                    setActiveTab('CONTENT');
-                }
+                lastTaskIdRef.current = initialData?.id || null;
             }
+
+            // LAZY LOADING LOGIC (Always check if we need full data when viewing a task)
+            if (initialData && (initialData as any)._isPartial && detailedData?.id !== initialData.id) {
+                const loadDetails = async () => {
+                    setIsLoadingDetails(true);
+                    console.log(`🔍 [TaskModal] Lazy loading full data for ${initialData.type}: ${initialData.id}`);
+                    const fullTask = await fetchTaskById(initialData.id, initialData.type);
+                    if (fullTask) {
+                        setDetailedData(fullTask);
+                        setTasks((prev: Task[]) => prev.map((t: Task) => t.id === fullTask.id ? fullTask : t));
+                    }
+                    setIsLoadingDetails(false);
+                };
+                loadDetails();
+            } else if (initialData && !(initialData as any)._isPartial && detailedData) {
+                // If we have full data and the new initialData is also full, we can clear detailedData
+                setDetailedData(null);
+            }
+
+            wasOpenRef.current = true;
+        } else {
+            wasOpenRef.current = false;
         }
     }, [isOpen, initialData?.id, initialData?.type, lockedType, initialViewMode, fetchTaskById, setTasks, detailedData?.id]);
 

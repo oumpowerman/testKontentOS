@@ -130,7 +130,11 @@ const TaskModalBody: React.FC<TaskModalBodyProps> = ({
                                     task={taskData}
                                     users={users}
                                     channels={channels}
-                                    onEdit={() => setMode('EDIT')}
+                                    masterOptions={masterOptions}
+                                    currentUser={currentUser}
+                                    mode={mode}
+                                    setMode={setMode}
+                                    onSave={onSave}
                                     onDelete={onDelete ? () => onDelete(taskData.id) : undefined}
                                     onClose={onClose}
                                     initialTab={initialContentTab}
@@ -147,18 +151,34 @@ const TaskModalBody: React.FC<TaskModalBodyProps> = ({
                                 />
                             )
                         ) : activeTab === 'CONTENT' ? (
-                            <ContentForm 
-                                key={taskData ? `content-${taskData.id}` : 'new-content'}
-                                initialData={taskData}
-                                selectedDate={selectedDate}
-                                channels={channels}
-                                users={users}
-                                masterOptions={masterOptions}
-                                currentUser={currentUser} 
-                                onSave={(task) => { onSave(task); if (taskData) setMode('VIEW'); else onClose(); }}
-                                onDelete={onDelete}
-                                onClose={taskData ? () => setMode('VIEW') : onClose}
-                            />
+                            taskData ? (
+                                <ContentDetail 
+                                    task={taskData}
+                                    users={users}
+                                    channels={channels}
+                                    masterOptions={masterOptions}
+                                    currentUser={currentUser}
+                                    mode={mode}
+                                    setMode={setMode}
+                                    onSave={onSave}
+                                    onDelete={onDelete && taskData ? () => onDelete(taskData.id) : undefined}
+                                    onClose={onClose}
+                                    initialTab="EDIT"
+                                />
+                            ) : (
+                                <ContentForm 
+                                    key="new-content"
+                                    initialData={null}
+                                    selectedDate={selectedDate}
+                                    channels={channels}
+                                    users={users}
+                                    masterOptions={masterOptions}
+                                    currentUser={currentUser} 
+                                    onSave={(task) => { onSave(task); onClose(); }}
+                                    onDelete={onDelete}
+                                    onClose={onClose}
+                                />
+                            )
                         ) : (
                             <GeneralTaskForm 
                                 key={taskData ? `task-${taskData.id}` : 'new-task'}

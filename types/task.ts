@@ -154,6 +154,7 @@ export interface Task {
     sla_revert_count?: number;
     is_penalized?: boolean;
     last_penalized_at?: Date;
+    hasAnalytics?: boolean;
 }
 
 export interface ChipConfig {

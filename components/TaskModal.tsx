@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Task, Channel, TaskType, User, MasterOption } from '../types';
 
 import { useTaskModalState } from '../hooks/useTaskModalState';
@@ -61,9 +60,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const currentTheme = TAB_CONFIGS[viewMode] || TAB_CONFIGS.DETAILS;
   const themeColor = currentTheme.color;
   
-  const modalContent = (
-    <AnimatePresence>
-      {isOpen && (
+  return (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-0 sm:p-4 md:p-6 lg:p-8 font-kanit overflow-hidden">
           {/* Backdrop */}
           <motion.div 
@@ -79,8 +76,14 @@ const TaskModal: React.FC<TaskModalProps> = ({
           <motion.div 
             initial={{ opacity: 0, scale: 0.95, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300, duration: 0.4 }}
+            exit={{ 
+              opacity: 0, 
+              scale: 0.96, 
+              y: 10,
+              filter: 'blur(8px)',
+              transition: { duration: 0.25, ease: 'easeOut' }
+            }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className={`
                 relative bg-white text-slate-900 w-full sm:max-w-5xl h-full sm:h-[92vh] sm:rounded-[2.5rem] shadow-[0_20px_70px_-12px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col 
                 ${!isMobile ? 'border-[6px]' : 'border-t-4'} transition-colors duration-500
@@ -97,6 +100,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 currentTheme={currentTheme}
                 taskData={taskData}
                 activeTab={activeTab}
+                channels={channels}
+                masterOptions={masterOptions}
             />
 
             {initialData && (
@@ -139,11 +144,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
             />
           </motion.div>
         </div>
-      )}
-    </AnimatePresence>
   );
-
-  return createPortal(modalContent, document.body);
 };
 
 export default TaskModal;
