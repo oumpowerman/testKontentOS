@@ -7,7 +7,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface MeetingListSidebarProps {
     meetings: MeetingLog[];
+    historyMeetings: MeetingLog[];
     selectedId: string | null;
+    isLoading?: boolean;
+    isHistoryLoading?: boolean;
+    hasMore?: boolean;
+    historyHasMore?: boolean;
+    onLoadMore?: () => void;
+    onLoadMoreHistory?: () => void;
+    currentMonth: Date;
+    onMonthChange: (date: Date) => void;
     onSelect: (id: string) => void;
     onDelete: (id: string) => void;
     searchQuery: string;
@@ -20,11 +29,10 @@ interface MeetingListSidebarProps {
 type ViewTab = 'UPCOMING' | 'HISTORY';
 
 const MeetingListSidebar: React.FC<MeetingListSidebarProps> = React.memo(({
-    meetings, selectedId, onSelect, onDelete, searchQuery, setSearchQuery, currentUser, masterOptions, users
+    meetings, historyMeetings, selectedId, isLoading = false, isHistoryLoading = false, hasMore = false, historyHasMore = false, onLoadMore, onLoadMoreHistory, currentMonth, onMonthChange, onSelect, onDelete, searchQuery, setSearchQuery, currentUser, masterOptions, users
 }) => {
     // --- State ---
     const [viewTab, setViewTab] = useState<ViewTab>('UPCOMING');
-    const [currentNavDate, setCurrentNavDate] = useState(new Date()); // For Calendar Navigation
     const [selectedDate, setSelectedDate] = useState<Date | null>(null); // Specific day filter
     const [filterCategory, setFilterCategory] = useState<string>('ALL'); // Changed type to string to match MasterOption key
     const [showCalendar, setShowCalendar] = useState(true);
@@ -33,8 +41,8 @@ const MeetingListSidebar: React.FC<MeetingListSidebarProps> = React.memo(({
     const getCategoryKey = (m: MeetingLog): string => m.category || 'GENERAL';
 
     // --- Calendar Logic ---
-    const monthStart = new Date(currentNavDate.getFullYear(), currentNavDate.getMonth(), 1);
-    const monthEnd = endOfMonth(currentNavDate);
+    const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    const monthEnd = endOfMonth(currentMonth);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
     const startOffset = monthStart.getDay(); 
     
@@ -47,7 +55,9 @@ const MeetingListSidebar: React.FC<MeetingListSidebarProps> = React.memo(({
 
     // --- Filter Logic ---
     const filteredMeetings = useMemo(() => {
-        let filtered = meetings.filter(m => {
+        const sourceData = viewTab === 'HISTORY' ? historyMeetings : meetings;
+
+        let filtered = sourceData.filter(m => {
             // 1. Search Query
             const matchSearch = m.title.toLowerCase().includes(searchQuery.toLowerCase());
             // 2. Category
@@ -64,14 +74,14 @@ const MeetingListSidebar: React.FC<MeetingListSidebarProps> = React.memo(({
             today.setHours(0,0,0,0);
             
             if (viewTab === 'UPCOMING') {
-                // Future or Today
+                // Future or Today (Filtered from meetings which is already month-bound)
                 filtered = filtered.filter(m => {
                     const mDate = new Date(m.date);
                     mDate.setHours(0,0,0,0);
                     return mDate >= today;
                 }).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()); 
             } else {
-                // Past
+                // Past (Uses historyMeetings which is NOT month-bound)
                 filtered = filtered.filter(m => {
                     const mDate = new Date(m.date);
                     mDate.setHours(0,0,0,0);
@@ -83,7 +93,7 @@ const MeetingListSidebar: React.FC<MeetingListSidebarProps> = React.memo(({
         }
 
         return filtered;
-    }, [meetings, searchQuery, filterCategory, selectedDate, viewTab]);
+    }, [meetings, historyMeetings, searchQuery, filterCategory, selectedDate, viewTab]);
 
     // --- Grouping Logic (For History) ---
     const groupedMeetings = useMemo(() => {
@@ -223,18 +233,26 @@ const MeetingListSidebar: React.FC<MeetingListSidebarProps> = React.memo(({
                 {/* Main Tabs */}
                 <div className="bg-slate-200/50 backdrop-blur-sm p-1 md:p-1.5 rounded-xl md:rounded-2xl flex font-medium text-[9px] font-kanit md:text-[12px] relative shadow-inner border border-white/40">
                     <button 
-                        onClick={() => { setViewTab('UPCOMING'); setSelectedDate(null); }}
+                        onClick={() => { 
+                            setViewTab('UPCOMING'); 
+                            setSelectedDate(null); 
+                            setShowCalendar(true); // Automatically show for better UX in Upcoming
+                        }}
                         className={`flex-1 py-2 md:py-2.5 rounded-lg md:rounded-xl transition-all duration-300 flex items-center justify-center gap-1.5 md:gap-2 uppercase tracking-widest relative ${viewTab === 'UPCOMING' && !selectedDate ? 'bg-white text-indigo-600 shadow-md scale-[1.02]' : 'text-slate-400 hover:text-slate-600'}`}
                     >
                         <span className="relative">
                             นัดหมาย
                             <span className={`absolute -right-6 md:-right-7 top-1/2 -translate-y-1/2 px-1 md:px-1.5 py-0.5 rounded-full text-[7px] md:text-[8px] min-w-[16px] md:min-w-[18px] text-center ${viewTab === 'UPCOMING' && !selectedDate ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-500'}`}>
-                                {meetings.filter(m => isFuture(m.date) || isToday(m.date)).length}
+                                {meetings.filter(m => (isFuture(m.date) || isToday(m.date)) && isSameMonth(m.date, currentMonth)).length}
                             </span>
                         </span>
                     </button>
                     <button 
-                        onClick={() => { setViewTab('HISTORY'); setSelectedDate(null); }}
+                        onClick={() => { 
+                            setViewTab('HISTORY'); 
+                            setSelectedDate(null); 
+                            setShowCalendar(false); // Automatically collapse for History
+                        }}
                         className={`flex-1 py-2 md:py-2.5 rounded-lg md:rounded-xl transition-all duration-300 flex items-center justify-center gap-1.5 md:gap-2 uppercase tracking-widest ${viewTab === 'HISTORY' && !selectedDate ? 'bg-white text-indigo-600 shadow-md scale-[1.02]' : 'text-slate-400 hover:text-slate-600'}`}
                     >
                         ประวัติเก่า
@@ -253,9 +271,9 @@ const MeetingListSidebar: React.FC<MeetingListSidebarProps> = React.memo(({
                     >
                         <div className="px-3 md:px-4 pb-3 md:pb-4 pt-2 md:pt-3">
                             <div className="flex justify-between items-center mb-3 md:mb-4">
-                                <button onClick={() => setCurrentNavDate(addMonths(currentNavDate, -1))} className="p-1.5 md:p-2 hover:bg-white/80 rounded-lg md:rounded-xl text-slate-400 transition-all active:scale-90 shadow-sm border border-white/60"><ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4"/></button>
-                                <span className="text-xs md:text-sm font-bold text-slate-800 tracking-tight">{format(currentNavDate, 'MMMM yyyy')}</span>
-                                <button onClick={() => setCurrentNavDate(addMonths(currentNavDate, 1))} className="p-1.5 md:p-2 hover:bg-white/80 rounded-lg md:rounded-xl text-slate-400 transition-all active:scale-90 shadow-sm border border-white/60"><ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4"/></button>
+                                <button onClick={() => onMonthChange(addMonths(currentMonth, -1))} className="p-1.5 md:p-2 hover:bg-white/80 rounded-lg md:rounded-xl text-slate-400 transition-all active:scale-90 shadow-sm border border-white/60"><ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4"/></button>
+                                <span className="text-xs md:text-sm font-bold text-slate-800 tracking-tight">{format(currentMonth, 'MMMM yyyy')}</span>
+                                <button onClick={() => onMonthChange(addMonths(currentMonth, 1))} className="p-1.5 md:p-2 hover:bg-white/80 rounded-lg md:rounded-xl text-slate-400 transition-all active:scale-90 shadow-sm border border-white/60"><ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4"/></button>
                             </div>
                             <div className="grid grid-cols-7 gap-0.5 md:gap-1 text-center mb-1 md:mb-2 max-w-[240px] md:max-w-[260px] mx-auto">
                                 {['S','M','T','W','T','F','S'].map((d, i) => (
@@ -286,7 +304,7 @@ const MeetingListSidebar: React.FC<MeetingListSidebarProps> = React.memo(({
                                             className={`
                                                 h-7 w-7 md:h-9 md:w-9 rounded-lg md:rounded-2xl text-[10px] md:text-xs font-bold flex items-center justify-center relative transition-all duration-300
                                                 ${isSelected ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-110 z-10' : 'hover:bg-white/80 text-slate-600 border border-transparent hover:border-white/80'}
-                                                ${!isSameMonth(day, currentNavDate) ? 'opacity-20' : ''}
+                                                ${!isSameMonth(day, currentMonth) ? 'opacity-20' : ''}
                                                 ${isCurrent && !isSelected ? 'text-indigo-600 font-bold border-2 border-indigo-100 bg-indigo-50/50' : ''}
                                             `}
                                         >
@@ -348,7 +366,14 @@ const MeetingListSidebar: React.FC<MeetingListSidebarProps> = React.memo(({
             
             {/* 4. Scrollable List Area */}
             <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-slate-200/50">
-                <AnimatePresence mode="popLayout">
+                {(viewTab === 'UPCOMING' ? isLoading : isHistoryLoading) && (meetings.length === 0 || (viewTab === 'HISTORY' && historyMeetings.length === 0)) ? (
+                    <div className="space-y-4 animate-pulse">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="p-4 bg-slate-100/50 rounded-[2rem] border border-slate-100 h-32"></div>
+                        ))}
+                    </div>
+                ) : (
+                    <AnimatePresence mode="popLayout">
                     {filteredMeetings.length === 0 ? (
                         <motion.div 
                             initial={{ opacity: 0, y: 20 }}
@@ -403,9 +428,21 @@ const MeetingListSidebar: React.FC<MeetingListSidebarProps> = React.memo(({
                                     {filteredMeetings.map(m => renderMeetingItem(m))}
                                 </div>
                             )}
+                            
+                            {(viewTab === 'UPCOMING' ? hasMore : historyHasMore) && (
+                                <motion.button
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    onClick={viewTab === 'UPCOMING' ? onLoadMore : onLoadMoreHistory}
+                                    className="w-full py-4 mt-2 mb-8 bg-white/40 hover:bg-white/80 border border-white/60 rounded-3xl text-indigo-500 font-black text-[10px] uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                                >
+                                    {(viewTab === 'UPCOMING' ? isLoading : isHistoryLoading) ? 'กำลังโหลดเพิ่ม...' : 'โหลดเพิ่ม +'}
+                                </motion.button>
+                            )}
                         </div>
                     )}
                 </AnimatePresence>
+                )}
             </div>
         </div>
     );

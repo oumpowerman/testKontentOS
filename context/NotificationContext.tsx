@@ -10,6 +10,7 @@ interface NotificationContextType {
     deadlineRequests: any[];
     isLoading: boolean;
     markAsRead: () => Promise<void>;
+    markNotificationAsRead: (id: string) => Promise<void>;
     dismissNotification: (id: string) => Promise<void>;
     refreshData: () => Promise<void>;
 }
@@ -82,6 +83,7 @@ export const NotificationProvider: React.FC<{ currentUser: User | null, children
                         const task = Array.isArray(req.tasks) ? req.tasks[0] : req.tasks;
                         return {
                             ...req,
+                            taskId: req.task_id, // Add CamelCase mapping
                             newDeadline: new Date(req.new_deadline),
                             createdAt: new Date(req.created_at),
                             user: profile ? { name: profile.full_name, avatarUrl: profile.avatar_url } : undefined,
@@ -200,6 +202,7 @@ export const NotificationProvider: React.FC<{ currentUser: User | null, children
                                 const task = Array.isArray(data.tasks) ? data.tasks[0] : data.tasks;
                                 const mapped = {
                                     ...data,
+                                    taskId: data.task_id, // Add CamelCase mapping
                                     newDeadline: new Date(data.new_deadline),
                                     createdAt: new Date(data.created_at),
                                     user: profile ? { name: profile.full_name, avatarUrl: profile.avatar_url } : undefined,
@@ -254,6 +257,17 @@ export const NotificationProvider: React.FC<{ currentUser: User | null, children
         }
     };
 
+    const markNotificationAsRead = async (id: string) => {
+        if (!currentUser) return;
+        // Optimistic Update
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+        try {
+            await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+        } catch (err) {
+            console.error("Mark notification as read error:", err);
+        }
+    };
+
     const dismissNotification = async (id: string) => {
         // Optimistically remove from local state
         if (id.startsWith('leave_')) {
@@ -286,9 +300,10 @@ export const NotificationProvider: React.FC<{ currentUser: User | null, children
         deadlineRequests,
         isLoading, 
         markAsRead, 
+        markNotificationAsRead,
         dismissNotification,
         refreshData: () => fetchAllData(true)
-    }), [notifications, gameLogs, leaveRequests, deadlineRequests, isLoading, markAsRead, dismissNotification, fetchAllData]);
+    }), [notifications, gameLogs, leaveRequests, deadlineRequests, isLoading, markAsRead, markNotificationAsRead, dismissNotification, fetchAllData]);
 
     return (
         <NotificationContext.Provider value={value}>

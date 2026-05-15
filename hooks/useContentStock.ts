@@ -15,6 +15,7 @@ interface UseContentStockProps {
         category: string[];
         statuses: string[];
         showStockOnly: boolean;
+        onlyOverdue?: boolean;
         hasShootDate?: boolean;
         shootDateStart?: string; // Changed to Start
         shootDateEnd?: string;   // Changed to End
@@ -84,6 +85,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         localPath: data.local_path,
         driveLabel: data.drive_label,
         isInShootQueue: data.is_in_shoot_queue || false,
+        hasAnalytics: !!data.content_analytics && (Array.isArray(data.content_analytics) ? data.content_analytics.length > 0 : !!data.content_analytics.id),
         
         reviews: Array.isArray(data.task_reviews) ? data.task_reviews.map((r: any) => ({
              id: r.id, taskId: r.content_id, round: r.round, scheduledAt: new Date(r.scheduled_at), 
@@ -92,6 +94,82 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         logs: []
     }), []);
 
+    // --- SMART HYDRATION LOGIC ---
+    const checkDoesItMatchFilters = useCallback((task: Task, currentFilters = filters) => {
+        const currentSearch = searchQuery.toLowerCase();
+
+        // Search Match
+        if (currentSearch) {
+            const titleMatch = (task.title || '').toLowerCase().includes(currentSearch);
+            const remarkMatch = (task.remark || '').toLowerCase().includes(currentSearch);
+            const locMatch = (task.shootLocation || '').toLowerCase().includes(currentSearch);
+            if (!titleMatch && !remarkMatch && !locMatch) return false;
+        }
+
+        // Filter Match
+        if (currentFilters.channelId !== 'ALL' && task.channelId !== currentFilters.channelId) return false;
+        
+        if (currentFilters.format.length > 0) {
+            const taskFormats = task.contentFormats || [];
+            const hasMatch = taskFormats.some(f => currentFilters.format.includes(f));
+            if (!hasMatch) return false;
+        }
+        
+        if (currentFilters.pillar.length > 0 && (!task.pillar || !currentFilters.pillar.includes(task.pillar))) return false;
+        if (currentFilters.category.length > 0 && (!task.category || !currentFilters.category.includes(task.category))) return false;
+        
+        // 2.1 Content Tab: Active vs Archive Invariant
+        const isArchive = currentFilters.contentSubTab === 'ARCHIVE';
+        const currentStatus = (task.status || '').toUpperCase();
+        const isTerminalStatus = currentStatus.includes('DONE') || ['PUBLISHED', 'FINAL', 'POSTED', 'DONE'].some(s => currentStatus === s || currentStatus.startsWith(s + ' '));
+        
+        if (currentFilters.onlyOverdue) {
+            // Overdue Analytics Match: MUST be explicitly scheduled (false) AND terminal AND > 7 days AND no analytics
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            
+            const endDateObj = task.endDate ? (task.endDate instanceof Date ? task.endDate : new Date(task.endDate)) : null;
+            const isActuallyOverdue = 
+                task.isUnscheduled === false && 
+                isTerminalStatus && 
+                !task.hasAnalytics && 
+                endDateObj && 
+                endDateObj <= sevenDaysAgo;
+            
+            if (!isActuallyOverdue) return false;
+            
+            // Status override check if specific status selected
+            if (currentFilters.statuses.length > 0 && !currentFilters.statuses.includes(task.status as any)) return false;
+        } else {
+            if (isArchive) {
+                if (!isTerminalStatus) return false;
+            } else {
+                // Active Tab case
+                if (isTerminalStatus) return false;
+                // Additional status filter if any
+                if (currentFilters.statuses.length > 0 && !currentFilters.statuses.includes(task.status as any)) return false;
+            }
+        }
+
+        if (currentFilters.showStockOnly && !task.isUnscheduled) return false;
+
+        // Shoot Date Filter
+        if (currentFilters.hasShootDate && !task.shootDate) return false;
+
+        // Shoot Date Range Match
+        if (task.shootDate) {
+             const taskShootStr = format(task.shootDate, 'yyyy-MM-dd');
+             if (currentFilters.shootDateStart && taskShootStr < currentFilters.shootDateStart) return false;
+             if (currentFilters.shootDateEnd && taskShootStr > currentFilters.shootDateEnd) return false;
+        } else {
+             // If filter is active but task has no date, hide it? 
+             // Usually yes, if searching for specific date range.
+             if (currentFilters.shootDateStart || currentFilters.shootDateEnd) return false;
+        }
+
+        return true;
+    }, [filters, searchQuery]);
+
     const fetchContents = useCallback(async (isBackground = false) => {
         if (!isBackground) setIsLoading(true);
         else setIsRefreshing(true);
@@ -99,7 +177,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         try {
             let query = supabase
                 .from('contents')
-                .select(`*, task_reviews(id, round, scheduled_at, reviewer_id, status, feedback, is_completed, content_id)`, { count: 'exact' });
+                .select(`*, task_reviews(id, round, scheduled_at, reviewer_id, status, feedback, is_completed, content_id), content_analytics(id)`, { count: 'exact' });
 
             // 1. Search
             if (searchQuery) {
@@ -118,7 +196,22 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
             if (filters.category.length > 0) query = query.in('category', filters.category);
             
             // 2.1 Content Tab: Active vs Archive
-            if (filters.contentSubTab === 'ARCHIVE') {
+            if (filters.onlyOverdue) {
+                // 2.3 Overdue Analytics Filter overrides standard Status/Tab logic
+                const sevenDaysAgo = new Date();
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                
+                query = query
+                    .or('status.ilike.%DONE%,status.eq.PUBLISHED,status.eq.FINAL,status.eq.POSTED')
+                    .lte('end_date', sevenDaysAgo.toISOString())
+                    .eq('is_unscheduled', false);
+
+                // If specific statuses were selected AND onlyOverdue is on, 
+                // we should respect them but stay within terminal statuses
+                if (filters.statuses.length > 0) {
+                    query = query.in('status', filters.statuses);
+                }
+            } else if (filters.contentSubTab === 'ARCHIVE') {
                 query = query.ilike('status', '%DONE%');
             } else {
                 // Default to ACTIVE: show everything EXCEPT statuses containing 'DONE'
@@ -133,21 +226,6 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
             // 2.2 Shoot Date Range Filter
             if (filters.hasShootDate) {
                 query = query.not('shoot_date', 'is', null);
-            }
-            if (filters.shootDateStart) {
-                // Start of the day (00:00:00)
-                const startDate = startOfDay(parseISO(filters.shootDateStart));
-                query = query.gte('shoot_date', startDate.toISOString());
-            }
-            if (filters.shootDateEnd) {
-                // End of the day (23:59:59.999)
-                const endDate = endOfDay(parseISO(filters.shootDateEnd));
-                query = query.lte('shoot_date', endDate.toISOString());
-            }
-
-            // Fixed: "Stock Only" logic
-            if (filters.showStockOnly) {
-                query = query.eq('is_unscheduled', true);
             }
 
             // 3. Sort
@@ -192,8 +270,13 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
             if (error) throw error;
 
             if (data) {
-                setContents(data.map(mapSupabaseToTask));
-                setTotalCount(count || 0);
+                const mapped = data.map(mapSupabaseToTask);
+                // Since we can't filter by virtual 'has_analytics' on the server easily without a column/view,
+                // we apply the filter again in memory to ensure accuracy for the 'onlyOverdue' mode.
+                const filtered = mapped.filter(item => checkDoesItMatchFilters(item, filters));
+                
+                setContents(filtered);
+                setTotalCount(filters.onlyOverdue ? filtered.length : (count || 0));
                 // Reset tracked IDs since we have a fresh baseline from server
                 trackedAddedIds.current.clear();
             }
@@ -203,7 +286,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
             if (!isBackground) setIsLoading(false);
             setIsRefreshing(false);
         }
-    }, [page, pageSize, searchQuery, filters, sortConfig, mapSupabaseToTask]);
+    }, [page, pageSize, searchQuery, filters, sortConfig, mapSupabaseToTask, checkDoesItMatchFilters]);
 
     // Initial Fetch
     useEffect(() => {
@@ -216,68 +299,11 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         fetchContentsRef.current = fetchContents;
     }, [fetchContents]);
 
-    // --- SMART HYDRATION LOGIC ---
-    const checkDoesItMatchFilters = (task: Task) => {
-        const currentSearch = searchRef.current.toLowerCase();
-        const currentFilters = filtersRef.current;
-
-        // Search Match
-        if (currentSearch) {
-            const titleMatch = (task.title || '').toLowerCase().includes(currentSearch);
-            const remarkMatch = (task.remark || '').toLowerCase().includes(currentSearch);
-            const locMatch = (task.shootLocation || '').toLowerCase().includes(currentSearch);
-            if (!titleMatch && !remarkMatch && !locMatch) return false;
-        }
-
-        // Filter Match
-        if (currentFilters.channelId !== 'ALL' && task.channelId !== currentFilters.channelId) return false;
-        
-        if (currentFilters.format.length > 0) {
-            const taskFormats = task.contentFormats || [];
-            const hasMatch = taskFormats.some(f => currentFilters.format.includes(f));
-            if (!hasMatch) return false;
-        }
-        
-        if (currentFilters.pillar.length > 0 && (!task.pillar || !currentFilters.pillar.includes(task.pillar))) return false;
-        if (currentFilters.category.length > 0 && (!task.category || !currentFilters.category.includes(task.category))) return false;
-        
-        // 2.1 Content Tab: Active vs Archive Invariant
-        const isArchive = currentFilters.contentSubTab === 'ARCHIVE';
-        const isDoneStatus = task.status ? task.status.toUpperCase().includes('DONE') : false;
-        
-        if (isArchive) {
-            if (!isDoneStatus) return false;
-        } else {
-            // Active Tab case
-            if (isDoneStatus) return false;
-            // Additional status filter if any
-            if (currentFilters.statuses.length > 0 && !currentFilters.statuses.includes(task.status as any)) return false;
-        }
-
-        if (currentFilters.showStockOnly && !task.isUnscheduled) return false;
-        
-        // Shoot Date Filter
-        if (currentFilters.hasShootDate && !task.shootDate) return false;
-
-        // Shoot Date Range Match
-        if (task.shootDate) {
-             const taskShootStr = format(task.shootDate, 'yyyy-MM-dd');
-             if (currentFilters.shootDateStart && taskShootStr < currentFilters.shootDateStart) return false;
-             if (currentFilters.shootDateEnd && taskShootStr > currentFilters.shootDateEnd) return false;
-        } else {
-             // If filter is active but task has no date, hide it? 
-             // Usually yes, if searching for specific date range.
-             if (currentFilters.shootDateStart || currentFilters.shootDateEnd) return false;
-        }
-
-        return true;
-    };
-
     const handleRealtimeUpdate = useCallback(async (id: string) => {
         try {
             const { data, error } = await supabase
                 .from('contents')
-                .select(`*, task_reviews(id, round, scheduled_at, reviewer_id, status, feedback, is_completed, content_id)`)
+                .select(`*, task_reviews(id, round, scheduled_at, reviewer_id, status, feedback, is_completed, content_id), content_analytics(id)`)
                 .eq('id', id)
                 .single();
 

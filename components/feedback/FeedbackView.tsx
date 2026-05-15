@@ -26,8 +26,8 @@ const ITEMS_PER_PAGE = 6;
 
 const FeedbackView: React.FC<FeedbackViewProps> = ({ currentUser, users = [] }) => {
     const { 
-        feedbacks, isLoading, submitFeedback, toggleVote, 
-        updateStatus, deleteFeedback, fetchComments, submitComment, toggleRepost 
+        feedbacks, totalCount, pendingCount, stats, isLoading, submitFeedback, toggleVote, 
+        updateStatus, deleteFeedback, fetchComments, submitComment, toggleRepost, fetchFeedbacks 
     } = useFeedback(currentUser);
     
     const [tab, setTab] = useState<'BOARD' | 'ADMIN'>('BOARD');
@@ -40,11 +40,22 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ currentUser, users = [] }) 
     const [sortBy, setSortBy] = useState<SortOption>('NEWEST');
     const [currentPage, setCurrentPage] = useState(1);
 
-    // Deep Link Logic
+    // Sync from server when params change
+    React.useEffect(() => {
+        fetchFeedbacks({
+            page: currentPage,
+            limit: ITEMS_PER_PAGE,
+            status: tab === 'BOARD' ? 'APPROVED' : 'PENDING_REJECTED',
+            type: activeFilter,
+            search: searchQuery,
+            sort: sortBy
+        });
+    }, [currentPage, tab, activeFilter, searchQuery, sortBy]);
+
+    // Handle Deep Link
     React.useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const targetUserId = params.get('targetUserId');
-        const monthKey = params.get('monthKey');
 
         if (targetUserId) {
             setActiveFilter('SHOUTOUT');
@@ -52,62 +63,15 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ currentUser, users = [] }) 
             if (targetUser) {
                 setSearchQuery(targetUser.name);
             }
-            // If monthKey is provided, we might want to filter by date too, 
-            // but the current FeedbackControls doesn't have a date filter.
-            // For now, searching by name is a good start.
         }
     }, [users]);
 
-    const approvedFeedbacks = feedbacks.filter(f => f.status === 'APPROVED');
-    const pendingFeedbacks = feedbacks.filter(f => f.status === 'PENDING' || f.status === 'REJECTED');
-
-    const sourceData = tab === 'BOARD' ? approvedFeedbacks : pendingFeedbacks;
-
-    const filteredData = useMemo(() => {
-        return sourceData.filter(item => {
-            const matchesSearch = item.content.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                  (item.creatorName && item.creatorName.toLowerCase().includes(searchQuery.toLowerCase()));
-            
-            // If we have a deep link target, ensure we only show items for that target
-            const params = new URLSearchParams(window.location.search);
-            const deepTargetId = params.get('targetUserId');
-            const monthKey = params.get('monthKey');
-
-            if (deepTargetId && activeFilter === 'SHOUTOUT' && searchQuery === users.find(u => u.id === deepTargetId)?.name) {
-                if (item.targetUserId !== deepTargetId) return false;
-                
-                if (monthKey) {
-                    const itemMonth = format(new Date(item.createdAt), 'yyyy-MM');
-                    if (itemMonth !== monthKey) return false;
-                }
-            }
-
-            const matchesType = activeFilter === 'ALL' || item.type === activeFilter;
-            return matchesSearch && matchesType;
-        });
-    }, [sourceData, searchQuery, activeFilter, users]);
-
-    const sortedData = useMemo(() => {
-        return [...filteredData].sort((a, b) => {
-            if (sortBy === 'VOTES') {
-                return b.voteCount - a.voteCount;
-            } else if (sortBy === 'OLDEST') {
-                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-            } else {
-                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            }
-        });
-    }, [filteredData, sortBy]);
-
-    const totalPages = Math.ceil(sortedData.length / ITEMS_PER_PAGE);
-    const paginatedData = useMemo(() => {
-        const start = (currentPage - 1) * ITEMS_PER_PAGE;
-        return sortedData.slice(start, start + ITEMS_PER_PAGE);
-    }, [sortedData, currentPage]);
-
-    useMemo(() => {
+    // Reset page when filters change
+    React.useEffect(() => {
         setCurrentPage(1);
-    }, [activeFilter, searchQuery, sortBy, tab]);
+    }, [tab, activeFilter, searchQuery, sortBy]);
+
+    const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
     const bgTheme = useMemo(() => {
         const themes: BackgroundTheme[] = ['pastel-pink', 'pastel-rose', 'pastel-purple'];
@@ -174,21 +138,21 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ currentUser, users = [] }) 
                                     relative px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 overflow-hidden
                                     ${tab === 'ADMIN' 
                                         ? 'bg-orange-50 text-orange-700 shadow-inner ring-1 ring-orange-100' 
-                                        : pendingFeedbacks.length > 0 
+                                        : pendingCount > 0 
                                             ? 'bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg shadow-orange-200 hover:scale-105 hover:-translate-y-0.5' 
                                             : 'text-gray-500 hover:bg-gray-50'
                                     }
                                 `}
                             >
-                                <ShieldCheck className={`w-4 h-4 ${pendingFeedbacks.length > 0 && tab !== 'ADMIN' ? 'animate-bounce' : ''}`} /> 
+                                <ShieldCheck className={`w-4 h-4 ${pendingCount > 0 && tab !== 'ADMIN' ? 'animate-bounce' : ''}`} /> 
                                 <span>Inbox</span>
                                 
-                                {pendingFeedbacks.length > 0 && (
+                                {pendingCount > 0 && (
                                     <span className={`
                                         ml-1 px-1.5 py-0.5 rounded-md text-[10px] min-w-[20px] text-center shadow-sm
                                         ${tab === 'ADMIN' ? 'bg-orange-200 text-orange-800' : 'bg-white text-rose-600 font-black'}
                                     `}>
-                                        {pendingFeedbacks.length}
+                                        {pendingCount}
                                     </span>
                                 )}
                             </button>
@@ -243,7 +207,7 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ currentUser, users = [] }) 
                                 )}
                             </span>
                             <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                {sortedData.length} items
+                                {totalCount} items
                             </span>
                         </h3>
                         
@@ -271,7 +235,7 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ currentUser, users = [] }) 
                              </div>
                         ) : (
                             <>
-                                {paginatedData.length === 0 ? (
+                                {feedbacks.length === 0 ? (
                                     <div className="text-center py-24 border-2 border-dashed border-gray-200 rounded-[40px] bg-white/50">
                                         <Inbox className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                                         <p className="text-gray-400 font-bold text-lg">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</p>
@@ -281,7 +245,7 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ currentUser, users = [] }) 
                                     </div>
                                 ) : (
                                     <div className="space-y-4 min-h-[400px]">
-                                        {paginatedData.map(item => (
+                                        {feedbacks.map(item => (
                                             <FeedbackCard 
                                                 key={item.id} 
                                                 item={item} 
@@ -301,7 +265,7 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ currentUser, users = [] }) 
                         )}
 
                         {/* 4. Pagination */}
-                        {!isLoading && sortedData.length > 0 && (
+                        {!isLoading && totalCount > 0 && (
                             <FeedbackPagination 
                                 currentPage={currentPage}
                                 totalPages={totalPages}
@@ -314,7 +278,7 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ currentUser, users = [] }) 
                 {/* Right: Stats & Info */}
                 <div className="hidden lg:block">
                     <div className="sticky top-6 space-y-6">
-                        <FeedbackStats items={feedbacks} />
+                        <FeedbackStats stats={stats} />
                         
                         {/* Twitter-like Trending/Community Card */}
                         <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">

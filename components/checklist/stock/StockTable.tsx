@@ -16,6 +16,7 @@ import StockTablePagination from './table/StockTablePagination';
 interface StockTableProps {
     isLoading: boolean;
     isFiltering?: boolean;
+    isOverdueFilterActive?: boolean;
     tasks: Task[];
     channels: Channel[];
     users: User[];
@@ -41,7 +42,7 @@ interface StockTableProps {
 }
 
 const StockTable: React.FC<StockTableProps> = React.memo(({ 
-    isLoading, isFiltering, tasks, channels, users, masterOptions,
+    isLoading, isFiltering, isOverdueFilterActive, tasks, channels, users, masterOptions,
     sortConfig, onSort,
     totalCount, currentPage, onPageChange, itemsPerPage,
     onEdit, onSchedule, onToggleQueue, onAddToWorkbox, onEditScript, onOpenAnalytics
@@ -195,9 +196,27 @@ const StockTable: React.FC<StockTableProps> = React.memo(({
     if (tasks.length === 0) {
         return (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden min-h-[400px] p-16 text-center flex flex-col items-center justify-center h-full">
-                <Search className="w-12 h-12 text-gray-300 mb-4" />
-                <h3 className="text-lg font-bold text-gray-800">ไม่พบรายการที่ค้นหา 🔍</h3>
-                <p className="text-gray-400">ลองเปลี่ยนตัวกรอง หรือเพิ่มรายการใหม่ดูนะครับ</p>
+                {isOverdueFilterActive ? (
+                    <>
+                        <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-6 border border-emerald-100 shadow-inner">
+                            <motion.div
+                                initial={{ scale: 0.5, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: 'spring', damping: 10 }}
+                            >
+                                <span className="text-4xl">✨</span>
+                            </motion.div>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-800 mb-2 font-kanit">เย้! กรอกสถิติครบหมดแล้ว 🏆</h3>
+                        <p className="text-slate-400 max-w-xs mx-auto text-sm">ไม่มีคอนเทนต์ที่ค้างกรอกข้อมูลสถิติในขณะนี้ ทีมงานเก่งมากครับ!</p>
+                    </>
+                ) : (
+                    <>
+                        <Search className="w-12 h-12 text-gray-300 mb-4" />
+                        <h3 className="text-lg font-bold text-gray-800">ไม่พบรายการที่ค้นหา 🔍</h3>
+                        <p className="text-gray-400 text-sm">ลองเปลี่ยนตัวกรอง หรือเพิ่มรายการใหม่ดูนะครับ</p>
+                    </>
+                )}
             </div>
         );
     }

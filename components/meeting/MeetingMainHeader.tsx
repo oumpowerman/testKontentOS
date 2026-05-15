@@ -3,6 +3,9 @@ import React from 'react';
 import { ArrowLeft, Coffee, Info, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { format, addMonths, subMonths, startOfMonth } from 'date-fns';
+import { th } from 'date-fns/locale';
+
 interface MeetingMainHeaderProps {
     onInfoOpen: () => void;
     onCreateMeeting: () => void;
@@ -28,18 +31,21 @@ const MeetingMainHeader: React.FC<MeetingMainHeaderProps> = ({
                         Meeting Room
                         <span className="ml-2 text-lg md:text-2xl animate-bounce">💬</span>
                     </h1>
-                    <p className="text-gray-500 text-[10px] md:text-sm font-bold bg-white/60 px-2 md:px-3 py-0.5 md:py-1 rounded-full w-fit backdrop-blur-sm border border-white/50">
-                        จดบันทึก ✦ ติดตามงาน ✦ ปิดจ็อบ
-                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                         <p className="text-gray-500 text-[10px] md:text-sm font-bold bg-white/60 px-2 md:px-3 py-0.5 md:py-1 rounded-full w-fit backdrop-blur-sm border border-white/50">
+                            จดบันทึก ✦ ติดตามงาน
+                        </p>
+                        <button 
+                            onClick={onInfoOpen}
+                            className="p-1 bg-white text-indigo-300 hover:text-indigo-500 rounded-full transition-all border border-indigo-50"
+                            title="คู่มือการใช้งาน"
+                        >
+                            <Info className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                        </button>
+                    </div>
                 </div>
-                <button 
-                    onClick={onInfoOpen}
-                    className="p-1.5 md:p-2 bg-white text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all shadow-sm border border-indigo-100 ml-1 md:ml-2 self-start mt-1 hover:scale-110 active:scale-95"
-                    title="คู่มือการใช้งาน"
-                >
-                    <Info className="w-4 h-4 md:w-5 md:h-5" />
-                </button>
             </div>
+
             <button 
                 onClick={onCreateMeeting}
                 className="w-full sm:w-auto flex items-center justify-center px-4 md:px-6 py-2.5 md:py-3.5 bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white font-bold rounded-xl md:rounded-2xl shadow-xl shadow-indigo-200 transition-all active:scale-95 group border-2 md:border-4 border-white/30 text-sm md:text-base"

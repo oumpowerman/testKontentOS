@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { MasterOption } from '../../../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Play, PenTool, ChevronDown, ChevronUp } from 'lucide-react';
+import { Zap, Play, PenTool, ChevronDown, ChevronUp, BarChart3 } from 'lucide-react';
 
 interface StockQuickFiltersProps {
   masterOptions: MasterOption[];
@@ -10,6 +10,9 @@ interface StockQuickFiltersProps {
   setStatuses: (statuses: string[]) => void;
   currentTab: 'ACTIVE' | 'ARCHIVE';
   setTab: (tab: 'ACTIVE' | 'ARCHIVE') => void;
+  showOnlyOverdue: boolean;
+  setShowOnlyOverdue: (show: boolean) => void;
+  overdueCount?: number;
 }
 
 const StockQuickFilters: React.FC<StockQuickFiltersProps> = ({ 
@@ -17,7 +20,10 @@ const StockQuickFilters: React.FC<StockQuickFiltersProps> = ({
   currentStatuses, 
   setStatuses,
   currentTab,
-  setTab
+  setTab,
+  showOnlyOverdue,
+  setShowOnlyOverdue,
+  overdueCount = 0
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -126,12 +132,36 @@ const StockQuickFilters: React.FC<StockQuickFiltersProps> = ({
                 PRODUCTION
               </button>
 
-              {currentStatuses.length > 0 && (
+              <button
+                onClick={() => {
+                   setShowOnlyOverdue(!showOnlyOverdue);
+                   if (!showOnlyOverdue) setStatuses([]); // Clear status filter if focusing on overdue
+                }}
+                className={`
+                  flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all
+                  ${showOnlyOverdue 
+                    ? 'bg-rose-500 text-white shadow-lg shadow-rose-200 ring-2 ring-rose-500 ring-offset-2' 
+                    : 'bg-white text-slate-500 border border-slate-200 hover:border-rose-300 hover:text-rose-600 hover:bg-rose-50/30'}
+                `}
+              >
+                <BarChart3 className={`w-3.5 h-3.5 ${showOnlyOverdue ? 'animate-bounce' : ''}`} />
+                <span>ค้างกรอกสถิติ</span>
+                {overdueCount > 0 && (
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${showOnlyOverdue ? 'bg-white text-rose-600' : 'bg-rose-500 text-white'}`}>
+                    {overdueCount}
+                  </span>
+                )}
+              </button>
+
+              {(currentStatuses.length > 0 || showOnlyOverdue) && (
                 <button
-                  onClick={() => setStatuses([])}
+                  onClick={() => {
+                    setStatuses([]);
+                    setShowOnlyOverdue(false);
+                  }}
                   className="px-4 py-2.5 text-[10px] font-bold text-slate-400 hover:text-rose-500 transition-colors uppercase tracking-tight"
                 >
-                  Clear Status Filters
+                  Clear Filters
                 </button>
               )}
             </div>

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Eye, Heart, Share2, TrendingUp, Target, Bookmark, LucideIcon, Info, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatCompactNumber } from '../../../lib/utils';
 
 interface MetricInfo {
     title: string;
@@ -81,7 +82,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, subValue, icon: Icon,
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-1">{label}</p>
                 <div className="flex items-baseline gap-2">
                     <h3 className="text-3xl font-bold text-slate-900 tracking-tight">
-                        {typeof value === 'number' ? value.toLocaleString() : value}
+                        {typeof value === 'number' ? formatCompactNumber(value) : value}
                     </h3>
                     {subValue && (
                         <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">

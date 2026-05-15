@@ -13,6 +13,7 @@ export const useSystemNotifications = (tasks: Task[], currentUser: User | null, 
         leaveRequests,
         deadlineRequests,
         markAsRead: contextMarkAsRead, 
+        markNotificationAsRead: contextMarkNotificationAsRead,
         dismissNotification: contextDismissNotification 
     } = useNotificationContext();
     
@@ -82,6 +83,7 @@ export const useSystemNotifications = (tasks: Task[], currentUser: User | null, 
             taskId: n.related_id,
             date: new Date(n.created_at),
             isRead: n.is_read || new Date(n.created_at) < lastReadTime,
+            is_read: n.is_read, // Add raw DB field for compatibility
             actionLink: n.link_path,
         }));
 
@@ -97,6 +99,7 @@ export const useSystemNotifications = (tasks: Task[], currentUser: User | null, 
         notifications,
         unreadCount,
         dismissNotification: contextDismissNotification,
+        markNotificationAsRead: contextMarkNotificationAsRead,
         markAsViewed: contextMarkAsRead,
         markAllAsRead: contextMarkAsRead 
     };

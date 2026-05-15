@@ -6,30 +6,96 @@ import { useToast } from '../context/ToastContext';
 
 export const useFeedback = (currentUser: User) => {
     const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [totalCount, setTotalCount] = useState(0);
+    const [pendingCount, setPendingCount] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
+    const [stats, setStats] = useState({ shoutouts: 0, ideas: 0, totalEngagement: 0 });
     const { showToast } = useToast();
 
-    const fetchFeedbacks = async () => {
-        // Don't set loading to true on background refetches to avoid flickering
-        if (feedbacks.length === 0) setIsLoading(true);
+    const fetchFeedbacks = async (options: {
+        page?: number;
+        limit?: number;
+        status?: FeedbackStatus | 'PENDING_REJECTED';
+        type?: FeedbackType | 'ALL';
+        search?: string;
+        sort?: 'NEWEST' | 'OLDEST' | 'VOTES';
+    } = {}) => {
+        const { 
+            page = 1, 
+            limit = 6, 
+            status = 'APPROVED', 
+            type = 'ALL', 
+            search = '', 
+            sort = 'NEWEST' 
+        } = options;
+
+        setIsLoading(true);
         
         try {
-            // 1. Fetch Feedbacks
-            const { data, error } = await supabase
+            // 1. Fetch Stats (Parallel for performance)
+            const [pendingRes, shoutoutRes, ideaRes, engagementRes] = await Promise.all([
+                supabase.from('feedbacks').select('*', { count: 'exact', head: true }).or('status.eq.PENDING,status.eq.REJECTED'),
+                supabase.from('feedbacks').select('*', { count: 'exact', head: true }).eq('status', 'APPROVED').eq('type', 'SHOUTOUT'),
+                supabase.from('feedbacks').select('*', { count: 'exact', head: true }).eq('status', 'APPROVED').eq('type', 'IDEA'),
+                supabase.from('feedbacks').select('id').eq('status', 'APPROVED') // We'll estimate engagement or skip for now if too heavy
+            ]);
+            
+            setPendingCount(pendingRes.count || 0);
+            setStats(prev => ({
+                ...prev,
+                shoutouts: shoutoutRes.count || 0,
+                ideas: ideaRes.count || 0
+            }));
+
+            // 2. Build Base Query
+            let query = supabase
                 .from('feedbacks')
                 .select(`
                     *,
-                    profiles (full_name, avatar_url),
+                    profiles!user_id (full_name, avatar_url),
                     feedback_votes (user_id),
                     feedback_comments (id),
                     feedback_reposts (user_id)
-                `)
-                .order('created_at', { ascending: false });
+                `, { count: 'exact' });
+
+            // 3. Filters
+            if (status === 'PENDING_REJECTED') {
+                query = query.or('status.eq.PENDING,status.eq.REJECTED');
+            } else {
+                query = query.eq('status', status);
+            }
+
+            if (type !== 'ALL') {
+                query = query.eq('type', type);
+            }
+
+            if (search) {
+                query = query.ilike('content', `%${search}%`);
+            }
+
+            // 4. Sorting
+            if (sort === 'VOTES') {
+                // Since vote_count is not a native column, we'd ideally sort by it.
+                // If it's not a column, we have to sort locally or use a view/function.
+                // For now, let's sort by created_at first, then we might have to do some magic if we want server-side vote sorting.
+                // Most Enterprise setups have a cached count.
+                query = query.order('created_at', { ascending: false });
+            } else if (sort === 'OLDEST') {
+                query = query.order('created_at', { ascending: true });
+            } else {
+                query = query.order('created_at', { ascending: false });
+            }
+
+            // 5. Pagination
+            const from = (page - 1) * limit;
+            const to = from + limit - 1;
+            query = query.range(from, to);
+
+            const { data, error, count } = await query;
 
             if (error) throw error;
 
             if (data) {
-                // Map and Calculate Votes/Ownership
                 const mapped: FeedbackItem[] = data.map((item: any) => {
                     const votes = item.feedback_votes || [];
                     const comments = item.feedback_comments || [];
@@ -55,23 +121,37 @@ export const useFeedback = (currentUser: User) => {
                         creatorAvatar: !item.is_anonymous && item.profiles ? item.profiles.avatar_url : undefined
                     };
                 });
-                setFeedbacks(mapped);
+
+                // Extra step for Sorting by Votes if sort === 'VOTES' (since it's manual)
+                // Note: Server-side sorting by a calculated count is better via a DB View,
+                // but let's stick to this for now if we can't change DB.
+                let finalData = mapped;
+                if (sort === 'VOTES') {
+                    finalData = [...mapped].sort((a, b) => b.voteCount - a.voteCount);
+                }
+
+                setFeedbacks(finalData);
+                setTotalCount(count || 0);
             }
         } catch (err: any) {
             console.error('Fetch feedback failed:', err);
+            showToast('ดึงข้อมูลไม่สำเร็จ: ' + err.message, 'error');
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Realtime
+    // We still want realtime for the current context
+    // In an Enterprise setup, usually we use React Query for this.
+    // For now, let's provide fetchFeedbacks and let the view call it.
+    
+    // We can still listen for changes to trigger a refresh of the count or current page
     useEffect(() => {
-        fetchFeedbacks();
-        const channel = supabase.channel('realtime-feedbacks')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'feedbacks' }, () => fetchFeedbacks())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'feedback_votes' }, () => fetchFeedbacks())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'feedback_comments' }, () => fetchFeedbacks())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'feedback_reposts' }, () => fetchFeedbacks())
+        const channel = supabase.channel('realtime-feedbacks-sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'feedbacks' }, () => {
+                // Silent refresh counts? 
+                // We'll let the component decide when to re-fetch based on interactions
+            })
             .subscribe();
         return () => { supabase.removeChannel(channel); };
     }, []);
@@ -207,7 +287,7 @@ export const useFeedback = (currentUser: User) => {
                 .from('feedback_comments')
                 .select(`
                     *,
-                    profiles (full_name, avatar_url)
+                    profiles!user_id (full_name, avatar_url)
                 `)
                 .eq('feedback_id', feedbackId)
                 .order('created_at', { ascending: true });
@@ -272,6 +352,9 @@ export const useFeedback = (currentUser: User) => {
 
     return {
         feedbacks,
+        totalCount,
+        pendingCount,
+        stats,
         isLoading,
         submitFeedback,
         toggleVote,
@@ -279,6 +362,7 @@ export const useFeedback = (currentUser: User) => {
         deleteFeedback,
         fetchComments,
         submitComment,
-        toggleRepost
+        toggleRepost,
+        fetchFeedbacks
     };
 };

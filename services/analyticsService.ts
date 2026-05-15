@@ -47,12 +47,13 @@ export const saveContentAnalytics = async (analytics: Partial<ContentAnalytics>)
         raw_ai_data: analytics.rawAiData
     };
 
-    const { data, error } = await supabase
+    const { data: analyticsData, error: analyticsError } = await supabase
         .from('content_analytics')
         .insert(payload)
         .select()
         .single();
 
-    if (error) throw error;
-    return mapSupabaseToAnalytics(data);
+    if (analyticsError) throw analyticsError;
+
+    return mapSupabaseToAnalytics(analyticsData);
 };

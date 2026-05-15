@@ -29,7 +29,7 @@ const DeadState: React.FC<DeadStateProps> = ({ onNavigate }) => {
                                 <ShieldAlert className="w-3 h-3" /> Status: DECEASED (0 HP)
                             </span>
                         </div>
-                        <h3 className="text-3xl font-black tracking-tighter leading-none mb-1.5 text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-500">
+                        <h3 className="text-3xl font-bold tracking-tighter leading-none mb-1.5 text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-500">
                             คุณเสียชีวิตแล้ว... 👻
                         </h3>
                         <p className="text-slate-400 text-sm font-medium leading-tight max-w-[280px]">

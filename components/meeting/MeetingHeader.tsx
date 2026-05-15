@@ -42,6 +42,165 @@ interface MeetingHeaderProps {
     activeMeetingTitle?: string;
 }
 
+const TimePickerPortal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    anchorRef: React.RefObject<HTMLElement>;
+    value: string;
+    onSelect: (val: string) => void;
+}> = ({ isOpen, onClose, anchorRef, value, onSelect }) => {
+    if (!isOpen || !anchorRef.current) return null;
+    const rect = anchorRef.current.getBoundingClientRect();
+    
+    const times = [];
+    for (let h = 0; h < 24; h++) {
+        for (let m = 0; m < 60; m += 15) {
+            times.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+        }
+    }
+
+    return createPortal(
+        <>
+            <div 
+                className="fixed inset-0 z-[10010]" 
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                }} 
+            />
+            <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{ 
+                    position: 'fixed',
+                    top: rect.bottom + 8,
+                    left: rect.left - 40,
+                    zIndex: 10011
+                }}
+                className="bg-white rounded-2xl shadow-2xl border border-indigo-50 p-2 w-[120px] max-h-[240px] overflow-y-auto scrollbar-hide"
+                onClick={e => e.stopPropagation()}
+            >
+                {times.map(t => (
+                    <button
+                        key={t}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onSelect(t);
+                            onClose();
+                        }}
+                        className={`w-full text-center py-2 rounded-xl text-xs font-bold transition-all mb-1 ${value === t ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-indigo-50'}`}
+                    >
+                        {t}
+                    </button>
+                ))}
+            </motion.div>
+        </>,
+        document.body
+    );
+};
+
+const CalendarPortal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    anchorRef: React.RefObject<HTMLElement>;
+    date: Date;
+    setDate: (d: Date) => void;
+    onBlurDate: (d: Date) => void;
+    viewDate: Date;
+    setViewDate: (d: Date) => void;
+}> = ({ isOpen, onClose, anchorRef, date, setDate, onBlurDate, viewDate, setViewDate }) => {
+    if (!isOpen || !anchorRef.current) return null;
+    
+    const rect = anchorRef.current.getBoundingClientRect();
+    const days = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+    const start = startOfMonth(viewDate);
+    const end = endOfMonth(viewDate);
+    const startDate = startOfWeek(start);
+    const endDate = endOfWeek(end);
+    
+    const calendarDays = [];
+    let curr = startDate;
+    while (curr <= endDate) {
+        calendarDays.push(new Date(curr));
+        curr = addDays(curr, 1);
+    }
+
+    return createPortal(
+        <>
+            <div 
+                className="fixed inset-0 z-[10010]" 
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                }} 
+            />
+            <motion.div 
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                style={{ 
+                    position: 'fixed',
+                    top: rect.bottom + 8,
+                    left: rect.left,
+                    zIndex: 10011
+                }}
+                className="bg-white rounded-3xl shadow-2xl border border-indigo-50 p-4 w-[280px]"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between mb-4">
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setViewDate(subMonths(viewDate, 1));
+                        }} 
+                        className="p-1.5 hover:bg-slate-50 rounded-full transition-colors text-slate-400"
+                    >
+                        <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="text-sm font-bold text-slate-700">{format(viewDate, 'MMMM yyyy')}</span>
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setViewDate(addMonths(viewDate, 1));
+                        }} 
+                        className="p-1.5 hover:bg-slate-50 rounded-full transition-colors text-slate-400"
+                    >
+                        <ChevronRight className="w-4 h-4" />
+                    </button>
+                </div>
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                    {days.map(d => <div key={d} className="text-[10px] font-bold text-slate-300 text-center uppercase">{d}</div>)}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                    {calendarDays.map((d, i) => {
+                        const isCurrentMonth = d.getMonth() === viewDate.getMonth();
+                        const isSelected = format(d, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+                        return (
+                            <button
+                                key={i}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDate(d);
+                                    onBlurDate(d);
+                                    onClose();
+                                }}
+                                className={`
+                                    h-8 w-8 rounded-xl text-[11px] font-bold transition-all
+                                    ${isSelected ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 
+                                      isCurrentMonth ? 'text-slate-600 hover:bg-indigo-50' : 'text-slate-200 pointer-events-none'}
+                                `}
+                            >
+                                {format(d, 'd')}
+                            </button>
+                        );
+                    })}
+                </div>
+            </motion.div>
+        </>,
+        document.body
+    );
+};
+
 const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
     title, setTitle, onBlurTitle,
     date, setDate, onBlurDate,
@@ -68,130 +227,7 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
     const [showStartTimePicker, setShowStartTimePicker] = useState(false);
     const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
-    const TimePickerPortal: React.FC<{
-        isOpen: boolean;
-        onClose: () => void;
-        anchorRef: React.RefObject<HTMLElement>;
-        value: string;
-        onSelect: (val: string) => void;
-    }> = ({ isOpen, onClose, anchorRef, value, onSelect }) => {
-        if (!isOpen || !anchorRef.current) return null;
-        const rect = anchorRef.current.getBoundingClientRect();
-        
-        const times = [];
-        for (let h = 0; h < 24; h++) {
-            for (let m = 0; m < 60; m += 15) {
-                times.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
-            }
-        }
-
-        return createPortal(
-            <>
-                <div className="fixed inset-0 z-[10010]" onClick={onClose} />
-                <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    style={{ 
-                        position: 'fixed',
-                        top: rect.bottom + 8,
-                        left: rect.left - 40,
-                        zIndex: 10011
-                    }}
-                    className="bg-white rounded-2xl shadow-2xl border border-indigo-50 p-2 w-[120px] max-h-[240px] overflow-y-auto scrollbar-hide"
-                    onClick={e => e.stopPropagation()}
-                >
-                    {times.map(t => (
-                        <button
-                            key={t}
-                            onClick={() => {
-                                onSelect(t);
-                                onClose();
-                            }}
-                            className={`w-full text-center py-2 rounded-xl text-xs font-bold transition-all mb-1 ${value === t ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-indigo-50'}`}
-                        >
-                            {t}
-                        </button>
-                    ))}
-                </motion.div>
-            </>,
-            document.body
-        );
-    };
-
-    const CalendarPortal: React.FC = () => {
-        if (!showDatePicker || !dateBtnRef.current) return null;
-        
-        const rect = dateBtnRef.current.getBoundingClientRect();
-        const days = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
-        const start = startOfMonth(viewDate);
-        const end = endOfMonth(viewDate);
-        const startDate = startOfWeek(start);
-        const endDate = endOfWeek(end);
-        
-        const calendarDays = [];
-        let curr = startDate;
-        while (curr <= endDate) {
-            calendarDays.push(new Date(curr));
-            curr = addDays(curr, 1);
-        }
-
-        return createPortal(
-            <>
-                <div className="fixed inset-0 z-[10010]" onClick={() => setShowDatePicker(false)} />
-                <motion.div 
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    style={{ 
-                        position: 'fixed',
-                        top: rect.bottom + 8,
-                        left: rect.left,
-                        zIndex: 10011
-                    }}
-                    className="bg-white rounded-3xl shadow-2xl border border-indigo-50 p-4 w-[280px]"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <div className="flex items-center justify-between mb-4">
-                        <button onClick={() => setViewDate(subMonths(viewDate, 1))} className="p-1.5 hover:bg-slate-50 rounded-full transition-colors text-slate-400">
-                            <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <span className="text-sm font-bold text-slate-700">{format(viewDate, 'MMMM yyyy')}</span>
-                        <button onClick={() => setViewDate(addMonths(viewDate, 1))} className="p-1.5 hover:bg-slate-50 rounded-full transition-colors text-slate-400">
-                            <ChevronRight className="w-4 h-4" />
-                        </button>
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 mb-2">
-                        {days.map(d => <div key={d} className="text-[10px] font-bold text-slate-300 text-center uppercase">{d}</div>)}
-                    </div>
-                    <div className="grid grid-cols-7 gap-1">
-                        {calendarDays.map((d, i) => {
-                            const isCurrentMonth = d.getMonth() === viewDate.getMonth();
-                            const isSelected = format(d, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
-                            return (
-                                <button
-                                    key={i}
-                                    onClick={() => {
-                                        setDate(d);
-                                        onBlurDate(d);
-                                        setShowDatePicker(false);
-                                    }}
-                                    className={`
-                                        h-8 w-8 rounded-xl text-[11px] font-bold transition-all
-                                        ${isSelected ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 
-                                          isCurrentMonth ? 'text-slate-600 hover:bg-indigo-50' : 'text-slate-200 pointer-events-none'}
-                                    `}
-                                >
-                                    {format(d, 'd')}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </motion.div>
-            </>,
-            document.body
-        );
-    };
-
-    const selectedCategory = masterOptions.find(o => o.key === category);
+    const selectedCategory = masterOptions.find(o => o.type === 'MEETING_CATEGORY' && o.key === category);
 
     // RSVP Logic
     const myStatus = attendance[currentUser.id] || 'INVITED';
@@ -297,13 +333,22 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
                     ref={dateBtnRef}
                     onClick={() => {
                         setViewDate(date);
-                        setShowDatePicker(!showDatePicker);
+                        setShowDatePicker(true);
                     }}
                     className="flex items-center gap-3 bg-white/60 p-3 rounded-2xl border border-white/80 shadow-sm relative group hover:bg-white transition-all cursor-pointer"
                 >
                     <Calendar className="w-4 h-4 text-indigo-400" />
                     <span className="text-xs font-bold text-slate-600">{format(date, 'd MMM yyyy')}</span>
-                    <CalendarPortal />
+                    <CalendarPortal 
+                        isOpen={showDatePicker}
+                        onClose={() => setShowDatePicker(false)}
+                        anchorRef={dateBtnRef}
+                        date={date}
+                        setDate={setDate}
+                        onBlurDate={onBlurDate}
+                        viewDate={viewDate}
+                        setViewDate={setViewDate}
+                    />
                 </div>
 
                 {/* Time Picker */}
@@ -314,7 +359,7 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
                             ref={startTimeRef}
                             type="text"
                             value={startTime}
-                            onFocus={() => setShowStartTimePicker(true)}
+                            onClick={() => setShowStartTimePicker(true)}
                             onChange={(e) => {
                                 // Simple validation for HH:mm format
                                 let val = e.target.value.replace(/[^0-9:]/g, '');
@@ -340,7 +385,7 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
                             ref={endTimeRef}
                             type="text"
                             value={endTime}
-                            onFocus={() => setShowEndTimePicker(true)}
+                            onClick={() => setShowEndTimePicker(true)}
                             onChange={(e) => {
                                 let val = e.target.value.replace(/[^0-9:]/g, '');
                                 if (val.length === 2 && !val.includes(':')) val += ':';
@@ -364,31 +409,52 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = React.memo(({
                 </div>
 
                 {/* Custom Category Dropdown */}
-                <div className="flex items-center gap-3 bg-white/60 p-3 rounded-2xl border border-white/80 shadow-sm relative">
-                    <Tag className="w-4 h-4 text-purple-400" />
+                <div className="flex items-center gap-3 bg-white/60 p-1.5 md:p-2 rounded-2xl border border-white/80 shadow-sm relative shrink-0 min-w-[140px]">
+                    <div className={`p-1.5 rounded-lg ${selectedCategory?.color ? selectedCategory.color.split(' ')[0] : 'bg-slate-100'}`}>
+                         <Tag className={`w-3.5 h-3.5 ${selectedCategory?.color ? selectedCategory.color.split(' ')[1] : 'text-slate-400'}`} />
+                    </div>
+                    
                     <button 
-                        onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                        className="flex items-center justify-between w-full text-xs font-bold text-slate-600"
+                         onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                         className={`flex items-center justify-between w-full text-[11px] md:text-xs font-black transition-all ${selectedCategory?.color ? selectedCategory.color.split(' ')[1] : 'text-slate-600'}`}
                     >
-                        {selectedCategory?.label || 'เลือกหมวดหมู่'}
-                        <ChevronDown className="w-4 h-4" />
+                         <span className="truncate mr-2">
+                            {selectedCategory?.label || 'เลือกหมวดหมู่'}
+                         </span>
+                         <ChevronDown className={`w-3 h-3 md:w-4 md:h-4 opacity-50 transition-transform ${isCategoryDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
+
                     {isCategoryDropdownOpen && (
-                        <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-2xl shadow-xl border border-gray-100 z-50 p-2">
-                            {masterOptions.filter(o => o.type === 'MEETING_CATEGORY').map(opt => (
-                                <button
-                                    key={opt.key}
-                                    onClick={() => {
-                                        setCategory(opt.key as MeetingCategory);
-                                        onBlurCategory(opt.key as MeetingCategory);
-                                        setIsCategoryDropdownOpen(false);
-                                    }}
-                                    className="w-full text-left px-4 py-2 text-xs font-bold text-slate-600 hover:bg-indigo-50 rounded-xl"
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
+                        <>
+                            <div 
+                                className="fixed inset-0 z-[60]" 
+                                onClick={() => setIsCategoryDropdownOpen(false)} 
+                            />
+                            <motion.div 
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                className="absolute top-full left-0 mt-2 w-[200px] bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 z-[70] p-2 overflow-hidden"
+                            >
+                                <div className="max-h-[300px] overflow-y-auto scrollbar-hide space-y-1">
+                                    {masterOptions.filter(o => o.type === 'MEETING_CATEGORY').map(opt => (
+                                        <button
+                                            key={opt.key}
+                                            onClick={() => {
+                                                setCategory(opt.key as MeetingCategory);
+                                                onBlurCategory(opt.key as MeetingCategory);
+                                                setIsCategoryDropdownOpen(false);
+                                            }}
+                                            className={`w-full text-left px-3 py-2.5 rounded-xl transition-all flex items-center gap-3 group ${category === opt.key ? 'bg-indigo-50 border border-indigo-100' : 'hover:bg-slate-50 border border-transparent'}`}
+                                        >
+                                            <div className={`w-2 h-2 rounded-full shrink-0 ${opt.color ? opt.color.split(' ')[0] : 'bg-slate-200'}`} />
+                                            <span className={`text-[11px] md:text-xs font-bold leading-none ${category === opt.key ? 'text-indigo-600' : 'text-slate-600'}`}>
+                                                {opt.label}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        </>
                     )}
                 </div>
 

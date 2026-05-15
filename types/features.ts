@@ -268,6 +268,7 @@ export interface MeetingLog {
     agenda?: MeetingAgendaItem[];
     assets?: TaskAsset[];
     referenceMeetingId?: string;
+    isPartial?: boolean;
 }
 
 // --- FEEDBACK ---
@@ -371,6 +372,7 @@ export interface WikiArticle {
     updatedBy?: string;
     author?: { name: string; avatarUrl: string };
     lastEditor?: { name: string; avatarUrl: string };
+    isPartial?: boolean;
 }
 
 // --- SYSTEM ---
@@ -390,6 +392,7 @@ export interface AppNotification {
     taskId?: string;
     date: Date;
     isRead: boolean;
+    is_read?: boolean; // Raw database state (true if explicitly marked as read)
     actionLink?: string; // Optional link for navigation
     user?: { name: string; avatarUrl: string; id?: string }; // Who this notification is about (for Admin)
     // This Metadata field is CRITICAL for the new Popover design

@@ -73,6 +73,9 @@ export const useAutoJudge = (currentUser: User | null) => {
 
     const hasNotification = (type: string, messageMatch: string) => {
         if (isLoading) return true; // Assume exists while loading to be safe
+        // Check ALL notifications in context. 
+        // We should ensure NotificationContext maintains a reasonable history or check DB.
+        // For now, we check if ANY notification (read or unread) exists with this message.
         return notifications.some(n => n.type === type && n.message && n.message.includes(messageMatch));
     };
 

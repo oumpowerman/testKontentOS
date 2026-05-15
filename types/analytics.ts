@@ -30,9 +30,15 @@ export interface PlatformMetrics {
 
 export interface AnalyticsSummary {
     totalViews: number;
+    totalLikes?: number;
+    totalShares?: number;
+    totalComments?: number;
+    totalSaves?: number;
+    totalEngagement?: number;
     totalInteraction: number;
     avgEngagementRate: number;
     avgRetention: number;
+    avgWatchTime?: number;
     platformBreakdown: Record<string, PlatformMetrics>;
     growthRate?: number;
     channelBenchmarks?: {
@@ -41,4 +47,5 @@ export interface AnalyticsSummary {
     };
     topPerformingPlatform?: string;
     totalInteractions?: number;
+    totalAnalyzed?: number;
 }

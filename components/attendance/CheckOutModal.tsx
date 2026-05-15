@@ -216,7 +216,7 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
                                 <button 
                                     onClick={handleNormalSubmit}
                                     disabled={isSubmitting}
-                                    className={`w-full py-4 text-white rounded-2xl font-black text-lg shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${checkOutStatus === 'EARLY_LEAVE' ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-200' : 'bg-green-600 hover:bg-green-700 shadow-green-200'}`}
+                                    className={`w-full py-4 text-white rounded-2xl font-bold text-lg shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${checkOutStatus === 'EARLY_LEAVE' ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-200' : 'bg-green-600 hover:bg-green-700 shadow-green-200'}`}
                                 >
                                     {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin"/> : <LogOut className="w-6 h-6"/>}
                                     {checkOutStatus === 'EARLY_LEAVE' ? 'ยืนยันกลับก่อน (Early)' : 'ยืนยันการเลิกงาน'}

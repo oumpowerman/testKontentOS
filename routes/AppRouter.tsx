@@ -48,7 +48,7 @@ const WikiView = lazy(() => import('../components/WikiView'));
 const LeaderboardView = lazy(() => import('../components/LeaderboardView')); 
 const NexusHub = lazy(() => import('../components/nexus/NexusHub'));
 const RoadmapView = lazy(() => import('../components/roadmap/RoadmapView'));
-const ContentAnalyticsView = lazy(() => import('../components/gamification/ContentAnalyticsView'));
+const ContentAnalyticsView = lazy(() => import('../components/analytics/ContentAnalyticsView'));
 
 // --- NEW MODULE BRIDGES (Lazy Loaded) ---
 const AttendanceRouter = lazy(() => import('./AttendanceRouter'));
@@ -253,7 +253,7 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
   const { items: workboxItems, addItem: addToWorkbox, setIsDragging } = useWorkboxContext();
 
   // --- SUB-HOOKS ---
-  const { notifications, unreadCount: sysUnread, dismissNotification, markAllAsRead, markAsViewed } = useSystemNotifications(tasks, currentUserProfile, fetchProfile);
+  const { notifications, unreadCount: sysUnread, dismissNotification, markNotificationAsRead, markAllAsRead, markAsViewed } = useSystemNotifications(tasks, currentUserProfile, fetchProfile);
   const { unreadCount: chatUnread } = useChatUnread(currentUserProfile);
   const { requests: leaveRequests, approveRequest, rejectRequest } = useLeaveRequests(
     currentUserProfile, 
@@ -285,7 +285,7 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
   
   // Handler for Lock Modal Acknowledge
   const handleAcknowledgeLock = async (notifId: string) => {
-      await dismissNotification(notifId); // Remove/Mark Read
+      await markNotificationAsRead(notifId); // Remove/Mark Read
       // Trigger refresh if needed, usually handled by realtime
   };
 

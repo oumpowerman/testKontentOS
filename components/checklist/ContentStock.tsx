@@ -21,8 +21,8 @@ import StockInventoryModal from './stock/inventory/StockInventoryModal';
 import StockUtilities from './stock/StockUtilities';
 import StockCountBadge from './stock/StockCountBadge';
 import StockShootQueue from './stock/StockShootQueue';
-import AnalyticsEntryModal from '../gamification/AnalyticsEntryModal';
-import ContentAnalyticsView from '../gamification/ContentAnalyticsView';
+import AnalyticsEntryModal from '../analytics/AnalyticsEntryModal';
+import ContentAnalyticsView from '../analytics/ContentAnalyticsView';
 import { BarChart3 } from 'lucide-react';
 
 interface ContentStockProps {
@@ -53,6 +53,7 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
   const [filterPillar, setFilterPillar] = useState<string[]>([]);
   const [filterCategory, setFilterCategory] = useState<string[]>([]);
   const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
+  const [filterOnlyOverdue, setFilterOnlyOverdue] = useState(false);
   
   // Updated: Range Filter
   const [filterHasShootDate, setFilterHasShootDate] = useState(false);
@@ -127,8 +128,9 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
       shootDateStart: filterShootDateStart, // Added
       shootDateEnd: filterShootDateEnd,     // Added
       showStockOnly: showStockOnly,
+      onlyOverdue: filterOnlyOverdue,
       contentSubTab: contentSubTab
-  }), [filterChannel, filterFormat, filterPillar, filterCategory, filterStatuses, filterHasShootDate, filterShootDateStart, filterShootDateEnd, showStockOnly, contentSubTab]);
+  }), [filterChannel, filterFormat, filterPillar, filterCategory, filterStatuses, filterHasShootDate, filterShootDateStart, filterShootDateEnd, showStockOnly, filterOnlyOverdue, contentSubTab]);
 
   // Transition Effect
   useEffect(() => {
@@ -175,6 +177,7 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
     setFilterShootDateStart(''); 
     setFilterShootDateEnd('');
     setFilterStatuses([]);
+    setFilterOnlyOverdue(false);
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -226,6 +229,21 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
     ];
     return themes[Math.floor(Math.random() * themes.length)];
   }, []);
+
+  const overdueCount = useMemo(() => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    return globalTasks.filter(task => {
+        const currentStatus = (task.status || '').toUpperCase();
+        const isTerminal = currentStatus.includes('DONE') || ['PUBLISHED', 'FINAL', 'POSTED'].includes(currentStatus);
+        
+        if (task.type !== 'CONTENT' || task.isUnscheduled !== false || task.hasAnalytics || !task.endDate || !isTerminal) return false;
+        
+        const endDateObj = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
+        return endDateObj <= sevenDaysAgo;
+    }).length;
+  }, [globalTasks]);
 
   return (
     <AppBackground theme={bgTheme} pattern="icons" className="p-4 md:p-8 min-h-screen">
@@ -396,6 +414,9 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
                                 setStatuses={setFilterStatuses}
                                 currentTab={contentSubTab}
                                 setTab={setContentSubTab}
+                                showOnlyOverdue={filterOnlyOverdue}
+                                setShowOnlyOverdue={setFilterOnlyOverdue}
+                                overdueCount={overdueCount}
                             />
                         </motion.div>
 
@@ -446,6 +467,7 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
                     <StockTable
                         isLoading={isLoading || isFiltering}
                         isFiltering={isFiltering}
+                        isOverdueFilterActive={filterOnlyOverdue}
                         tasks={paginatedTasks}
                         channels={channels}
                         users={users}

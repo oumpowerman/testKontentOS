@@ -17,6 +17,7 @@ export const useWiki = (currentUser?: User) => {
             return context.updateArticle(id, updates, currentUser);
         },
         deleteArticle: context.deleteArticle,
-        toggleHelpful: context.toggleHelpful
+        toggleHelpful: context.toggleHelpful,
+        fetchArticleDetail: context.fetchArticleDetail
     };
 };

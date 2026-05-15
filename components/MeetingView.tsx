@@ -28,7 +28,22 @@ interface MeetingViewProps {
 type MeetingTab = 'AGENDA' | 'NOTES' | 'FILES' | 'ACTIONS' | 'DECISIONS';
 
 const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, masterOptions = [] }) => {
-    const { meetings, createMeeting, updateMeeting, deleteMeeting, isLoading: isMeetingsLoading } = useMeetings();
+    const { 
+        meetings, 
+        historyMeetings,
+        createMeeting, 
+        updateMeeting, 
+        deleteMeeting, 
+        isLoading: isMeetingsLoading, 
+        isHistoryLoading,
+        currentMonth, 
+        setCurrentMonth, 
+        fetchMeetingDetail,
+        hasMore: contextHasMore,
+        historyHasMore,
+        loadMoreMeetings,
+        loadMoreHistory
+    } = useMeetings();
     const { handleSaveTask } = useTasks(() => {}); 
     
     // UI State
@@ -70,6 +85,13 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
     const [taskToNote, setTaskToNote] = useState<Task | null>(null);
     const [noteText, setNoteText] = useState('');
 
+    // Fetch detail when selection changes
+    useEffect(() => {
+        if (selectedId) {
+            fetchMeetingDetail(selectedId);
+        }
+    }, [selectedId, fetchMeetingDetail]);
+
     // Filter Logic
     const filteredMeetings = meetings.filter(m => 
         m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -83,7 +105,7 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
         if (selectedMeeting) {
             setTitle(selectedMeeting.title);
             setDate(selectedMeeting.date);
-            setContent(selectedMeeting.content);
+            setContent(selectedMeeting.content || '');
             setSheets(selectedMeeting.sheets || []); // Sync Sheets
             setDecisions(selectedMeeting.decisions || ''); // Sync Decisions
             // Force cast for flexibility if legacy data exists
@@ -98,7 +120,7 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
 
     // Auto-save debounce for content, decisions, and sheets
     useEffect(() => {
-        if (!selectedId || !selectedMeeting) return;
+        if (!selectedId || !selectedMeeting || selectedMeeting.isPartial) return;
         
         const timer = setTimeout(() => {
             // Only update if values actually changed from the last known meeting state
@@ -387,8 +409,17 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
                             className={`flex flex-col bg-white/80 backdrop-blur-md rounded-[1.5rem] md:rounded-[2rem] border border-indigo-50 shadow-sm overflow-hidden h-full shrink-0 relative z-[70] w-full md:w-[500px] absolute md:relative inset-1 md:inset-auto`}
                         >
                              <MeetingListSidebar 
-                                meetings={filteredMeetings}
+                                meetings={meetings}
+                                historyMeetings={historyMeetings}
                                 selectedId={selectedId}
+                                isLoading={isMeetingsLoading}
+                                isHistoryLoading={isHistoryLoading}
+                                hasMore={contextHasMore}
+                                historyHasMore={historyHasMore}
+                                onLoadMore={loadMoreMeetings}
+                                onLoadMoreHistory={loadMoreHistory}
+                                currentMonth={currentMonth}
+                                onMonthChange={setCurrentMonth}
                                 onSelect={(id) => {
                                     setSelectedId(id);
                                     setIsSidebarCollapsed(true); // Auto-hide on select

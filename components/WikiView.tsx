@@ -37,7 +37,7 @@ interface WikiViewProps {
 export type WikiLayoutMode = 'STANDARD' | 'FOCUS' | 'ZEN';
 
 const WikiView: React.FC<WikiViewProps> = ({ currentUser }) => {
-    const { articles, addArticle, updateArticle, deleteArticle, toggleHelpful } = useWiki(currentUser);
+    const { articles, addArticle, updateArticle, deleteArticle, toggleHelpful, fetchArticleDetail } = useWiki(currentUser);
     const { masterOptions } = useMasterData();
     const { showConfirm } = useGlobalDialog();
     const { showToast } = useToast();
@@ -50,6 +50,7 @@ const WikiView: React.FC<WikiViewProps> = ({ currentUser }) => {
     const [isInfoOpen, setIsInfoOpen] = useState(false);
     const [wikiMode, setWikiMode] = useState<'ARTICLES' | 'HANDBOOK' | 'NEXUS'>('ARTICLES');
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+    const [isFetchingDetail, setIsFetchingDetail] = useState(false);
     
     // DND State
     const [activeArticle, setActiveArticle] = useState<WikiArticle | null>(null);
@@ -117,13 +118,27 @@ const WikiView: React.FC<WikiViewProps> = ({ currentUser }) => {
         setIsMobileListVisible(false); 
     };
 
-    const handleEditStart = (article: WikiArticle) => {
-        setViewingArticle(article);
+    const handleEditStart = async (article: WikiArticle) => {
+        let fullArticle = article;
+        if (article.isPartial) {
+            setIsFetchingDetail(true);
+            const fetched = await fetchArticleDetail(article.id);
+            if (fetched) fullArticle = fetched;
+            setIsFetchingDetail(false);
+        }
+        setViewingArticle(fullArticle);
         setIsEditing(true);
     };
 
-    const handleOpenArticle = (article: WikiArticle) => {
-        setViewingArticle(article);
+    const handleOpenArticle = async (article: WikiArticle) => {
+        let fullArticle = article;
+        if (article.isPartial) {
+            setIsFetchingDetail(true);
+            const fetched = await fetchArticleDetail(article.id);
+            if (fetched) fullArticle = fetched;
+            setIsFetchingDetail(false);
+        }
+        setViewingArticle(fullArticle);
         setIsEditing(false);
         setIsMobileListVisible(false); 
         // Auto-collapse header when reading to maximize space
@@ -353,6 +368,11 @@ const WikiView: React.FC<WikiViewProps> = ({ currentUser }) => {
                         </div>
                     ) : wikiMode === 'HANDBOOK' ? (
                         <WikiHandbook currentUser={currentUser} />
+                    ) : isFetchingDetail ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-indigo-300">
+                             <Loader2 className="w-12 h-12 animate-spin mb-4" />
+                             <p className="font-bold text-sm animate-pulse">กำลังโหลดเนื้อหา...</p>
+                        </div>
                     ) : isEditing ? (
                         <Suspense fallback={
                             <div className="flex-1 flex flex-col items-center justify-center text-indigo-300">

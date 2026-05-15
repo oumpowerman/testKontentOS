@@ -16,6 +16,7 @@ import { ChecklistProvider } from './context/ChecklistContext';
 import { KPIProvider } from './context/KPIContext';
 import { FinanceProvider } from './context/FinanceContext';
 import { WikiProvider } from './context/WikiContext';
+import { MeetingProvider } from './context/MeetingContext';
 import { UserSessionProvider, useUserSession } from './context/UserSessionContext';
 import { ShootQueueProvider } from './context/ShootQueueContext';
 import { StorageProvider } from './context/StorageContext';
@@ -149,12 +150,14 @@ function AuthenticatedAppInner({ user }: { user: any }) {
             <FinanceProvider>
               <WikiProvider>
                 <GameConfigProvider>
-                  <TaskProvider>
-                    <ShootQueueProvider>
-                      <GlobalRealtimeSync />
-                      <AppRouter user={user} />
-                    </ShootQueueProvider>
-                  </TaskProvider>
+                  <MeetingProvider>
+                    <TaskProvider>
+                      <ShootQueueProvider>
+                        <GlobalRealtimeSync />
+                        <AppRouter user={user} />
+                      </ShootQueueProvider>
+                    </TaskProvider>
+                  </MeetingProvider>
                 </GameConfigProvider>
               </WikiProvider>
             </FinanceProvider>

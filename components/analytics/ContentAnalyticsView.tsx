@@ -1,38 +1,47 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { supabase } from '../../lib/supabase';
-import { Task, ContentAnalytics, PlatformMetrics, AnalyticsSummary } from '../../types';
-import { fetchAnalyticsForContent, mapSupabaseToAnalytics } from '../../services/analyticsService';
+import { Task, PlatformMetrics, AnalyticsSummary } from '../../types';
 import { useChannels } from '../../hooks/useChannels';
-import { subDays, isAfter } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Modular Components
-import AnalyticsHeader from '../analytics/dashboard/AnalyticsHeader';
-import AnalyticsStatsGrid from '../analytics/dashboard/AnalyticsStatsGrid';
-import AnalyticsCharts from '../analytics/dashboard/AnalyticsCharts';
-import AnalyticsListTable from '../analytics/dashboard/AnalyticsListTable';
-import PendingActionsAlert from '../analytics/dashboard/PendingActionsAlert';
+import AnalyticsHeader from './dashboard/AnalyticsHeader';
+import AnalyticsStatsGrid from './dashboard/AnalyticsStatsGrid';
+import AnalyticsCharts from './dashboard/AnalyticsCharts';
+import AnalyticsListTable from './dashboard/AnalyticsListTable';
+import PendingActionsAlert from './dashboard/PendingActionsAlert';
 import AnalyticsEntryModal from './AnalyticsEntryModal';
 import TaskModal from '../TaskModal';
 import { useTeam } from '../../hooks/useTeam';
 import { useTasks } from '../../hooks/useTasks';
-
-interface ContentWithAnalytics extends Task {
-    analytics?: ContentAnalytics[];
-}
+import { useContentAnalyticsFetcher } from '../../hooks/useContentAnalyticsFetcher';
 
 const ContentAnalyticsView: React.FC = () => {
-    const { channels } = useChannels();
+    const { channels, fetchChannels } = useChannels();
     const { allUsers: users } = useTeam();
     const { handleSaveTask, handleDeleteTask } = useTasks();
-    const [data, setData] = useState<ContentWithAnalytics[]>([]);
-    const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    
+    useEffect(() => {
+        if (channels.length === 0) {
+            fetchChannels();
+        }
+    }, [channels.length]);
+    
+    // Use our new custom hook for fetching and state management
+    const {
+        data,
+        pendingTasks,
+        isLoading,
+        platformFilter,
+        setPlatformFilter,
+        channelFilter,
+        setChannelFilter,
+        timeRange,
+        setTimeRange,
+        refetch
+    } = useContentAnalyticsFetcher();
+    
     const [searchTerm, setSearchTerm] = useState('');
-    const [platformFilter, setPlatformFilter] = useState('ALL');
-    const [channelFilter, setChannelFilter] = useState('ALL');
-    const [timeRange, setTimeRange] = useState('90'); // Default to 90 days
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [detailTask, setDetailTask] = useState<Task | null>(null);
 
@@ -40,130 +49,29 @@ const ContentAnalyticsView: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 8;
 
-    const fetchData = async () => {
-        setIsLoading(true);
-        try {
-            // Calculate cutoff date based on timeRange
-            const cutoffDate = timeRange === 'ALL' ? null : subDays(new Date(), parseInt(timeRange));
-            
-            // 1. Fetch contents with fallback date logic
-            // We'll query by posted_at OR created_at depending on what's available
-            let contentsQuery = supabase
-                .from('contents')
-                .select('*')
-                .order('created_at', { ascending: false });
-            
-            if (cutoffDate) {
-                // If we don't have posted_at yet, we use created_at as a proxy for the content's timeline
-                // But we allow filtering by posted_at if the user has started filling it in
-                contentsQuery = contentsQuery.or(`posted_at.gte.${cutoffDate.toISOString()},created_at.gte.${cutoffDate.toISOString()}`);
-            }
-
-            const { data: contents, error: contentError } = await contentsQuery;
-
-            if (contentError) throw contentError;
-
-            // 2. Fetch analytics only for the fetched contents or within the time range
-            // To be efficient, we fetch analytics captured in the last active period 
-            // OR specifically linked to these contents
-            const contentIds = (contents || []).map(c => c.id);
-            
-            let analyticsQuery = supabase
-                .from('content_analytics')
-                .select('*')
-                .order('captured_at', { ascending: true });
-
-            if (contentIds.length > 0 && contentIds.length < 500) {
-                analyticsQuery = analyticsQuery.in('content_id', contentIds);
-            } else if (cutoffDate) {
-                // Fallback for many contents: fetch recent analytics
-                analyticsQuery = analyticsQuery.gte('captured_at', cutoffDate.toISOString());
-            }
-
-            const { data: analyticsRaw, error: analyticsError } = await analyticsQuery;
-            if (analyticsError) throw analyticsError;
-            
-            const analytics = (analyticsRaw || []).map(data => mapSupabaseToAnalytics(data));
-
-            // 3. Merge and Map data
-            const enrichedData = (contents || []).map((content: any) => {
-                // Inline mapping similar to TaskContext to ensure camelCase and correct types
-                const mappedContent: Task = {
-                    id: content.id,
-                    title: content.title,
-                    description: content.description || '',
-                    status: content.status,
-                    type: 'CONTENT',
-                    startDate: content.start_date ? new Date(content.start_date) : new Date(),
-                    endDate: content.end_date ? new Date(content.end_date) : new Date(),
-                    channelId: content.channel_id,
-                    targetPlatforms: content.target_platform || [],
-                    isUnscheduled: content.is_unscheduled, // MUST include this
-                    ideaOwnerIds: content.idea_owner_ids || [],
-                    editorIds: content.editor_ids || [],
-                    assigneeIds: content.assignee_ids || [],
-                    performance: content.performance,
-                    // ... other fields as needed for the view
-                } as any;
-
-                return {
-                    ...mappedContent,
-                    analytics: analytics.filter(a => a.contentId === content.id)
-                };
-            });
-
-            // 4. Scan for pending entries (Targeting the 7-day reporting threshold)
-            const sevenDaysAgo = subDays(new Date(), 7);
-            const fortyFiveDaysAgo = subDays(new Date(), 45); // Keep a generous backlog
-            
-            const pending = enrichedData.filter((item: any) => {
-                // Triple-Check: Must be scheduled and in terminal status (Posted/Done)
-                const currentStatus = (item.status || '').toUpperCase();
-                const isActuallyPosted = !item.isUnscheduled && (
-                    currentStatus.includes('DONE') || 
-                    ['PUBLISHED', 'FINAL', 'POSTED', 'COMPLETE', 'COMPLETED'].includes(currentStatus)
-                );
-                if (!isActuallyPosted) return false;
-
-                const publishDate = item.endDate;
-                const hasAnalytics = item.analytics && item.analytics.length > 0;
-                
-                // Show items that have reached the 7-day mark but are not too old to be irrelevant
-                // Logic: publishDate <= sevenDaysAgo AND publishDate >= fortyFiveDaysAgo
-                const isReachedReportingMark = publishDate && !isAfter(publishDate, sevenDaysAgo);
-                const isNotTooOld = publishDate && isAfter(publishDate, fortyFiveDaysAgo);
-                
-                return isReachedReportingMark && isNotTooOld && !hasAnalytics;
-            }).sort((a, b) => {
-                // "ยิ่งเป็น 7 วันพอดียิ่งสำคัญมากสุด" (The closer it is to exactly 7 days, the higher the priority)
-                // Since we already filtered for age >= 7 days (date <= sevenDaysAgo),
-                // the most recent date is the one closest to the 7-day mark.
-                const timeA = a.endDate ? new Date(a.endDate).getTime() : 0;
-                const timeB = b.endDate ? new Date(b.endDate).getTime() : 0;
-                return timeB - timeA; // Descending order = most recent first
-            });
-
-            setData(enrichedData as any);
-            setPendingTasks(pending as any);
-        } catch (error) {
-            console.error('Fetch Analytics Error:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, [timeRange]);
-
     const filteredData = useMemo(() => {
-        return data.filter(item => {
+        const flattened: any[] = [];
+        data.forEach(item => {
             const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase());
-            const itemPlatform = (item as any).platform || (item.targetPlatforms?.[0] || 'ALL');
-            const matchesPlatform = platformFilter === 'ALL' || itemPlatform === platformFilter;
             const matchesChannel = channelFilter === 'ALL' || item.channelId === channelFilter;
-            return matchesSearch && matchesPlatform && matchesChannel;
+            
+            if (matchesSearch && matchesChannel) {
+                const platforms = item.targetPlatforms && item.targetPlatforms.length > 0 ? item.targetPlatforms : [(item as any).platform || 'OTHER'];
+                
+                platforms.forEach((pt: string) => {
+                    const matchesPlatform = platformFilter === 'ALL' || pt === platformFilter;
+                    if (matchesPlatform) {
+                        const platformAnalytics = (item as any).analytics?.filter((a: any) => a.platform === pt) || [];
+                        flattened.push({
+                            ...item,
+                            displayPlatform: pt,
+                            analytics: platformAnalytics
+                        });
+                    }
+                });
+            }
         });
+        return flattened;
     }, [data, searchTerm, platformFilter, channelFilter]);
 
     // Reset page when filters change
@@ -183,7 +91,10 @@ const ContentAnalyticsView: React.FC = () => {
         const platformBreakdown: Record<string, PlatformMetrics> = {};
 
         filteredData.forEach(item => {
-            const latest = item.analytics?.[item.analytics.length - 1];
+            const arr = (item as any).analytics;
+            // Get the latest analytics for this specific platform
+            const latest = arr && arr.length > 0 ? arr[arr.length - 1] : null;
+            
             if (latest) {
                 const v = latest.views || 0;
                 const l = latest.likes || 0;
@@ -196,8 +107,8 @@ const ContentAnalyticsView: React.FC = () => {
                 totalLikes += l;
                 totalShares += s;
                 totalInteraction += interaction;
-
-                const p = latest.platform || 'OTHER';
+                
+                const p = item.displayPlatform;
                 if (!platformBreakdown[p]) {
                     platformBreakdown[p] = { platform: p, views: 0, engagement: 0, contentCount: 0, avgEngagementRate: 0 };
                 }
@@ -213,20 +124,36 @@ const ContentAnalyticsView: React.FC = () => {
             totalViews, 
             totalLikes, 
             totalShares, 
+            totalComments,
+            totalSaves,
             totalEngagement: totalInteraction,
             totalInteraction,
             avgEngagementRate: avgER,
             avgRetention: 0, 
-            platformBreakdown 
+            platformBreakdown,
+            totalAnalyzed: filteredData.length
         };
     }, [filteredData]);
 
     const chartData = useMemo(() => {
-        return filteredData.slice(0, 10).map(item => {
-            const latest = item.analytics?.[item.analytics.length - 1];
+        // Only include those with actual analytics data, sorted by views
+        const withAnalytics = filteredData.filter(item => {
+            const arr = (item as any).analytics;
+            return arr && arr.length > 0;
+        });
+        
+        withAnalytics.sort((a, b) => {
+            const latestA = (a as any).analytics[(a as any).analytics.length - 1];
+            const latestB = (b as any).analytics[(b as any).analytics.length - 1];
+            return (latestB?.views || 0) - (latestA?.views || 0);
+        });
+
+        return withAnalytics.slice(0, 10).map(item => {
+            const latest = (item as any).analytics?.[(item as any).analytics.length - 1];
             return {
                 name: item.title.length > 20 ? item.title.substring(0, 20) + '...' : item.title,
                 views: latest?.views || 0,
+                engagement: latest ? (latest.likes + latest.comments + latest.shares + latest.saves) : 0,
             };
         });
     }, [filteredData]);
@@ -238,7 +165,7 @@ const ContentAnalyticsView: React.FC = () => {
         }));
     }, [statsSummary]);
 
-    if (isLoading) {
+    if (isLoading && data.length === 0) {
         return (
             <div className="flex-1 flex items-center justify-center bg-white">
                 <div className="relative">
@@ -279,8 +206,13 @@ const ContentAnalyticsView: React.FC = () => {
             </AnimatePresence>
 
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-slate-800 tracking-tight">ข้อมูลสรุปประสิทธิภาพรวม</h2>
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-xl font-semibold text-slate-800 tracking-tight">ข้อมูลสรุปประสิทธิภาพรวม</h2>
+                        <div className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-[11px] font-bold shadow-sm border border-indigo-100 uppercase tracking-wide">
+                            อิงจาก {statsSummary.totalAnalyzed} คอนเทนต์
+                        </div>
+                    </div>
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-1 rounded-md">
                         อัปเดตล่าสุด: วันนี้, {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
                     </div>
@@ -313,6 +245,7 @@ const ContentAnalyticsView: React.FC = () => {
                     totalPages={Math.ceil(filteredData.length / itemsPerPage)}
                     onPageChange={setCurrentPage}
                     totalItems={filteredData.length}
+                    onRowClick={setSelectedTask}
                 />
             </div>
 
@@ -321,7 +254,7 @@ const ContentAnalyticsView: React.FC = () => {
                     content={selectedTask}
                     onClose={() => setSelectedTask(null)}
                     onSave={() => {
-                        fetchData(); // Refresh on save
+                        refetch(); // Refresh on save
                     }}
                 />
             )}
@@ -335,16 +268,16 @@ const ContentAnalyticsView: React.FC = () => {
                     users={users}
                     onSave={async (t) => {
                         await handleSaveTask(t, detailTask);
-                        fetchData();
+                        refetch();
                     }}
                     onUpdate={async (t) => {
                         await handleSaveTask(t, detailTask);
-                        fetchData();
+                        refetch();
                     }}
                     onDelete={async (id) => {
                         await handleDeleteTask(id);
                         setDetailTask(null);
-                        fetchData();
+                        refetch();
                     }}
                     initialContentTab="INSIGHT"
                 />

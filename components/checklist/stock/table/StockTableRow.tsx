@@ -1,8 +1,8 @@
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Package, ClipboardList, Tag, FileText, MoreHorizontal, CalendarPlus, Inbox, Video, BarChart3, AlertCircle } from 'lucide-react';
-import { format, differenceInDays } from 'date-fns';
+import { Package, ClipboardList, Tag, FileText, MoreHorizontal, CalendarPlus, Inbox, Video, BarChart3, AlertCircle, Zap } from 'lucide-react';
+import { format, differenceInDays, startOfToday } from 'date-fns';
 import th from 'date-fns/locale/th';
 import { Task, Channel, User, MasterOption } from '../../../../types';
 import { ColumnKey } from './StockTableSettings';
@@ -60,13 +60,13 @@ const StockTableRow = React.memo(React.forwardRef<HTMLTableRowElement, StockTabl
         const currentStatus = (task.status || '').toUpperCase();
         const isTerminal = currentStatus.includes('DONE') || ['PUBLISHED', 'FINAL', 'POSTED'].includes(currentStatus);
             
-        if (task.isUnscheduled || !isTerminal || !task.endDate) return false;
+        // Must be explicitly scheduled (not in stock), terminal status, no analytics, and > 7 days old
+        if (task.type !== 'CONTENT' || task.isUnscheduled !== false || !isTerminal || !task.endDate || task.hasAnalytics) return false;
             
-        const daysSincePublish = differenceInDays(new Date(), new Date(task.endDate));
-            // We only check if it's over 7 days. Ideally we'd check if an analytics entry exists, 
-            // but for now we tag all old DONE content to encourage checking insights.
+        const endDateObj = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
+        const daysSincePublish = differenceInDays(startOfToday(), endDateObj);
         return daysSincePublish >= 7;
-    }, [task.status, task.endDate, task.isUnscheduled]);
+    }, [task.type, task.status, task.endDate, task.isUnscheduled, task.hasAnalytics]);
 
     const handleDragStart = (e: React.DragEvent) => {
         setIsDragging(true);
@@ -122,6 +122,17 @@ const StockTableRow = React.memo(React.forwardRef<HTMLTableRowElement, StockTabl
                         <div className={`font-medium font-kanit text-[18px] group-hover:text-indigo-700 line-clamp-2 text-sm leading-snug ${task.isInShootQueue ? 'text-indigo-600' : 'text-gray-800'}`} title={task.title}>
                             {task.title}
                         </div>
+                        {task.hasAnalytics && (
+                             <motion.div 
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                whileHover={{ scale: 1.2, rotate: 15 }}
+                                className="shrink-0 flex items-center justify-center w-5 h-5 bg-purple-100 rounded-full border border-purple-200"
+                                title="Performance Data Entry Complete ✨"
+                            >
+                                <Zap className="w-2.5 h-2.5 text-purple-600 fill-purple-600" />
+                            </motion.div>
+                        )}
                         {isInsightOverdue && (
                             <motion.div 
                                 initial={{ scale: 0.8, opacity: 0 }}

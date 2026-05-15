@@ -16,6 +16,8 @@ const DeathLockModal: React.FC<DeathLockModalProps> = ({ notification, onAcknowl
 
     useEffect(() => {
         if (notification) {
+            // Only reset if it's a DIFFERENT notification ID
+            // This prevents resets when notifications array re-calculates in parent
             setCanClose(false);
             setCountdown(7);
             const timer = setInterval(() => {
@@ -30,7 +32,7 @@ const DeathLockModal: React.FC<DeathLockModalProps> = ({ notification, onAcknowl
             }, 1000);
             return () => clearInterval(timer);
         }
-    }, [notification]);
+    }, [notification?.id]); // Change dependency to notification.id
 
     if (!notification) return null;
 
@@ -54,7 +56,7 @@ const DeathLockModal: React.FC<DeathLockModalProps> = ({ notification, onAcknowl
                     </div>
                 </div>
 
-                <h2 className="text-3xl font-black text-white mb-2 tracking-tight uppercase italic">
+                <h2 className="text-3xl font-bold text-white mb-2 tracking-tight uppercase italic">
                     {isImminent ? 'วิญญาณกำลังจะแตกสลาย!' : 'สัญญาณชีพกำลังจะดับสูญ'}
                 </h2>
                 <div className="flex items-center gap-2 mb-6">
@@ -75,7 +77,7 @@ const DeathLockModal: React.FC<DeathLockModalProps> = ({ notification, onAcknowl
                             <div className="bg-red-950/30 p-5 rounded-2xl border border-red-500/20">
                                 <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest mb-1">Time Remaining</p>
                                 <div className="flex items-center justify-center gap-2">
-                                    <p className="text-4xl font-black text-white">{daysRemaining}</p>
+                                    <p className="text-4xl font-bold text-white">{daysRemaining}</p>
                                     <p className="text-sm font-bold text-red-500">วันทำการ</p>
                                 </div>
                             </div>
@@ -97,7 +99,7 @@ const DeathLockModal: React.FC<DeathLockModalProps> = ({ notification, onAcknowl
                         onClick={() => canClose && onAcknowledge(notification.id)}
                         disabled={!canClose}
                         className={`
-                            w-full py-5 rounded-2xl font-black text-base transition-all flex items-center justify-center gap-3
+                            w-full py-5 rounded-2xl font-bold text-base transition-all flex items-center justify-center gap-3
                             ${canClose 
                                 ? 'bg-white text-black hover:bg-red-600 hover:text-white shadow-[0_0_30px_rgba(255,255,255,0.1)] cursor-pointer active:scale-[0.98]' 
                                 : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'}

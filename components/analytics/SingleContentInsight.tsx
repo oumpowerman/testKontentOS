@@ -3,16 +3,19 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { TrendingUp, BarChart3, Clock, AlertCircle, PlusCircle, Search } from 'lucide-react';
 import { Task, ContentAnalytics } from '../../types';
 import { supabase } from '../../lib/supabase';
+import { formatCompactNumber } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import AnalyticsStatsGrid from './dashboard/AnalyticsStatsGrid';
-import AnalyticsEntryModal from '../gamification/AnalyticsEntryModal';
+import AnalyticsEntryModal from './AnalyticsEntryModal';
 
 interface SingleContentInsightProps {
     task: Task;
 }
 
 const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => {
+    const platforms = task.targetPlatforms && task.targetPlatforms.length > 0 ? task.targetPlatforms : ['OTHER'];
+    const [selectedPlatform, setSelectedPlatform] = useState<string>(platforms[0]);
     const [analytics, setAnalytics] = useState<ContentAnalytics[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
@@ -32,7 +35,7 @@ const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => 
             const mappedData: ContentAnalytics[] = (data || []).map(item => ({
                 id: item.id,
                 contentId: item.content_id,
-                platform: item.platform,
+                platform: item.platform || 'OTHER',
                 capturedAt: item.captured_at,
                 views: item.views,
                 likes: item.likes,
@@ -60,7 +63,11 @@ const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => 
         fetchTaskAnalytics();
     }, [task.id]);
 
-    const latest = analytics[analytics.length - 1];
+    const platformAnalytics = useMemo(() => {
+        return analytics.filter(a => a.platform === selectedPlatform);
+    }, [analytics, selectedPlatform]);
+
+    const latest = platformAnalytics[platformAnalytics.length - 1];
 
     const summary = useMemo(() => {
         const v = latest?.views || 0;
@@ -75,19 +82,25 @@ const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => 
             totalViews: v,
             totalLikes: l,
             totalShares: s,
+            totalComments: c,
+            totalSaves: sv,
+            totalEngagement: interaction,
             totalInteraction: interaction,
-            avgEngagementRate: er
+            avgEngagementRate: er,
+            avgRetention: latest?.retentionRate || 0,
+            avgWatchTime: latest?.avgWatchTime || 0,
+            platformBreakdown: {}
         };
     }, [latest]);
 
     const chartData = useMemo(() => {
-        return analytics.map(a => ({
+        return platformAnalytics.map(a => ({
             date: new Date(a.capturedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }),
             views: a.views,
             likes: a.likes,
             retention: a.retentionRate || 0
         }));
-    }, [analytics]);
+    }, [platformAnalytics]);
 
     if (isLoading) {
         return (
@@ -101,7 +114,28 @@ const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => 
     return (
         <div className="space-y-10 py-6">
             {/* Header / Actions */}
-            <div className="flex items-center justify-end">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex bg-slate-100 p-1 rounded-xl">
+                    {platforms.map(pt => (
+                        <button
+                            key={pt}
+                            onClick={() => setSelectedPlatform(pt)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                                selectedPlatform === pt 
+                                    ? 'bg-white text-slate-800 shadow-sm' 
+                                    : 'text-slate-400 hover:text-slate-600'
+                            }`}
+                        >
+                            <div className={`w-2 h-2 rounded-full ${
+                                pt === 'TIKTOK' ? 'bg-black' : 
+                                pt === 'FACEBOOK' ? 'bg-blue-600' :
+                                pt === 'YOUTUBE' ? 'bg-red-600' :
+                                'bg-indigo-400'
+                            }`} />
+                            {pt}
+                        </button>
+                    ))}
+                </div>
                 <button 
                     onClick={() => setIsEntryModalOpen(true)}
                     className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-indigo-200 hover:bg-slate-900 transition-all active:scale-95"
@@ -111,7 +145,7 @@ const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => 
                 </button>
             </div>
 
-            {analytics.length === 0 ? (
+            {platformAnalytics.length === 0 ? (
                 <div className="bg-white border-2 border-dashed border-slate-100 rounded-[3rem] p-20 text-center space-y-6">
                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto border border-slate-100">
                         <BarChart3 className="w-8 h-8 text-slate-300" />
@@ -124,7 +158,7 @@ const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => 
             ) : (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-700">
                     {/* Stats Grid */}
-                    <AnalyticsStatsGrid summary={summary} />
+                    <AnalyticsStatsGrid summary={summary as any} />
 
                     {/* Chart Section */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -186,11 +220,11 @@ const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => 
                             <h3 className="text-lg font-bold">Data Capture Log</h3>
                         </div>
                         <div className="space-y-4">
-                            {analytics.slice().reverse().map((a, idx) => (
+                            {platformAnalytics.slice().reverse().map((a, idx) => (
                                 <div key={idx} className="flex items-center justify-between border-b border-white/5 pb-4 last:border-0 hover:bg-white/5 -mx-4 px-4 rounded-xl transition-colors">
                                     <div className="flex items-center gap-4">
                                         <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-[10px] font-bold">
-                                            #{analytics.length - idx}
+                                            #{platformAnalytics.length - idx}
                                         </div>
                                         <div>
                                             <p className="text-sm font-bold text-white">{new Date(a.capturedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
@@ -199,7 +233,7 @@ const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => 
                                     </div>
                                     <div className="flex items-center gap-6">
                                         <div className="text-right">
-                                            <p className="text-xs font-bold text-white">{a.views.toLocaleString()}</p>
+                                            <p className="text-xs font-bold text-white">{formatCompactNumber(a.views)}</p>
                                             <p className="text-[9px] text-slate-400 uppercase font-medium">Views</p>
                                         </div>
                                         <div className="text-right">
@@ -216,7 +250,7 @@ const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => 
 
             {isEntryModalOpen && (
                 <AnalyticsEntryModal 
-                    content={task}
+                    content={{ ...task, displayPlatform: selectedPlatform } as any}
                     onClose={() => setIsEntryModalOpen(false)}
                     onSave={fetchTaskAnalytics}
                 />

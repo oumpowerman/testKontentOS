@@ -12,6 +12,7 @@ interface WikiContextType {
     deleteArticle: (id: string) => Promise<void>;
     toggleHelpful: (id: string) => Promise<void>;
     refreshWiki: () => Promise<void>;
+    fetchArticleDetail: (id: string) => Promise<WikiArticle | null>;
 }
 
 const WikiContext = createContext<WikiContextType | undefined>(undefined);
@@ -30,7 +31,7 @@ export const WikiProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: a.id,
         title: a.title,
         category: a.category,
-        content: a.content,
+        content: a.content || '',
         targetRoles: a.target_roles || ['ALL'],
         createdAt: new Date(a.created_at),
         lastUpdated: new Date(a.updated_at),
@@ -41,6 +42,7 @@ export const WikiProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updatedBy: a.updated_by,
         author: a.author ? { name: a.author.full_name, avatarUrl: a.author.avatar_url } : undefined,
         lastEditor: a.lastEditor ? { name: a.lastEditor.full_name, avatarUrl: a.lastEditor.avatar_url } : undefined,
+        isPartial: a.content === undefined || a.content === null
     }), []);
 
     const updateSystemVersion = async () => {
@@ -111,12 +113,13 @@ export const WikiProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
 
             if (!useCache) {
-                // Fetch Full Data
-                console.log('📡 Wiki: Fetching full articles (Version mismatch or no cache)...');
+                // Fetch Full Data (Metadata only for performance)
+                console.log('📡 Wiki: Fetching articles metadata (Version mismatch or no cache)...');
                 const { data, error } = await supabase
                     .from('wiki_articles')
                     .select(`
-                        *,
+                        id, title, category, target_roles, is_pinned, cover_image, 
+                        helpful_count, created_by, updated_by, created_at, updated_at,
                         author:profiles!wiki_articles_created_by_fkey(full_name, avatar_url),
                         lastEditor:profiles!wiki_articles_updated_by_fkey(full_name, avatar_url)
                     `)
@@ -156,7 +159,15 @@ export const WikiProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             } else if (action === 'UPDATE') {
                 const index = rawArticles.findIndex((o: any) => o.id === payload.id);
-                if (index > -1) rawArticles[index] = { ...rawArticles[index], ...payload };
+                if (index > -1) {
+                    // Preserve content if the payload is a metadata-only update
+                    const existingContent = rawArticles[index].content;
+                    rawArticles[index] = { 
+                        ...rawArticles[index], 
+                        ...payload,
+                        content: payload.content !== undefined ? payload.content : existingContent
+                    };
+                }
             } else if (action === 'DELETE') {
                 rawArticles = rawArticles.filter((o: any) => o.id !== payload);
             }
@@ -354,6 +365,37 @@ export const WikiProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const fetchArticleDetail = async (id: string): Promise<WikiArticle | null> => {
+        try {
+            // Check if we already have the full content in state
+            const existing = articles.find(a => a.id === id);
+            if (existing && !existing.isPartial) return existing;
+
+            console.log(`📡 Wiki: Fetching full content for article ${id}`);
+            const { data, error } = await supabase
+                .from('wiki_articles')
+                .select(`
+                    *,
+                    author:profiles!wiki_articles_created_by_fkey(full_name, avatar_url),
+                    lastEditor:profiles!wiki_articles_updated_by_fkey(full_name, avatar_url)
+                `)
+                .eq('id', id)
+                .single();
+
+            if (error) throw error;
+            if (data) {
+                const fullArticle = mapArticle(data);
+                // Update state silently so we don't trigger refetches
+                setArticles(prev => prev.map(a => a.id === id ? fullArticle : a));
+                return fullArticle;
+            }
+            return null;
+        } catch (err) {
+            console.error('Fetch article detail failed:', err);
+            return null;
+        }
+    };
+
     const value = useMemo(() => ({
         articles,
         isLoading,
@@ -361,6 +403,7 @@ export const WikiProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateArticle,
         deleteArticle,
         toggleHelpful,
+        fetchArticleDetail,
         refreshWiki: fetchArticles
     }), [articles, isLoading, fetchArticles]);
 

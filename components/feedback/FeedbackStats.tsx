@@ -4,15 +4,16 @@ import { FeedbackItem } from '../../types';
 import { Quote, Sparkles, Zap } from 'lucide-react';
 
 interface FeedbackStatsProps {
-    items: FeedbackItem[];
+    stats?: { shoutouts: number, ideas: number, totalEngagement: number };
+    items?: FeedbackItem[]; // Keep for backward compatibility if needed
 }
 
-const FeedbackStats: React.FC<FeedbackStatsProps> = ({ items }) => {
-    const approved = items.filter(i => i.status === 'APPROVED');
-    const shoutouts = approved.filter(i => i.type === 'SHOUTOUT').length;
-    const ideas = approved.filter(i => i.type === 'IDEA').length;
+const FeedbackStats: React.FC<FeedbackStatsProps> = ({ stats, items = [] }) => {
+    // If stats are provided (Enterprise mode), use them. Otherwise fallback to client calculation.
+    const shoutouts = stats ? stats.shoutouts : items.filter(i => i.status === 'APPROVED' && i.type === 'SHOUTOUT').length;
+    const ideas = stats ? stats.ideas : items.filter(i => i.status === 'APPROVED' && i.type === 'IDEA').length;
     
-    const totalEngagement = approved.reduce((acc, curr) => 
+    const totalEngagement = stats ? stats.totalEngagement : items.filter(i => i.status === 'APPROVED').reduce((acc, curr) => 
         acc + (curr.voteCount || 0) + (curr.commentCount || 0) + (curr.repostCount || 0), 0
     );
 

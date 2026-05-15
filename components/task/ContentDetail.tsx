@@ -1,10 +1,10 @@
 
 import React from 'react';
 import { Task, User, Channel, MasterOption } from '../../types';
-import { format } from 'date-fns';
+import { format, differenceInDays, startOfToday } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Activity, MessageSquare, Paperclip } from 'lucide-react';
+import { FileText, Activity, MessageSquare, Paperclip, Check } from 'lucide-react';
 import SingleContentInsight from '../analytics/SingleContentInsight';
 import ContentDetailHeader from './detail/ContentDetailHeader';
 import ContentInfoView from './detail/ContentInfoView';
@@ -29,6 +29,25 @@ const ContentDetail: React.FC<ContentDetailProps> = ({
 }) => {
     const [isHeaderExpanded, setIsHeaderExpanded] = React.useState(false);
     const [viewSubTab, setViewSubTab] = React.useState<'INFO' | 'INSIGHT'>(initialTab === 'INSIGHT' ? 'INSIGHT' : 'INFO');
+
+    const isInsightOverdue = React.useMemo(() => {
+        const currentStatus = (task.status || '').toUpperCase();
+        const isTerminal = currentStatus.includes('DONE') || ['PUBLISHED', 'FINAL', 'POSTED'].includes(currentStatus);
+        
+        if (task.type !== 'CONTENT' || task.isUnscheduled || !isTerminal || !task.endDate || task.hasAnalytics) return false;
+        
+        const endDateObj = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
+        return differenceInDays(startOfToday(), endDateObj) >= 7;
+    }, [task]);
+
+    const isInsightCompleted = React.useMemo(() => {
+        const currentStatus = (task.status || '').toUpperCase();
+        const isTerminal = currentStatus.includes('DONE') || ['PUBLISHED', 'FINAL', 'POSTED'].includes(currentStatus);
+        
+        if (task.type !== 'CONTENT' || !isTerminal) return false;
+        
+        return !!task.hasAnalytics;
+    }, [task]);
 
     const containerVariants = {
         hidden: { opacity: 0, y: 15 },
@@ -125,10 +144,21 @@ const ContentDetail: React.FC<ContentDetailProps> = ({
                                     </button>
                                     <button 
                                         onClick={() => setViewSubTab('INSIGHT')}
-                                        className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all ${viewSubTab === 'INSIGHT' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                                        className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all relative ${viewSubTab === 'INSIGHT' ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'} ${isInsightOverdue && viewSubTab !== 'INSIGHT' ? 'animate-pulse text-rose-500' : ''} ${isInsightCompleted ? 'text-emerald-600' : ''}`}
                                     >
                                         <Activity className="w-3.5 h-3.5" />
                                         <span>สถิติ (INSIGHT)</span>
+                                        {isInsightOverdue && (
+                                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 border-2 border-white"></span>
+                                            </span>
+                                        )}
+                                        {isInsightCompleted && (
+                                            <span className="absolute -top-1 -right-1 flex items-center justify-center p-0.5 bg-emerald-500 rounded-full border-2 border-white text-white">
+                                                <Check strokeWidth={4} className="w-2 h-2" />
+                                            </span>
+                                        )}
                                     </button>
                                 </div>
                             </div>

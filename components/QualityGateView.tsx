@@ -8,7 +8,6 @@ import { isToday, isTomorrow, isPast, isFuture, differenceInCalendarDays, isSame
 import { Clock, Search, Filter, AlertTriangle, Info, CheckCircle2, ChevronDown, ChevronRight, LayoutList, Layers, Calendar, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Channel, Task, MasterOption, User } from '../types';
-import MentorTip from './MentorTip';
 import ReviewCard from './quality-gate/ReviewCard';
 import ReviewActionModal from './quality-gate/ReviewActionModal';
 import QualityStatsWidget from './quality-gate/QualityStatsWidget';
@@ -239,15 +238,6 @@ const QualityGateView: React.FC<QualityGateViewProps> = ({ channels, users, mast
         <AppBackground theme="inspector" pattern="grid" className="-mx-4 md:-mx-6 -mt-4 md:-mt-6 p-4 md:p-8 min-h-screen">
             <div className="space-y-6 animate-in fade-in duration-500 pb-20 relative z-10">
                 <div className="max-w-[1600px] mx-auto space-y-8">
-                    {/* Post-it Mentor Tip */}
-                    <div className="transform -rotate-1 hover:rotate-0 transition-transform duration-300 max-w-2xl">
-                        <MentorTip variant="purple" messages={[
-                            "Tip: เริ่มเคลียร์จาก 'Critical' ก่อน เพราะคืองานที่เลยกำหนดแล้ว", 
-                            "งาน 'Revise' คือน้องๆ แก้มาส่งใหม่ อย่าลืมเข้าไปดูนะ",
-                            "กด 'Pass' เพื่ออนุมัติและแจก XP ให้ทีมงานทันที! 🎉"
-                        ]} />
-                    </div>
-
                     <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                         <div className="flex items-start gap-3">
                             <div className="p-4 bg-indigo-500/10 text-indigo-400 rounded-3xl shadow-2xl border border-indigo-500/20 backdrop-blur-md">

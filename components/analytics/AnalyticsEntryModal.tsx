@@ -17,6 +17,7 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
     const { showToast } = useToast();
     const [isAILoading, setIsAILoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoadingData, setIsLoadingData] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [formData, setFormData] = useState({
@@ -29,6 +30,43 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
         avgWatchTime: 0,
         reach: 0,
     });
+
+    useEffect(() => {
+        const fetchExistingAnalytics = async () => {
+            setIsLoadingData(true);
+            try {
+                const targetPlatform = (content as any).displayPlatform || (content.targetPlatforms && content.targetPlatforms.length > 0 ? content.targetPlatforms[0] : 'OTHER');
+                
+                const { data, error } = await supabase
+                    .from('content_analytics')
+                    .select('*')
+                    .eq('content_id', content.id)
+                    .eq('platform', targetPlatform)
+                    .maybeSingle(); // Use maybeSingle instead of single to prevent errors if no row
+                
+                if (data && !error) {
+                    setFormData({
+                        views: data.views || 0,
+                        likes: data.likes || 0,
+                        comments: data.comments || 0,
+                        shares: data.shares || 0,
+                        saves: data.saves || 0,
+                        retentionRate: data.retention_rate || 0,
+                        avgWatchTime: data.avg_watch_time || 0,
+                        reach: data.reach || 0,
+                    });
+                }
+            } catch (err) {
+                console.error("No existing analytics found or error fetching", err);
+            } finally {
+                setIsLoadingData(false);
+            }
+        };
+
+        if (content?.id) {
+            fetchExistingAnalytics();
+        }
+    }, [content?.id, (content as any).displayPlatform]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -77,41 +115,50 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
         e.preventDefault();
         setIsSaving(true);
         try {
-            const platform = (content as any).platform || (content.targetPlatforms && content.targetPlatforms.length > 0 ? content.targetPlatforms[0] : 'OTHER');
-            const analyticsData: Partial<ContentAnalytics> = {
-                contentId: content.id,
+            const platform = (content as any).displayPlatform || (content.targetPlatforms && content.targetPlatforms.length > 0 ? content.targetPlatforms[0] : 'OTHER');
+            const analyticsData = {
+                content_id: content.id,
                 platform: platform,
-                capturedAt: new Date(),
                 views: formData.views,
                 likes: formData.likes,
                 comments: formData.comments,
                 shares: formData.shares,
                 saves: formData.saves,
-                retentionRate: formData.retentionRate,
-                avgWatchTime: formData.avgWatchTime,
+                retention_rate: formData.retentionRate,
+                avg_watch_time: formData.avgWatchTime,
                 reach: formData.reach,
-                isAiExtracted: false, // Could be true if they didn't edit, but default simplified
+                captured_at: new Date().toISOString(),
+                is_ai_extracted: false,
             };
 
-            const { data, error } = await supabase
+            // Check if exists
+            const { data: existing } = await supabase
                 .from('content_analytics')
-                .upsert([{
-                    content_id: analyticsData.contentId,
-                    platform: analyticsData.platform,
-                    views: analyticsData.views,
-                    likes: analyticsData.likes,
-                    comments: analyticsData.comments,
-                    shares: analyticsData.shares,
-                    saves: analyticsData.saves,
-                    retention_rate: analyticsData.retentionRate,
-                    avg_watch_time: analyticsData.avgWatchTime,
-                    reach: analyticsData.reach,
-                    captured_at: new Date().toISOString()
-                }], { 
-                    onConflict: 'content_id' 
-                })
-                .select()
-                .single();
+                .select('id')
+                .eq('content_id', content.id)
+                .eq('platform', platform)
+                .maybeSingle();
+
+            let data, error;
+
+            if (existing) {
+                const res = await supabase
+                    .from('content_analytics')
+                    .update(analyticsData)
+                    .eq('id', existing.id)
+                    .select()
+                    .single();
+                data = res.data;
+                error = res.error;
+            } else {
+                const res = await supabase
+                    .from('content_analytics')
+                    .insert([analyticsData])
+                    .select()
+                    .single();
+                data = res.data;
+                error = res.error;
+            }
 
             if (error) throw error;
 
@@ -148,6 +195,12 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
                 className="bg-white w-full max-w-2xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] relative z-10"
                 onClick={(e) => e.stopPropagation()}
             >
+                {isLoadingData && (
+                    <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex items-center justify-center">
+                        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                    </div>
+                )}
+                
                 {/* Header */}
                 <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-white relative">
                     <div className="flex items-center gap-5">
@@ -155,8 +208,15 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
                             <BarChart3 className="w-7 h-7 text-indigo-600" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">บันทึกผลประสิทธิภาพ</h2>
-                            <p className="text-xs text-slate-400 font-medium uppercase tracking-widest mt-0.5 line-clamp-1">{content.title}</p>
+                            <h2 className="text-2xl font-semibold text-slate-900 tracking-tight flex items-center gap-2">
+                                บันทึกผลประสิทธิภาพ
+                                <span className="text-xs font-bold px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md uppercase tracking-wider border border-indigo-100">
+                                    {(content as any).displayPlatform || (content.targetPlatforms && content.targetPlatforms.length > 0 ? content.targetPlatforms[0] : 'OTHER')}
+                                </span>
+                            </h2>
+                            <p className="text-xs text-slate-400 font-medium uppercase tracking-widest mt-0.5 line-clamp-1">
+                                กำลังกรอกข้อมูลสำหรับ: <span className="text-slate-900 font-bold ml-1">{content.title}</span>
+                            </p>
                         </div>
                     </div>
                     <button onClick={onClose} className="w-10 h-10 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center transition-colors">

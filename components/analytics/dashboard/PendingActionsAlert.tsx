@@ -33,18 +33,26 @@ const PendingActionsAlert: React.FC<PendingActionsAlertProps> = ({ pendingTasks,
                         คอนเทนต์ด้านล่างนี้ลงไปเกิน 7 วันแล้ว ต้องการข้อมูลเพื่อวิเคราะห์ผลครับ
                     </p>
                     
-                    {/* List of pending items */}
                     <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
-                        {pendingTasks.slice(0, 3).map((task) => (
-                            <button 
-                                key={task.id}
-                                onClick={() => onAction(task)}
-                                className="px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-[11px] font-bold text-amber-700 hover:bg-amber-100 transition-colors flex items-center gap-2 max-w-[200px]"
-                            >
-                                <span className="truncate">{task.title}</span>
-                                <ArrowRight className="w-3 h-3 shrink-0" />
-                            </button>
-                        ))}
+                        {pendingTasks.slice(0, 3).map((task) => {
+                            const pt = (task as any).displayPlatform || 'OTHER';
+                            return (
+                                <button 
+                                    key={`${task.id}_${pt}`}
+                                    onClick={() => onAction(task)}
+                                    className="px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-[11px] font-bold text-amber-700 hover:bg-amber-100 transition-colors flex items-center gap-2 max-w-[200px]"
+                                >
+                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                        pt === 'TIKTOK' ? 'bg-black' : 
+                                        pt === 'FACEBOOK' ? 'bg-blue-600' :
+                                        pt === 'YOUTUBE' ? 'bg-red-600' :
+                                        'bg-indigo-400'
+                                    }`} />
+                                    <span className="truncate">{task.title}</span>
+                                    <ArrowRight className="w-3 h-3 shrink-0" />
+                                </button>
+                            );
+                        })}
                         {pendingTasks.length > 3 && (
                             <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-400">
                                 และอีก {pendingTasks.length - 3} รายการ...

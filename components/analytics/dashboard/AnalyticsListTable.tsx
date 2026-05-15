@@ -10,6 +10,7 @@ interface AnalyticsListTableProps {
     totalPages: number;
     onPageChange: (page: number) => void;
     totalItems: number;
+    onRowClick?: (task: any) => void;
 }
 
 const AnalyticsListTable: React.FC<AnalyticsListTableProps> = ({ 
@@ -18,7 +19,8 @@ const AnalyticsListTable: React.FC<AnalyticsListTableProps> = ({
     currentPage, 
     totalPages, 
     onPageChange,
-    totalItems
+    totalItems,
+    onRowClick
 }) => {
     const getChannelInfo = (channelId: string | undefined) => {
         return channels.find(c => c.id === channelId);
@@ -53,7 +55,7 @@ const AnalyticsListTable: React.FC<AnalyticsListTableProps> = ({
                             </tr>
                         ) : data.map((item, idx) => {
                             const latest = item.analytics?.[item.analytics.length - 1];
-                            const platform = (item as any).platform || (item.targetPlatforms?.[0] || 'OTHER');
+                            const pt = (item as any).displayPlatform || 'OTHER';
                             const channel = getChannelInfo(item.channelId);
                             
                             const totalEngagement = latest ? (latest.likes + latest.shares + latest.comments + latest.saves) : 0;
@@ -61,7 +63,11 @@ const AnalyticsListTable: React.FC<AnalyticsListTableProps> = ({
                             const isAboveAvg = er > 3; // Standard social benchmark
 
                             return (
-                                <tr key={idx} className="group hover:bg-slate-50/50 transition-all duration-200">
+                                <tr 
+                                    key={idx} 
+                                    onClick={() => onRowClick?.(item)}
+                                    className={`group hover:bg-slate-50/50 transition-all duration-200 ${onRowClick ? 'cursor-pointer' : ''}`}
+                                >
                                     <td className="px-8 py-5">
                                         <div className="flex flex-col gap-1">
                                             <div className="flex items-center gap-2">
@@ -81,14 +87,14 @@ const AnalyticsListTable: React.FC<AnalyticsListTableProps> = ({
                                         </div>
                                     </td>
                                     <td className="px-6 py-5">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${
-                                                platform === 'TIKTOK' ? 'bg-black' : 
-                                                platform === 'FACEBOOK' ? 'bg-blue-600' :
-                                                platform === 'YOUTUBE' ? 'bg-red-600' :
+                                        <div className="inline-flex items-center gap-1 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${
+                                                pt === 'TIKTOK' ? 'bg-black' : 
+                                                pt === 'FACEBOOK' ? 'bg-blue-600' :
+                                                pt === 'YOUTUBE' ? 'bg-red-600' :
                                                 'bg-indigo-400'
                                             }`} />
-                                            <span className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">{platform}</span>
+                                            <span className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">{pt}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-5 text-center">
