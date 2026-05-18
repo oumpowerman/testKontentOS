@@ -5,7 +5,6 @@ import { Task, Channel, User, Status, MasterOption, TaskType } from '../types';
 import { STATUS_LABELS, STATUS_COLORS, PLATFORM_ICONS } from '../constants';
 import { Plus, MoreHorizontal, Calendar, User as UserIcon, Filter, Check, AlertCircle, ArrowRight, CornerDownRight, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
-import MentorTip from './MentorTip';
 
 interface BoardViewProps {
     tasks: Task[];

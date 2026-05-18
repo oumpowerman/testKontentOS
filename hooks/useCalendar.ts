@@ -24,7 +24,7 @@ export const useCalendar = ({ tasks, userId, onMoveTask }: UseCalendarProps) => 
     
     const [customChips, setCustomChips] = useState<ChipConfig[]>([]);
 
-    const [showFilters, setShowFilters] = useState(true);
+    const [showFilters, setShowFilters] = useState(false);
     const [dragOverDate, setDragOverDate] = useState<Date | null>(null);
     const [isManageModalOpen, setIsManageModalOpen] = useState(false);
 
@@ -95,8 +95,9 @@ export const useCalendar = ({ tasks, userId, onMoveTask }: UseCalendarProps) => 
 
     useEffect(() => {
         setActiveChipIds([]);
-        setShowFilters(true);
     }, [viewMode]);
+
+    const toggleFilters = useCallback(() => setShowFilters(prev => !prev), []);
 
     const nextMonth = useCallback(() => setCurrentDate(prev => addMonths(prev, 1)), []);
     const prevMonth = useCallback(() => setCurrentDate(prev => addMonths(prev, -1)), []);
@@ -307,6 +308,7 @@ export const useCalendar = ({ tasks, userId, onMoveTask }: UseCalendarProps) => 
         setViewMode,
         setFilterChannelId,
         toggleChip,
+        toggleFilters,
         setIsExpanded,
         setIsManageModalOpen,
 

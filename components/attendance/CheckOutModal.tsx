@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { calculateCheckOutStatus } from '../../lib/attendanceUtils';
 import { useMasterData } from '../../hooks/useMasterData';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
+import TimePickerModal from '../ui/TimePickerModal';
 
 interface CheckOutModalProps {
     isOpen: boolean;
@@ -38,6 +39,7 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
     const [reason, setReason] = useState('');
     const [earlyReason, setEarlyReason] = useState(''); // New state for early leave reason when GPS is OK
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -173,7 +175,13 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
                                 <p className="text-xs font-bold text-gray-400 uppercase">ส่งคำขอ Check-out</p>
                                 <div>
                                     <label className="text-xs font-bold text-gray-700">เวลาออกจริง</label>
-                                    <input type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full p-2 border rounded-xl font-bold text-center text-lg" required />
+                                    <button 
+                                        type="button"
+                                        onClick={() => setIsTimePickerOpen(true)}
+                                        className="w-full p-3 bg-white border-2 border-indigo-100 rounded-xl font-bold text-center text-xl text-indigo-600 shadow-sm hover:border-indigo-400 transition-all"
+                                    >
+                                        {time || '--:--'}
+                                    </button>
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-gray-700">เหตุผล / หมายเหตุ</label>
@@ -244,13 +252,13 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
                                 <p className="text-sm font-bold text-gray-700">กรุณาส่งคำขอ Check-out นอกสถานที่</p>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 mb-1">เวลาเลิกงานจริง (Actual Time)</label>
-                                    <input 
-                                        type="time" 
-                                        value={time} 
-                                        onChange={e => setTime(e.target.value)} 
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-800 text-center text-xl focus:ring-2 focus:ring-indigo-100 outline-none" 
-                                        required 
-                                    />
+                                    <button 
+                                        type="button"
+                                        onClick={() => setIsTimePickerOpen(true)}
+                                        className="w-full p-3 bg-white border-2 border-indigo-100 rounded-xl font-bold text-gray-800 text-center text-xl focus:ring-2 focus:ring-indigo-100 outline-none hover:border-indigo-400 transition-all"
+                                    >
+                                        {time || '--:--'}
+                                    </button>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 mb-1">เหตุผล (Reason)</label>
@@ -276,6 +284,12 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
                     )}
                 </div>
             </div>
+            <TimePickerModal
+                isOpen={isTimePickerOpen}
+                onClose={() => setIsTimePickerOpen(false)}
+                initialTime={time}
+                onSelect={(val) => setTime(val)}
+            />
         </div>,
         document.body
     );

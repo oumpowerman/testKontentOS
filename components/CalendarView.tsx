@@ -8,6 +8,7 @@ import MentorTip from './MentorTip';
 import TaskCategoryModal from './TaskCategoryModal';
 import { useCalendar } from '../hooks/useCalendar';
 import CalendarHeader from './CalendarHeader';
+import CalendarSecondaryHeader from './calendar/CalendarSecondaryHeader';
 import SmartFilterModal from './SmartFilterModal';
 import BoardView from './BoardView';
 import CalendarGrid from './calendar/CalendarGrid';
@@ -67,7 +68,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       currentDate,
       viewMode, setViewMode,
       filterChannelId, setFilterChannelId,
-      activeChipIds, toggleChip, customChips,
+      activeChipIds, toggleChip, toggleFilters, customChips,
       isExpanded, setIsExpanded,
       showFilters,
       startDate, endDate,
@@ -171,12 +172,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       // Optional logic
   };
 
-  const CALENDAR_TIPS = [
-      "💡 Tip: กดปุ่มที่มุมขวาบนเพื่อสลับดูแบบ Board (Kanban) ได้นะ",
-      "คลิกขวาที่ช่องวันที่ เพื่อเปลี่ยนสีไฮไลท์วัน (เช่น วันออกกอง, วันหยุด) ได้เลย!",
-      "การลงคอนเทนต์สม่ำเสมอสำคัญกว่ายอดวิวเปรี้ยงปรา้างแค่คลิปเดียว",
-      "วางแผนล่วงหน้า 1 สัปดาห์ ชีวิตจะดีขึ้นเยอะ!",
-  ];
 
   const bgTheme = useMemo(() => {
     const themes: BackgroundTheme[] = [
@@ -213,9 +208,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             </div>
         )}
 
-        {!isExpanded && displayMode === 'CALENDAR' && <MentorTip variant="green" messages={CALENDAR_TIPS} />}
         
-        <div className={`relative transition-all duration-500 ease-[cubic-bezier(0.25,0.8,0.25,1)] ${isExpanded ? 'mb-6 max-w-[1920px] mx-auto' : ''}`}>
+        <div className={`relative z-30 transition-all duration-500 ease-[cubic-bezier(0.25,0.8,0.25,1)] ${isExpanded ? 'mb-6 max-w-[1920px] mx-auto' : ''}`}>
            {!isExpanded && displayMode === 'CALENDAR' && (
                <>
                   <div className="absolute -top-10 -right-10 w-48 md:w-72 h-48 md:h-72 bg-gradient-to-br from-indigo-200/40 to-purple-200/40 rounded-full blur-3xl pointer-events-none mix-blend-multiply transition-all duration-1000"></div>
@@ -231,6 +225,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               nextMonth={calendarViewType === 'WEEK' ? nextWeek : nextMonth}
               goToToday={goToToday}
               showFilters={showFilters}
+              onToggleFilters={toggleFilters}
               viewMode={viewMode}
               setViewMode={setViewMode}
               activeChipIds={activeChipIds} 
@@ -268,6 +263,34 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               isWorkboxOpen={isWorkboxOpen}
               calendarViewType={calendarViewType}
               setCalendarViewType={setCalendarViewType}
+           />
+
+           <CalendarSecondaryHeader 
+              show={showFilters}
+              onClose={toggleFilters}
+              activeChipIds={activeChipIds}
+              toggleChip={toggleChip}
+              customChips={customChips || []}
+              channels={channels}
+              onManageFilters={() => setIsManageModalOpen(true)}
+              unreadCount={unreadCount}
+              onOpenNotifications={onOpenNotifications}
+              onOpenSettings={onOpenSettings}
+              onToggleWorkbox={onToggleWorkbox}
+              onToggleStock={() => {
+                  if (viewMode === 'TASK') {
+                      showAlert(
+                          'ฟีเจอร์ "คลังเก็บเนื้อหา" จะใช้งานได้เฉพาะในโหมด Content เท่านั้น',
+                          'เปิดหน้าต่างคลังไม่ได้'
+                      );
+                      return;
+                  }
+                  setIsStockOpen(!isStockOpen);
+              }}
+              isWorkboxOpen={!!isWorkboxOpen}
+              isStockOpen={isStockOpen}
+              taskDisplayMode={taskDisplayMode}
+              setTaskDisplayMode={setTaskDisplayMode}
            />
         </div>
 
@@ -329,6 +352,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                                 onTaskClick={onSelectTask}
                                 onSelectDate={onSelectDate}
                                 isLandscape={isMobileLandscape}
+                                allTasks={tasks}
+                                onMoveTask={handleMoveAttempt}
                             />
                         )
                     ) : (

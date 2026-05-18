@@ -292,17 +292,22 @@ const CalendarTaskPill: React.FC<CalendarTaskPillProps> = ({
             {!isExpanded && (
                 <div 
                     className={`
-                        md:hidden w-1.5 h-1.5 rounded-full ${(!task.channelId || !channels?.find(c => c.id === task.channelId)?.color) ? getTaskDotClass(task) : ''}
+                        md:hidden w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1)] ring-1 ring-white/30
                         animate-spring
+                        ${(() => {
+                            const color = task.channelId && channels?.find(c => c.id === task.channelId)?.color;
+                            if (!color) return getTaskDotClass(task);
+                            if (color.startsWith('#')) return '';
+                            // Convert text-indigo-500 or border-indigo-500 to bg-indigo-500
+                            const base = color.replace('bg-', '').replace('text-', '').replace('border-', '').replace('border-l-', '');
+                            return `bg-${base}`;
+                        })()}
                     `}
                     style={{ 
                         animationDelay: `${index * 30}ms`, 
                         animationFillMode: 'both',
-                        backgroundColor: (task.channelId && channels?.find(c => c.id === task.channelId)?.color) 
-                            ? (channels.find(c => c.id === task.channelId)?.color?.startsWith('#') 
-                                ? channels.find(c => c.id === task.channelId)?.color 
-                                : undefined // Tailwind class will handle it if we find a way, but let's stick to hex for inline or fallback to dot class
-                            ) 
+                        backgroundColor: (task.channelId && channels?.find(c => c.id === task.channelId)?.color?.startsWith('#')) 
+                            ? channels.find(c => c.id === task.channelId)?.color 
                             : undefined
                     }}
                 />

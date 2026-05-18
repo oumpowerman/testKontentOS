@@ -185,8 +185,8 @@ const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
                 </div>
 
                 {!isExpanded && (
-                    <div className="flex md:hidden flex-wrap content-end justify-center gap-1 p-1 w-full h-full pb-2">
-                        {tasks.slice(0, 5).map((task, index) => (
+                    <div className="flex md:hidden flex-wrap content-center justify-center gap-1.5 p-1 w-full h-full pb-1">
+                        {tasks.slice(0, 8).map((task, index) => (
                             <CalendarTaskPill 
                                 key={`${task.id}-dot`}
                                 task={task}
@@ -202,8 +202,8 @@ const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
                                 onClick={onTaskClick}
                             />
                         ))}
-                        {tasks.length > 5 && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-gray-300 flex items-center justify-center text-[5px]">
+                        {tasks.length > 8 && (
+                            <div className="w-2 h-2 rounded-full bg-gray-200 flex items-center justify-center text-[6px] text-gray-500 font-bold ring-1 ring-white">
                                 +
                             </div>
                         )}
