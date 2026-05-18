@@ -65,6 +65,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         pillar: data.pillar,
         contentFormats: data.content_formats || [],
         category: data.category,
+        scheduledTime: data.scheduled_time || data.scheduledTime,
         isUnscheduled: data.is_unscheduled,
         
         assigneeIds: Array.isArray(data.assignee_ids) ? data.assignee_ids : [],

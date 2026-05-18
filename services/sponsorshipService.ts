@@ -70,6 +70,8 @@ export const sponsorshipService = {
       dealValue: item.deal_value || 0,
       requirements: item.requirements,
       paymentStatus: item.payment_status,
+      isPaid: item.is_paid,
+      invoiceUrl: item.invoice_url,
       createdAt: item.created_at,
       client: item.client ? {
         id: item.client.id,
@@ -100,12 +102,13 @@ export const sponsorshipService = {
         client:clients(*)
       `)
       .eq('task_id', taskId)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      if (error.code === 'PGRST116') return null; // No record found
       throw error;
     }
+
+    if (!data) return null;
 
     return {
       taskId: data.task_id,
@@ -116,6 +119,8 @@ export const sponsorshipService = {
       paymentStatus: data.payment_status,
       isPaid: data.is_paid,
       invoiceUrl: data.invoice_url,
+      createdAt: data.created_at ? new Date(data.created_at) : undefined,
+      updatedAt: data.updated_at ? new Date(data.updated_at) : undefined,
       client: data.client ? {
         id: data.client.id,
         name: data.client.name,
@@ -171,9 +176,10 @@ export const sponsorshipService = {
         is_active: true
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) throw new Error('Failed to create client: No data returned');
     return {
       id: data.id,
       name: data.name,

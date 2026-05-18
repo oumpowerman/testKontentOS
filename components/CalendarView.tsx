@@ -11,6 +11,7 @@ import CalendarHeader from './CalendarHeader';
 import SmartFilterModal from './SmartFilterModal';
 import BoardView from './BoardView';
 import CalendarGrid from './calendar/CalendarGrid';
+import WeeklyView from './calendar/WeeklyView';
 import { useCalendarHighlights } from '../hooks/useCalendarHightlights';
 import DayHighlightModal from './calendar/DayHightlightModal';
 import StockSidePanel from './StockSidePanel';
@@ -19,6 +20,7 @@ import AppBackground, { BackgroundTheme } from './common/AppBackground';
 import MobileLandscapeWrapper from './common/MobileLandscapeWrapper';
 import { useGlobalDialog } from '../context/GlobalDialogContext';
 export type TaskDisplayMode = 'MINIMAL' | 'DOT' | 'EMOJI' | 'FULL';
+export type CalendarViewType = 'MONTH' | 'WEEK';
 
 interface CalendarViewProps {
   tasks: Task[];
@@ -69,7 +71,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       isExpanded, setIsExpanded,
       showFilters,
       startDate, endDate,
-      nextMonth, prevMonth, goToToday,
+      nextMonth, prevMonth,
+      nextWeek, prevWeek,
+      goToToday,
       filterTasks, getTasksForDay,
       saveChip, deleteChip,
       handleDragStart, handleDragOver, handleDrop: internalHandleDrop, setDragOverDate, dragOverDate,
@@ -120,6 +124,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   // --- Stock Panel State ---
   const [isStockOpen, setIsStockOpen] = useState(false);
+  const [calendarViewType, setCalendarViewType] = useState<CalendarViewType>('MONTH');
 
   // --- Mobile Landscape State ---
   const [isMobileLandscape, setIsMobileLandscape] = useState(false);
@@ -222,8 +227,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               currentDate={currentDate || new Date()} 
               isExpanded={isExpanded}
               setIsExpanded={setIsExpanded}
-              prevMonth={prevMonth}
-              nextMonth={nextMonth}
+              prevMonth={calendarViewType === 'WEEK' ? prevWeek : prevMonth}
+              nextMonth={calendarViewType === 'WEEK' ? nextWeek : nextMonth}
               goToToday={goToToday}
               showFilters={showFilters}
               viewMode={viewMode}
@@ -261,6 +266,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               onToggleMobileLandscape={() => setIsMobileLandscape(!isMobileLandscape)}
               onToggleWorkbox={onToggleWorkbox}
               isWorkboxOpen={isWorkboxOpen}
+              calendarViewType={calendarViewType}
+              setCalendarViewType={setCalendarViewType}
            />
         </div>
 
@@ -278,7 +285,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
               <AnimatePresence mode="wait">
                 <motion.div 
-                  key={`${displayMode}-${viewMode}`}
+                  key={`${displayMode}-${viewMode}-${calendarViewType}`}
                   initial={{ opacity: 0, scale: 0.98, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 1.02, y: -10 }}
@@ -286,29 +293,44 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                   className="h-full"
                 >
                     {displayMode === 'CALENDAR' ? (
-                        <CalendarGrid 
-                            startDate={startDate}
-                            endDate={endDate}
-                            currentDate={currentDate || new Date()}
-                            isExpanded={isExpanded || isMobileLandscape} // Force expanded mode in landscape
-                            dragOverDate={dragOverDate}
-                            viewMode={viewMode}
-                            taskDisplayMode={taskDisplayMode}
-                            activeChipIds={activeChipIds}
-                            customChips={customChips || []}
-                            highlights={highlights}
-                            masterOptions={masterOptions}
-                            channels={channels}
-                            getTasksForDay={getTasksForDay}
-                            filterTasks={filterTasks}
-                            onDayClick={handleDayClick}
-                            onDayContextMenu={handleDayContextMenu}
-                            onDragOver={handleDragOver}
-                            onDragLeave={handleDragLeave}
-                            onDrop={internalHandleDrop}
-                            onTaskDragStart={handleDragStart}
-                            onTaskClick={onSelectTask}
-                        />
+                        calendarViewType === 'MONTH' ? (
+                            <CalendarGrid 
+                                startDate={startDate}
+                                endDate={endDate}
+                                currentDate={currentDate || new Date()}
+                                isExpanded={isExpanded || isMobileLandscape} // Force expanded mode in landscape
+                                dragOverDate={dragOverDate}
+                                viewMode={viewMode}
+                                taskDisplayMode={taskDisplayMode}
+                                activeChipIds={activeChipIds}
+                                customChips={customChips || []}
+                                highlights={highlights}
+                                masterOptions={masterOptions}
+                                channels={channels}
+                                getTasksForDay={getTasksForDay}
+                                filterTasks={filterTasks}
+                                onDayClick={handleDayClick}
+                                onDayContextMenu={handleDayContextMenu}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={internalHandleDrop}
+                                onTaskDragStart={handleDragStart}
+                                onTaskClick={onSelectTask}
+                            />
+                        ) : (
+                            <WeeklyView 
+                                currentDate={currentDate || new Date()}
+                                viewMode={viewMode}
+                                taskDisplayMode={taskDisplayMode}
+                                getTasksForDay={getTasksForDay}
+                                filterTasks={filterTasks}
+                                channels={channels}
+                                masterOptions={masterOptions}
+                                onTaskClick={onSelectTask}
+                                onSelectDate={onSelectDate}
+                                isLandscape={isMobileLandscape}
+                            />
+                        )
                     ) : (
                         <div 
                             key="board-view" 

@@ -22,7 +22,7 @@ const MeetingNavigation: React.FC<MeetingNavigationProps> = React.memo(({ active
     const activeTheme = TABS.find(t => t.id === activeTab) || TABS[1];
 
     return (
-        <div className="px-4 md:px-6 pt-2 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white z-10 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] overflow-x-auto no-scrollbar">
+        <div className="px-3 md:px-6 pt-2 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white z-10 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] overflow-x-auto no-scrollbar scroll-smooth">
             <div className="flex gap-1 md:gap-2 relative">
                 {TABS.map((tab) => {
                     const isActive = activeTab === tab.id;
@@ -32,7 +32,7 @@ const MeetingNavigation: React.FC<MeetingNavigationProps> = React.memo(({ active
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as MeetingTab)}
                             className={`
-                                relative pb-3 pt-2 px-3 md:px-4 text-[11px] md:text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 rounded-t-2xl group
+                                relative pb-3 pt-2 px-2.5 md:px-4 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 rounded-t-2xl group shrink-0
                                 ${isActive ? tab.text : 'text-slate-400 hover:text-slate-600'}
                             `}
                         >
@@ -54,9 +54,8 @@ const MeetingNavigation: React.FC<MeetingNavigationProps> = React.memo(({ active
                                 />
                             )}
 
-                            <tab.icon className={`w-3.5 h-3.5 md:w-4 h-4 transition-transform duration-300 ${isActive ? 'scale-110 stroke-[2.5px]' : 'group-hover:scale-110'}`} /> 
-                            <span className="hidden sm:inline">{tab.label}</span>
-                            <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+                            <tab.icon className={`w-3.5 h-3.5 md:w-4 md:h-4 transition-transform duration-300 ${isActive ? 'scale-110 stroke-[2.5px]' : 'group-hover:scale-110'}`} /> 
+                            <span className={`${isActive ? 'inline' : 'hidden sm:inline'}`}>{tab.label}</span>
 
                             {/* Glow effect for active tab */}
                             {isActive && (
@@ -67,12 +66,14 @@ const MeetingNavigation: React.FC<MeetingNavigationProps> = React.memo(({ active
                 })}
             </div>
             
-            <div className="flex items-center gap-4 ml-4">
+            <div className="flex items-center gap-4 ml-4 shrink-0">
                 <div className={`hidden lg:flex items-center gap-2 px-3 py-1 rounded-full border ${activeTheme.bg} ${activeTheme.text} ${activeTheme.border.replace('border-', 'border-').replace('500', '100')} text-[9px] font-black uppercase tracking-tighter animate-in fade-in zoom-in duration-500`}>
                     <div className={`w-1.5 h-1.5 rounded-full ${activeTheme.bg.replace('bg-', 'bg-').replace('50', '500')} animate-pulse`}></div>
                     {activeTheme.label} Mode
                 </div>
-                <MeetingTimer />
+                <div className="hidden xs:block">
+                    <MeetingTimer />
+                </div>
             </div>
         </div>
     );

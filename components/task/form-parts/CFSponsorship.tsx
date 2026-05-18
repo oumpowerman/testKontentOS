@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { DollarSign, Briefcase, Info, Plus, CheckCircle2, XCircle, Search, ChevronDown } from 'lucide-react';
+import { DollarSign, Briefcase, Info, Plus, CheckCircle2, XCircle, Search, ChevronDown, Link as LinkIcon } from 'lucide-react';
 import { Client, SponsorshipDetail } from '../../../types/task';
 import { useSponsorship } from '../../../hooks/useSponsorship';
 import ClientModal from './ClientModal.tsx';
@@ -18,6 +18,7 @@ const CFSponsorship: React.FC<CFSponsorshipProps> = ({ taskId, onChange, initial
     const [dealValue, setDealValue] = useState(initialData?.dealValue ?? 0);
     const [requirements, setRequirements] = useState(initialData?.requirements ?? '');
     const [paymentStatus, setPaymentStatus] = useState(initialData?.paymentStatus ?? 'UNPAID');
+    const [invoiceUrl, setInvoiceUrl] = useState(initialData?.invoiceUrl ?? '');
 
     // Lazy Fetch Clients: Only when sponsored is active
     useEffect(() => {
@@ -27,6 +28,7 @@ const CFSponsorship: React.FC<CFSponsorshipProps> = ({ taskId, onChange, initial
     }, [isSponsored, fetchClients, clients.length]);
 
     // UI States for Smart Search
+    // ... rest of the state
     const [searchQuery, setSearchQuery] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -52,12 +54,13 @@ const CFSponsorship: React.FC<CFSponsorshipProps> = ({ taskId, onChange, initial
                 requirements,
                 paymentStatus,
                 isPaid: paymentStatus === 'PAID',
+                invoiceUrl,
                 taskId: taskId || ''
             });
         } else {
             onChange(null);
         }
-    }, [isSponsored, clientId, dealValue, requirements, paymentStatus, taskId]);
+    }, [isSponsored, clientId, dealValue, requirements, paymentStatus, invoiceUrl, taskId]);
 
     // Handle outside click for dropdown
     useEffect(() => {
@@ -223,6 +226,20 @@ const CFSponsorship: React.FC<CFSponsorshipProps> = ({ taskId, onChange, initial
                                 placeholder="ระบุเงื่อนไขพิเศษ เช่น พูดถึงแบรนด์ 30 วินาที, วางสินค้าในเฟรม..."
                                 rows={3}
                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none border-none shadow-inner"
+                            />
+                        </div>
+
+                        {/* Invoice URL */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <LinkIcon className="w-3 h-3" /> ลิงค์ใบแจ้งหนี้/หลักฐาน (Invoice URL)
+                            </label>
+                            <input 
+                                type="url"
+                                value={invoiceUrl}
+                                onChange={(e) => setInvoiceUrl(e.target.value)}
+                                placeholder="https://drive.google.com/... หรือ ลิงค์ไฟล์หลักฐาน"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all border-none shadow-inner"
                             />
                         </div>
 

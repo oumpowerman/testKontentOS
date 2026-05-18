@@ -86,13 +86,13 @@ const MeetingActionModule: React.FC<MeetingActionModuleProps> = ({
     };
 
     return (
-        <div className="flex-1 p-8 overflow-y-auto space-y-10 bg-white/20 backdrop-blur-xl scrollbar-thin scrollbar-thumb-slate-200/50">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto space-y-8 md:space-y-10 bg-white/20 backdrop-blur-xl scrollbar-thin scrollbar-thumb-slate-200/50">
             
             {/* 1. New Action Item Form (Glassy & 3D) */}
             <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white/60 backdrop-blur-2xl border border-white/80 rounded-[2.5rem] p-8 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] relative overflow-hidden group"
+                className="bg-white/60 backdrop-blur-2xl border border-white/80 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] relative overflow-hidden group"
             >
                  {/* Decor */}
                 <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/5 rounded-bl-[10rem] pointer-events-none group-hover:scale-110 transition-transform duration-700" />
@@ -349,16 +349,16 @@ const MeetingActionModule: React.FC<MeetingActionModuleProps> = ({
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
+                                <div className="flex items-center gap-2 mt-2 group-hover:translate-x-0 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:translate-x-4">
                                     <button 
                                         onClick={() => onUpdateTask(task, 'NOTE')}
-                                        className="px-4 py-2 text-xs font-bold text-slate-600 bg-white/80 border border-white/80 rounded-xl hover:border-indigo-300 hover:text-indigo-600 shadow-sm active:scale-95 transition-all"
+                                        className="px-3 md:px-4 py-2 text-[10px] md:text-xs font-bold text-slate-600 bg-white shadow-sm border border-slate-100 rounded-xl hover:border-indigo-300 hover:text-indigo-600 active:scale-95 transition-all"
                                     >
                                         Note
                                     </button>
                                     <button 
                                         onClick={() => onUpdateTask(task, 'DONE')}
-                                        className="px-4 py-2 text-xs font-bold text-emerald-600 bg-emerald-50/80 border border-emerald-100 rounded-xl hover:bg-emerald-100 shadow-sm active:scale-95 transition-all"
+                                        className="px-3 md:px-4 py-2 text-[10px] md:text-xs font-bold text-emerald-600 bg-emerald-50 shadow-sm border border-emerald-100 rounded-xl hover:bg-emerald-100 active:scale-95 transition-all"
                                     >
                                         Done
                                     </button>

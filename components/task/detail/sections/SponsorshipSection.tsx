@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { DollarSign, Briefcase, Info, CheckCircle2, Clock } from 'lucide-react';
+import { DollarSign, Briefcase, Info, CheckCircle2, Clock, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { SponsorshipDetail } from '../../../../types/task';
 import { useSponsorship } from '../../../../hooks/useSponsorship';
 
@@ -68,6 +68,24 @@ const SponsorshipSection: React.FC<SponsorshipSectionProps> = ({ taskId }) => {
                             ฿{sponsorship.dealValue.toLocaleString()}
                         </p>
                     </div>
+
+                    {/* Invoice Link */}
+                    {sponsorship.invoiceUrl && (
+                        <div className="space-y-2 pt-2">
+                            <span className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <LinkIcon className="w-3 h-3" /> Invoice/Link
+                            </span>
+                            <a 
+                                href={sponsorship.invoiceUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-colors border border-indigo-100"
+                            >
+                                <ExternalLink className="w-3 h-3" />
+                                View Document
+                            </a>
+                        </div>
+                    )}
                 </div>
 
                 {/* Requirements */}

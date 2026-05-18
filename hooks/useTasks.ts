@@ -228,6 +228,7 @@ export const useTasks = (setIsModalOpen?: (isOpen: boolean) => void) => {
             end_date: taskToSave.endDate.toISOString(),
             assignee_ids: taskToSave.assigneeIds || [],
             target_position: taskToSave.targetPosition,
+            scheduled_time: taskToSave.scheduledTime,
             assets: taskToSave.assets || [], 
             ...(isContent ? {} : { 
                 type: 'TASK', 
@@ -263,6 +264,7 @@ export const useTasks = (setIsModalOpen?: (isOpen: boolean) => void) => {
             is_in_shoot_queue: taskToSave.isInShootQueue || false,
             local_path: taskToSave.localPath || null,
             drive_label: taskToSave.driveLabel || null,
+            scheduled_time: taskToSave.scheduledTime,
         } : {};
 
         const nowStr = format(new Date(), 'yyyy-MM-dd');

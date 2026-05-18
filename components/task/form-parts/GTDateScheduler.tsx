@@ -1,22 +1,31 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, Sparkles, Info, Lock } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, Sparkles, Info, Lock, Clock } from 'lucide-react';
 import { format, parseISO, isSameMonth, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isValid, isWeekend } from 'date-fns';
+import { th } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAnnualHolidays } from '../../../hooks/useAnnualHolidays';
 import { useCalendarExceptions } from '../../../hooks/useCalendarExceptions';
+import TimePickerModal from '../../ui/TimePickerModal';
 
 interface GTDateSchedulerProps {
     startDate: string;
     setStartDate: (val: string) => void;
     endDate: string;
     setEndDate: (val: string) => void;
+    scheduledTime?: string;
+    setScheduledTime?: (val: string) => void;
     isEndDateLocked?: boolean;
     onRequestExtension?: () => void;
 }
 
-const GTDateScheduler: React.FC<GTDateSchedulerProps> = ({ startDate, setStartDate, endDate, setEndDate, isEndDateLocked, onRequestExtension }) => {
+const GTDateScheduler: React.FC<GTDateSchedulerProps> = ({ 
+    startDate, setStartDate, endDate, setEndDate, 
+    scheduledTime, setScheduledTime,
+    isEndDateLocked, onRequestExtension 
+}) => {
     const [activePicker, setActivePicker] = useState<'START' | 'END' | null>(null);
+    const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
     const [viewMonth, setViewMonth] = useState(new Date());
     const containerRef = useRef<HTMLDivElement>(null);
     
@@ -98,7 +107,7 @@ const GTDateScheduler: React.FC<GTDateSchedulerProps> = ({ startDate, setStartDa
             <div className="grid grid-cols-2 gap-4">
                 {/* Start Date Display */}
                 <div className="space-y-2">
-                    <label className="block text-[12px] font-bold text-gray-400 ml-1 uppercase tracking-widest">เริ่ม (Start Date)</label>
+                    <label className="block text-[12px] font-bold text-gray-400 ml-1 uppercase tracking-widest">วันเริ่ม</label>
                     <button 
                         type="button"
                         onClick={(e) => {
@@ -121,7 +130,7 @@ const GTDateScheduler: React.FC<GTDateSchedulerProps> = ({ startDate, setStartDa
                 {/* End Date Display */}
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                        <label className="block text-[12px] font-bold text-gray-400 ml-1 uppercase tracking-widest">จบ (Due Date)</label>
+                        <label className="block text-[12px] font-bold text-gray-400 ml-1 uppercase tracking-widest">วันครบกำหนด</label>
                         {isEndDateLocked && (
                             <button 
                                 type="button" 
@@ -161,6 +170,33 @@ const GTDateScheduler: React.FC<GTDateSchedulerProps> = ({ startDate, setStartDa
                 </div>
             </div>
 
+            {/* Scheduled Time Section */}
+            <div className="mt-4 space-y-2">
+                <label className="block text-[12px] font-bold text-gray-400 ml-1 uppercase tracking-widest flex items-center gap-2">
+                     เวลานัดหมาย
+                </label>
+                <div className="relative group">
+                    <button
+                        type="button"
+                        onClick={() => setIsTimePickerOpen(true)}
+                        className="w-full px-4 py-3 bg-indigo-50/20 border-2 border-indigo-100 rounded-2xl outline-none font-bold text-indigo-700 hover:border-indigo-400 transition-all cursor-pointer hover:bg-white flex items-center justify-between"
+                    >
+                        <div className="flex items-center gap-3">
+                            <Clock className="w-5 h-5 text-indigo-400" />
+                            <span>{scheduledTime || '--:--'}</span>
+                        </div>
+                        <Sparkles className="w-4 h-4 text-indigo-300" />
+                    </button>
+                </div>
+            </div>
+
+            <TimePickerModal 
+                isOpen={isTimePickerOpen}
+                onClose={() => setIsTimePickerOpen(false)}
+                initialTime={scheduledTime}
+                onSelect={(time) => setScheduledTime?.(time)}
+            />
+
             {/* Custom Pastel Calendar Popover */}
             <AnimatePresence>
                 {activePicker && (
@@ -182,7 +218,7 @@ const GTDateScheduler: React.FC<GTDateSchedulerProps> = ({ startDate, setStartDa
                                         <Sparkles className="w-4 h-4" />
                                     </div>
                                     <span className="text-xs font-black text-slate-500 uppercase tracking-widest">
-                                        {activePicker === 'START' ? 'Select Start Date' : 'Select Due Date'}
+                                        {activePicker === 'START' ? 'เลือกวันเริ่ม' : 'เลือกวันครบกำหนด'}
                                     </span>
                                 </div>
                                 <button 
@@ -209,7 +245,7 @@ const GTDateScheduler: React.FC<GTDateSchedulerProps> = ({ startDate, setStartDa
                                     <ChevronLeft className="w-5 h-5" />
                                 </button>
                                 <span className="text-sm font-black text-slate-700 uppercase tracking-widest">
-                                    {format(viewMonth, 'MMMM yyyy')}
+                                    {format(viewMonth, 'MMMM yyyy', { locale: th })}
                                 </span>
                                 <button 
                                     type="button"
@@ -224,7 +260,7 @@ const GTDateScheduler: React.FC<GTDateSchedulerProps> = ({ startDate, setStartDa
                             </div>
 
                             <div className="grid grid-cols-7 gap-1 mb-2">
-                                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                                {['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'อา.'].map(day => (
                                     <div key={day} className="text-[10px] font-black text-gray-300 text-center py-2 uppercase tracking-tighter">{day}</div>
                                 ))}
                                 {calendarDays.map((date, i) => {
@@ -281,11 +317,11 @@ const GTDateScheduler: React.FC<GTDateSchedulerProps> = ({ startDate, setStartDa
                             <div className="mt-6 pt-4 border-t border-gray-50 flex items-center gap-4">
                                 <div className="flex items-center gap-1.5">
                                     <div className="w-2 h-2 rounded-full bg-rose-300"></div>
-                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Holiday / Weekend</span>
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">วันหยุด / เสาร์-อาทิตย์</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Selected</span>
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">วันที่เลือก</span>
                                 </div>
                             </div>
                         </div>

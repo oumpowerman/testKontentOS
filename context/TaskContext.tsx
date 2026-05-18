@@ -120,6 +120,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updatedAt: data.updated_at ? new Date(data.updated_at) : undefined,
             channelId: data.channel_id || data.channelId,
             targetPlatforms: platforms,
+            scheduledTime: data.scheduled_time || data.scheduledTime,
             isUnscheduled: data.is_unscheduled || data.isUnscheduled,
             assigneeIds: data.assignee_ids || data.assigneeIds || [],
             ideaOwnerIds: data.idea_owner_ids || data.ideaOwnerIds || [],
@@ -154,6 +155,20 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             is_penalized: data.is_penalized,
             last_penalized_at: data.last_penalized_at ? new Date(data.last_penalized_at) : undefined,
             hasAnalytics: !!data.content_analytics && (Array.isArray(data.content_analytics) ? data.content_analytics.length > 0 : !!data.content_analytics.id),
+            sponsorship: data.sponsorship_details ? (() => {
+                const s = Array.isArray(data.sponsorship_details) ? data.sponsorship_details[0] : data.sponsorship_details;
+                if (!s) return undefined;
+                return {
+                    taskId: data.id,
+                    isSponsored: s.is_sponsored,
+                    dealValue: s.deal_value || 0,
+                    requirements: s.requirements,
+                    paymentStatus: s.payment_status,
+                    isPaid: s.is_paid,
+                    invoiceUrl: s.invoice_url,
+                    clientId: s.client_id
+                };
+            })() : undefined,
             _isPartial: isPartial
         } as any;
     }, []);
@@ -177,17 +192,18 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // 🚀 STRATEGY: Select only essential fields for Board/Calendar (Reduce payload size by ~70%)
         const contentFields = `
             id, title, description, status, pillar, category, content_formats, 
-            start_date, end_date, channel_id, created_at, updated_at, is_unscheduled, remark,
+            start_date, end_date, channel_id, created_at, updated_at, is_unscheduled, remark, scheduled_time,
             target_platform, assignee_ids, idea_owner_ids, editor_ids, shoot_trip_id,
             shoot_date, is_in_shoot_queue, is_soft_finished, sla_revert_count, 
             task_reviews(id, round, status, is_completed),
-            content_analytics(id)
+            content_analytics(id),
+            sponsorship_details(is_sponsored, deal_value, requirements, payment_status, is_paid, invoice_url, client_id)
         `.replace(/\s+/g, '');
 
         const taskFields = `
             id, title, status, priority, start_date, end_date, created_at, updated_at, 
             assignee_ids, content_id, show_on_board, target_position, roadmap_id, 
-            sla_revert_count, difficulty, assignee_type, estimated_hours,
+            sla_revert_count, difficulty, assignee_type, estimated_hours, scheduled_time,
             contents(title), task_reviews(id, round, status, is_completed)
         `.replace(/\s+/g, '');
 
@@ -273,8 +289,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             let query = supabase.from(table).select(
                 type === 'TASK' 
                     ? `*, contents (title), task_reviews(*)` 
-                    : `*, task_reviews(*), content_analytics(id)`
-            ).eq('id', id).single();
+                    : `*, task_reviews(*), content_analytics(id), sponsorship_details(*)`
+            ).eq('id', id).maybeSingle();
             
             const { data, error } = await query;
             if (error) throw error;
@@ -332,8 +348,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     let query = supabase.from(table).select(
                         type === 'TASK' 
                             ? `*, contents (title), task_reviews(*)` 
-                            : `*, task_reviews(*), content_analytics(id)`
-                    ).eq('id', payload.new.id).single();
+                            : `*, task_reviews(*), content_analytics(id), sponsorship_details(*)`
+                    ).eq('id', payload.new.id).maybeSingle();
                     
                     const { data } = await query;
                     if (data) {
@@ -352,8 +368,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     let query = supabase.from(table).select(
                         type === 'TASK' 
                             ? `*, contents (title), task_reviews(*)` 
-                            : `*, task_reviews(*), content_analytics(id)`
-                    ).eq('id', payload.new.id).single();
+                            : `*, task_reviews(*), content_analytics(id), sponsorship_details(*)`
+                    ).eq('id', payload.new.id).maybeSingle();
                     
                     const { data } = await query;
                     if (data) {
@@ -399,7 +415,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     
                     supabase.from(table).select(
                         type === 'TASK' ? `*, contents (title), task_reviews(*)` : `*, task_reviews(*), content_analytics(id)`
-                    ).eq('id', taskId).single().then(({ data }) => {
+                    ).eq('id', taskId).maybeSingle().then(({ data }) => {
                         if (data) {
                             const updatedTask = mapSupabaseToTask(data, type);
                             setTasks(current => current.map(t => t.id === updatedTask.id ? updatedTask : t));
@@ -415,7 +431,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (!contentId) return;
 
                 // When analytics change, re-fetch the content to update hasAnalytics status
-                supabase.from('contents').select(`*, task_reviews(*), content_analytics(id)`).eq('id', contentId).single().then(({ data }) => {
+                supabase.from('contents').select(`*, task_reviews(*), content_analytics(id)`).eq('id', contentId).maybeSingle().then(({ data }) => {
                     if (data) {
                         const updatedTask = mapSupabaseToTask(data, 'CONTENT');
                         setTasks(current => current.map(t => t.id === updatedTask.id ? updatedTask : t));

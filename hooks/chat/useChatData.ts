@@ -91,7 +91,7 @@ export const useChatData = (currentUser: User | null) => {
                     .from('team_messages')
                     .select(`*, profiles (*)`)
                     .eq('id', payload.new.id)
-                    .single();
+                    .maybeSingle();
                 
                 if (data && !error) {
                     const newMessage = mapMessage(data);
@@ -118,7 +118,7 @@ export const useChatData = (currentUser: User | null) => {
                     .from('team_messages')
                     .select(`*, profiles (*)`)
                     .eq('id', payload.new.id)
-                    .single();
+                    .maybeSingle();
                 
                 if (data && !error) {
                     const updatedMessage = mapMessage(data);

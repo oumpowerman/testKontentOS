@@ -41,8 +41,9 @@ export const roadmapService = {
       .from('roadmap_categories')
       .insert([{ name, color }])
       .select()
-      .single();
+      .maybeSingle();
     if (error) throw error;
+    if (!data) throw new Error('Failed to create category: No data returned');
     return data;
   },
 
@@ -70,9 +71,10 @@ export const roadmapService = {
       .from('roadmap_tasks')
       .insert([task])
       .select()
-      .single();
+      .maybeSingle();
     
     if (error) throw error;
+    if (!data) throw new Error('Failed to create task: No data returned');
     return data as RoadmapTask;
   },
 
@@ -82,9 +84,10 @@ export const roadmapService = {
       .update(updates)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
     
     if (error) throw error;
+    if (!data) throw new Error('Failed to update task: Not found or no data returned');
     return data as RoadmapTask;
   },
 

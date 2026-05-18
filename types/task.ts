@@ -147,6 +147,7 @@ export interface Task {
     difficulty?: Difficulty;
     estimatedHours?: number;
     performance?: TaskPerformance;
+    scheduledTime?: string; // HH:mm format
     
     // New fields
     targetPosition?: string;

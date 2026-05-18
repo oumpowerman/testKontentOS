@@ -100,6 +100,16 @@ export const useCalendar = ({ tasks, userId, onMoveTask }: UseCalendarProps) => 
 
     const nextMonth = useCallback(() => setCurrentDate(prev => addMonths(prev, 1)), []);
     const prevMonth = useCallback(() => setCurrentDate(prev => addMonths(prev, -1)), []);
+    const nextWeek = useCallback(() => setCurrentDate(prev => {
+        const next = new Date(prev);
+        next.setDate(next.getDate() + 7);
+        return next;
+    }), []);
+    const prevWeek = useCallback(() => setCurrentDate(prev => {
+        const prevDate = new Date(prev);
+        prevDate.setDate(prevDate.getDate() - 7);
+        return prevDate;
+    }), []);
     const goToToday = useCallback(() => setCurrentDate(new Date()), []);
 
     const getStartOfWeek = (d: Date) => {
@@ -302,6 +312,8 @@ export const useCalendar = ({ tasks, userId, onMoveTask }: UseCalendarProps) => 
 
         nextMonth,
         prevMonth,
+        nextWeek,
+        prevWeek,
         goToToday,
         filterTasks,
         getTasksForDay,

@@ -11,6 +11,7 @@ interface Props {
     showTimeSelectOnly?: boolean;
     dateFormat?: string;
     portalId?: string;
+    disabled?: boolean;
 }
 
 const CustomDatePicker: React.FC<Props> = ({ 
@@ -20,7 +21,8 @@ const CustomDatePicker: React.FC<Props> = ({
     showTimeSelect = false,
     showTimeSelectOnly = false,
     dateFormat = showTimeSelectOnly ? "HH:mm" : "dd/MM/yyyy",
-    portalId
+    portalId,
+    disabled = false
 }) => {
     // Shared common props
     const commonProps = {
@@ -28,7 +30,8 @@ const CustomDatePicker: React.FC<Props> = ({
         portalId: portalId,
         popperPlacement: "bottom-start" as const,
         popperClassName: "!z-[12000]",
-        className: "w-full px-5 py-4 bg-white/80 border-2 border-indigo-50 rounded-3xl outline-none font-bold text-indigo-900 transition-all text-sm shadow-[0_4px_12px_rgba(99,102,241,0.1),inset_0_2px_4px_rgba(255,255,255,0.5)] focus:bg-white focus:border-indigo-200 focus:ring-4 focus:ring-indigo-50/50 pl-12 placeholder:text-indigo-200",
+        disabled: disabled,
+        className: `w-full px-5 py-4 bg-white/80 border-2 border-indigo-50 rounded-3xl outline-none font-bold text-indigo-900 transition-all text-sm shadow-[0_4px_12px_rgba(99,102,241,0.1),inset_0_2px_4px_rgba(255,255,255,0.5)] focus:bg-white focus:border-indigo-200 focus:ring-4 focus:ring-indigo-50/50 pl-12 placeholder:text-indigo-200 ${disabled ? 'opacity-50 cursor-not-allowed grayscale' : ''}`,
         wrapperClassName: "w-full"
     };
 

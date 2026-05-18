@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ArrowLeft, Loader2, Film, Activity as ActivityIcon, Copy, Check, Coins, Star } from 'lucide-react';
+import { X, ArrowLeft, Loader2, Film, Activity as ActivityIcon, Copy, Check, Coins, Star, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, TaskType, Channel, MasterOption } from '../../types';
 import { useToast } from '../../context/ToastContext';
@@ -219,6 +219,18 @@ const TaskModalHeader: React.FC<TaskModalHeaderProps> = ({
                                             className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-12 -z-0"
                                         />
                                     )}
+                                </motion.div>
+                            )}
+
+                            {/* Scheduled Time Badge */}
+                            {taskData?.scheduledTime && (
+                                <motion.div
+                                    initial={{ scale: 0.8, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] sm:text-[10px] font-black tracking-widest uppercase border-2 bg-white border-indigo-100 text-indigo-500 shadow-sm"
+                                >
+                                    <Clock className="w-3 h-3" />
+                                    <span>{taskData.scheduledTime}</span>
                                 </motion.div>
                             )}
 

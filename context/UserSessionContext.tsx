@@ -147,7 +147,7 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
             const [minProfilesRes, activeProfilesRes, currentProfileRes] = await Promise.all([
                 supabase.from('profiles').select('id, full_name, avatar_url, is_active, role, position, start_date').order('full_name', { ascending: true }),
                 supabase.from('profiles').select('*').eq('is_active', true),
-                supabase.from('profiles').select('*').eq('id', sessionUser.id).single()
+                supabase.from('profiles').select('*').eq('id', sessionUser.id).maybeSingle()
             ]);
 
             if (minProfilesRes.error) throw minProfilesRes.error;

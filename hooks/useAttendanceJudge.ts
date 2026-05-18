@@ -178,7 +178,7 @@ export const useAttendanceJudge = (
                              status: 'ABSENT',
                              work_type: 'OFFICE',
                              note: '[SYSTEM] Auto-marked as Absent by Judge (Lookback Catch-up)'
-                         }, { onConflict: 'user_id, date' }).select('id').single();
+                         }, { onConflict: 'user_id, date' }).select('id').maybeSingle();
                          
                          if (!insertError && newLog) {
                              // หักคะแนนขาดงาน
@@ -265,7 +265,7 @@ export const useAttendanceJudge = (
                 if (alreadyPenalized) {
                     // Recovery: ถ้าเคยหักแล้วแต่สถานะยังเป็น WORKING ให้แก้เป็น ACTION_REQUIRED เพื่อหยุด Loop
                     // FETCH FRESH NOTE TO PREVENT OVERWRITE
-                    const { data: freshLog } = await supabase.from('attendance_logs').select('note').eq('id', log.id).single();
+                    const { data: freshLog } = await supabase.from('attendance_logs').select('note').eq('id', log.id).maybeSingle();
 
                     await supabase.from('attendance_logs').update({
                         status: 'ACTION_REQUIRED',
@@ -282,7 +282,7 @@ export const useAttendanceJudge = (
 
                     try {
                         // FETCH FRESH NOTE TO PREVENT OVERWRITE
-                        const { data: freshLog } = await supabase.from('attendance_logs').select('note').eq('id', log.id).single();
+                        const { data: freshLog } = await supabase.from('attendance_logs').select('note').eq('id', log.id).maybeSingle();
 
                         // Update status to ACTION_REQUIRED
                         await supabase.from('attendance_logs').update({

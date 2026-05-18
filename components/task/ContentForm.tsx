@@ -63,6 +63,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
         startDate, setStartDate,
         endDate, setEndDate,
         isStock, setIsStock,
+        scheduledTime, setScheduledTime,
         status, setStatus,
         channelId, setChannelId,
         targetPlatforms, 
@@ -417,6 +418,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
                                 startDate={startDate} setStartDate={setStartDate}
                                 endDate={endDate} setEndDate={setEndDate}
                                 isStock={isStock} setIsStock={setIsStock}
+                                scheduledTime={scheduledTime} setScheduledTime={setScheduledTime}
                             />
 
                             {/* 5. Production Info */}

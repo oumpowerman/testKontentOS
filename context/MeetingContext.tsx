@@ -152,7 +152,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 .from('meeting_logs')
                 .select('content, sheets, decisions, agenda, assets')
                 .eq('id', id)
-                .single();
+                .maybeSingle();
 
             if (error) throw error;
 

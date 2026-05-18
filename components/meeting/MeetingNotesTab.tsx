@@ -176,15 +176,15 @@ const MeetingNotesTab: React.FC<MeetingNotesTabProps> = ({
                                 >
                                     <div className="flex-1 overflow-y-auto pr-1 flex flex-wrap content-start gap-2 relative z-10 max-h-[180px] lg:max-h-none pb-2">
                                         {assets.length === 0 ? (
-                                            <div className="flex flex-col sm:flex-row gap-2 w-full">
+                                            <div className="flex flex-col xs:flex-row gap-2 w-full">
                                                 <motion.button 
                                                     whileHover={{ scale: 0.99, backgroundColor: '#f8fafc' }}
                                                     whileTap={{ scale: 0.97 }}
                                                     onClick={(e) => { e.stopPropagation(); setIsLinkModalOpen(true); }}
-                                                    className="flex-1 h-20 md:h-24 flex flex-col items-center justify-center text-slate-300 border-2 border-dashed border-slate-100 rounded-2xl transition-all group/empty relative overflow-hidden"
+                                                    className="flex-1 h-14 xs:h-20 md:h-24 flex xs:flex-col items-center justify-center gap-3 xs:gap-1 text-slate-300 border-2 border-dashed border-slate-100 rounded-2xl transition-all group/empty relative overflow-hidden"
                                                 >
                                                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover/empty:opacity-100 transition-opacity" />
-                                                    <LinkIcon className="w-5 h-5 md:w-6 md:h-6 mb-1 opacity-20 group-hover/empty:opacity-40 group-hover/empty:scale-110 transition-all" />
+                                                    <LinkIcon className="w-4 h-4 xs:w-5 xs:h-5 md:w-6 md:h-6 opacity-20 group-hover/empty:opacity-40 group-hover/empty:scale-110 transition-all" />
                                                     <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest group-hover/empty:text-indigo-400">แปะลิงก์</span>
                                                 </motion.button>
 
@@ -193,12 +193,12 @@ const MeetingNotesTab: React.FC<MeetingNotesTabProps> = ({
                                                     whileTap={{ scale: 0.97 }}
                                                     disabled={!isDriveReady}
                                                     onClick={handleDriveSelect}
-                                                    className={`flex-1 h-20 md:h-24 flex flex-col items-center justify-center border-2 border-dashed rounded-2xl transition-all group/drive relative overflow-hidden ${isDriveAuthenticated ? 'text-blue-500 border-blue-200 bg-blue-50/30' : 'text-slate-300 border-slate-100'}`}
+                                                    className={`flex-1 h-14 xs:h-20 md:h-24 flex xs:flex-col items-center justify-center gap-3 xs:gap-1 border-2 border-dashed rounded-2xl transition-all group/drive relative overflow-hidden ${isDriveAuthenticated ? 'text-blue-500 border-blue-200 bg-blue-50/30' : 'text-slate-300 border-slate-100'}`}
                                                 >
                                                     <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 opacity-0 group-hover/drive:opacity-100 transition-opacity" />
-                                                    <HardDrive className={`w-5 h-5 md:w-6 md:h-6 mb-1 opacity-20 group-hover/drive:opacity-40 group-hover/drive:scale-110 transition-all ${isDriveAuthenticated ? 'text-blue-500 opacity-40' : ''}`} />
+                                                    <HardDrive className={`w-4 h-4 xs:w-5 xs:h-5 md:w-6 md:h-6 opacity-20 group-hover/drive:opacity-40 group-hover/drive:scale-110 transition-all ${isDriveAuthenticated ? 'text-blue-500 opacity-40' : ''}`} />
                                                     <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest group-hover/drive:text-blue-400">
-                                                        {isDriveAuthenticated ? 'เลือกจาก Drive' : 'เชื่อมต่อ Drive'}
+                                                        {isDriveAuthenticated ? (innerWidth < 640 ? 'Drive' : 'เลือกจาก Drive') : (innerWidth < 640 ? 'Drive' : 'เชื่อมต่อ Drive')}
                                                     </span>
                                                 </motion.button>
 
@@ -207,12 +207,12 @@ const MeetingNotesTab: React.FC<MeetingNotesTabProps> = ({
                                                     whileTap={{ scale: 0.97 }}
                                                     disabled={!isDriveReady || isUploading}
                                                     onClick={handleDriveUploadClick}
-                                                    className={`flex-1 h-20 md:h-24 flex flex-col items-center justify-center border-2 border-dashed rounded-2xl transition-all group/upload relative overflow-hidden ${isDriveAuthenticated ? 'text-emerald-500 border-emerald-200 bg-emerald-50/30' : 'text-slate-300 border-slate-100'}`}
+                                                    className={`flex-1 h-14 xs:h-20 md:h-24 flex xs:flex-col items-center justify-center gap-3 xs:gap-1 border-2 border-dashed rounded-2xl transition-all group/upload relative overflow-hidden ${isDriveAuthenticated ? 'text-emerald-500 border-emerald-200 bg-emerald-50/30' : 'text-slate-300 border-slate-100'}`}
                                                 >
                                                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover/upload:opacity-100 transition-opacity" />
-                                                    {isUploading ? <Loader2 className="w-5 h-5 md:w-6 md:h-6 mb-1 animate-spin text-emerald-400" /> : <UploadCloud className={`w-5 h-5 md:w-6 md:h-6 mb-1 opacity-20 group-hover/upload:opacity-40 group-hover/upload:scale-110 transition-all ${isDriveAuthenticated ? 'text-emerald-500 opacity-40' : ''}`} />}
+                                                    {isUploading ? <Loader2 className="w-4 h-4 xs:w-5 xs:h-5 md:w-6 md:h-6 animate-spin text-emerald-400" /> : <UploadCloud className={`w-4 h-4 xs:w-5 xs:h-5 md:w-6 md:h-6 opacity-20 group-hover/upload:opacity-40 group-hover/upload:scale-110 transition-all ${isDriveAuthenticated ? 'text-emerald-500 opacity-40' : ''}`} />}
                                                     <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest group-hover/upload:text-emerald-400">
-                                                        {isUploading ? 'กำลังอัป...' : isDriveAuthenticated ? 'อัปโหลดขึ้น Drive' : 'เชื่อมต่อเพื่ออัปโหลด'}
+                                                        {isUploading ? 'อัป...' : innerWidth < 640 ? 'อัปโหลด' : isDriveAuthenticated ? 'อัปโหลดขึ้น Drive' : 'เชื่อมต่อเพื่ออัปโหลด'}
                                                     </span>
                                                 </motion.button>
                                             </div>

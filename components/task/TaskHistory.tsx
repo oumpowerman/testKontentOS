@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
 import { History, Loader2, FileCheck, Calendar, Clock, Activity } from 'lucide-react';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
+import TimePickerModal from '../ui/TimePickerModal';
 
 interface TaskHistoryProps {
     task: Task;
@@ -21,6 +22,7 @@ const TaskHistory: React.FC<TaskHistoryProps> = ({ task, currentUser, onSaveTask
     const [bookingRound, setBookingRound] = useState(1);
     const [bookingDate, setBookingDate] = useState('');
     const [bookingTime, setBookingTime] = useState('14:00');
+    const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
 
     // Fetch Logs
     useEffect(() => {
@@ -65,7 +67,6 @@ const TaskHistory: React.FC<TaskHistoryProps> = ({ task, currentUser, onSaveTask
         if (task.id) fetchLogs();
         
         // --- REALTIME SUBSCRIPTION FOR LOGS ---
-        // Dynamically listen to correct column
         const filterCol = task.type === 'CONTENT' ? `content_id=eq.${task.id}` : `task_id=eq.${task.id}`;
         const channel = supabase
             .channel(`logs-${task.id}`)
@@ -73,7 +74,6 @@ const TaskHistory: React.FC<TaskHistoryProps> = ({ task, currentUser, onSaveTask
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'task_logs', filter: filterCol },
                 (payload) => {
-                    // Fetch full detail for new log to get user profile
                     supabase
                         .from('task_logs')
                         .select(`id, user_id, action, details, reason, created_at, profiles(full_name, avatar_url)`)
@@ -81,7 +81,7 @@ const TaskHistory: React.FC<TaskHistoryProps> = ({ task, currentUser, onSaveTask
                         .single()
                         .then(({ data }) => {
                             if (data) {
-                                const logData = data as any; // Cast to any to handle type mismatch
+                                const logData = data as any;
                                 const profile = Array.isArray(logData.profiles) ? logData.profiles[0] : logData.profiles;
 
                                 const newLog: TaskLog = {
@@ -112,7 +112,7 @@ const TaskHistory: React.FC<TaskHistoryProps> = ({ task, currentUser, onSaveTask
         
         try {
             const { error } = await supabase.from('task_reviews').insert({
-                [task.type === 'CONTENT' ? 'content_id' : 'task_id']: task.id, // Correct FK
+                [task.type === 'CONTENT' ? 'content_id' : 'task_id']: task.id,
                 round: bookingRound,
                 scheduled_at: scheduledAt.toISOString(),
                 status: 'PENDING'
@@ -144,7 +144,6 @@ const TaskHistory: React.FC<TaskHistoryProps> = ({ task, currentUser, onSaveTask
                 </h3>
                 
                 <div className="relative pl-6 space-y-8">
-                    {/* Vertical Line */}
                     <div className="absolute left-[11px] top-2 bottom-2 w-[2px] bg-purple-100 rounded-full"></div>
 
                     {task.reviews?.length === 0 && (
@@ -157,7 +156,6 @@ const TaskHistory: React.FC<TaskHistoryProps> = ({ task, currentUser, onSaveTask
                         const isLatest = index === 0;
                         return (
                             <div key={review.id} className="relative">
-                                {/* Dot Indicator */}
                                 <div className={`absolute -left-[21px] top-4 w-4 h-4 rounded-full border-2 border-white shadow-sm z-10 ${
                                     review.status === 'PASSED' ? 'bg-green-500' :
                                     review.status === 'REVISE' ? 'bg-red-500' :
@@ -170,7 +168,7 @@ const TaskHistory: React.FC<TaskHistoryProps> = ({ task, currentUser, onSaveTask
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex flex-col">
                                             <span className={`text-xs font-black uppercase tracking-wider mb-1 ${isLatest ? 'text-purple-600' : 'text-gray-500'}`}>
-                                                DRAFT {review.round}
+                                                รอบที่ {review.round}
                                             </span>
                                             <div className="flex items-center text-sm font-bold text-gray-800">
                                                 <Calendar className="w-4 h-4 mr-1.5 text-gray-400" />
@@ -192,7 +190,6 @@ const TaskHistory: React.FC<TaskHistoryProps> = ({ task, currentUser, onSaveTask
                                         </span>
                                     </div>
 
-                                    {/* Feedback Box */}
                                     {review.feedback && (
                                         <div className="mt-3 bg-white p-3 rounded-xl border-l-4 border-red-200 shadow-sm text-sm text-gray-700 relative">
                                             <p className="font-bold text-red-500 text-[10px] uppercase mb-1">Feedback:</p>
@@ -205,22 +202,28 @@ const TaskHistory: React.FC<TaskHistoryProps> = ({ task, currentUser, onSaveTask
                     })}
                 </div>
 
-                {/* Manual Booking Toggle */}
                 <details className="mt-8 group">
                     <summary className="list-none flex items-center gap-2 cursor-pointer text-xs font-bold text-purple-500 hover:text-purple-700 transition-colors">
-                        <span className="border-b border-dashed border-purple-300">จองคิวตรวจเอง (Manual Booking)</span>
+                        <span className="border-b border-dashed border-purple-300">จองคิวตรวจเอง</span>
                     </summary>
                     <div className="mt-4 bg-purple-50 p-4 rounded-xl border border-purple-100 animate-in slide-in-from-top-2">
                         <div className="grid grid-cols-2 gap-3 mb-3">
                             <div>
                                 <label className="text-xs font-bold text-gray-500 mb-1 block">รอบ (Draft)</label>
                                 <select className="w-full p-2 rounded-lg border border-purple-200 text-sm bg-white" value={bookingRound} onChange={e => setBookingRound(Number(e.target.value))}>
-                                    {[1,2,3,4,5].map(r => <option key={r} value={r}>Draft {r}</option>)}
+                                    {[1,2,3,4,5].map(r => <option key={r} value={r}>รอบที่ {r}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-gray-500 mb-1 block">เวลานัด</label>
-                                <input type="time" className="w-full p-2 rounded-lg border border-purple-200 text-sm" value={bookingTime} onChange={e => setBookingTime(e.target.value)} />
+                                <button 
+                                    type="button"
+                                    onClick={() => setIsTimePickerOpen(true)}
+                                    className="w-full p-2 rounded-lg border border-purple-200 text-sm bg-white text-left flex items-center justify-between"
+                                >
+                                    <span>{bookingTime || '--:--'}</span>
+                                    <Clock className="w-3.5 h-3.5 text-purple-400" />
+                                </button>
                             </div>
                         </div>
                         <div className="mb-3">
@@ -231,6 +234,13 @@ const TaskHistory: React.FC<TaskHistoryProps> = ({ task, currentUser, onSaveTask
                             ยืนยันการจองคิว
                         </button>
                     </div>
+                    
+                    <TimePickerModal 
+                        isOpen={isTimePickerOpen}
+                        onClose={() => setIsTimePickerOpen(false)}
+                        initialTime={bookingTime}
+                        onSelect={(time) => setBookingTime(time)}
+                    />
                 </details>
             </div>
 
@@ -275,7 +285,7 @@ const TaskHistory: React.FC<TaskHistoryProps> = ({ task, currentUser, onSaveTask
                                 
                                 {log.reason && (
                                     <div className="mt-1 text-xs text-red-500 bg-red-50 px-2 py-1 rounded w-fit border border-red-100 font-medium">
-                                        Note: {log.reason}
+                                        หมายเหตุ: {log.reason}
                                     </div>
                                 )}
                                 
@@ -287,7 +297,7 @@ const TaskHistory: React.FC<TaskHistoryProps> = ({ task, currentUser, onSaveTask
                                             {log.user?.name?.charAt(0)}
                                         </div>
                                     )}
-                                    <span className="text-[10px] text-gray-400 font-medium">by {log.user?.name || 'System'}</span>
+                                    <span className="text-[10px] text-gray-400 font-medium">โดย {log.user?.name || 'ระบบ'}</span>
                                 </div>
                             </div>
                         ))}

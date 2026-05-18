@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Channel, User, Status, MasterOption, TaskType } from '../types';
 import { STATUS_LABELS, STATUS_COLORS, PLATFORM_ICONS } from '../constants';
-import { Plus, MoreHorizontal, Calendar, User as UserIcon, Filter, Check, AlertCircle, ArrowRight, CornerDownRight } from 'lucide-react';
+import { Plus, MoreHorizontal, Calendar, User as UserIcon, Filter, Check, AlertCircle, ArrowRight, CornerDownRight, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import MentorTip from './MentorTip';
 
@@ -298,6 +298,12 @@ const BoardView: React.FC<BoardViewProps> = ({
                                                     {/* Show 'General Task' badge if no channel/format */}
                                                     {viewMode === 'TASK' && !channel && (
                                                         <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded border border-blue-100 font-bold">TASK</span>
+                                                    )}
+                                                    {/* NEW: Sponsored Badge */}
+                                                    {task.sponsorship?.isSponsored && (
+                                                        <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-200 font-black animate-pulse flex items-center gap-1">
+                                                            <DollarSign className="w-2.5 h-2.5" /> SPONSORED
+                                                        </span>
                                                     )}
                                                 </div>
 

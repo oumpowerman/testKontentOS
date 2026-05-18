@@ -22,6 +22,7 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [isStock, setIsStock] = useState(false);
+    const [scheduledTime, setScheduledTime] = useState(''); 
     const [status, setStatus] = useState<string>(''); 
     const [tags, setTags] = useState<string[]>([]);
     
@@ -68,6 +69,7 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
             setStartDate(initialData.startDate ? format(initialData.startDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
             setEndDate(initialData.endDate ? format(initialData.endDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
             setIsStock(!!initialData.isUnscheduled);
+            setScheduledTime(initialData.scheduledTime || '');
             setStatus(initialData.status);
             setTags(initialData.tags || []);
             
@@ -107,6 +109,7 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
             setStartDate(defaultDate);
             setEndDate(defaultDate);
             setIsStock(false);
+            setScheduledTime('');
             
             // DYNAMIC DEFAULT STATUS: Take the first one from sorted list
             const defaultStatus = statusOptions.find(o => o.isDefault)?.key || (statusOptions.length > 0 ? statusOptions[0].key : 'TODO');
@@ -191,6 +194,7 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
                 startDate: startObj,
                 endDate: endObj,
                 isUnscheduled: isStock,
+                scheduledTime: scheduledTime || undefined,
 
                 // Content Fields (Crucial for Weekly Quests)
                 channelId,
@@ -248,6 +252,7 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
         startDate, setStartDate,
         endDate, setEndDate,
         isStock, setIsStock,
+        scheduledTime, setScheduledTime,
         status, setStatus,
         
         channelId, setChannelId,

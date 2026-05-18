@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,6 +7,7 @@ import { MergedQueueItem } from './types';
 import { MasterOption } from '../../../../types';
 import { useMasterData } from '../../../../hooks/useMasterData';
 import { useGlobalDialog } from '../../../../context/GlobalDialogContext';
+import TimePickerModal from '../../../ui/TimePickerModal';
 
 interface ShootPlanningModalProps {
     item: MergedQueueItem;
@@ -24,6 +26,8 @@ const ShootPlanningModal: React.FC<ShootPlanningModalProps> = ({ item, isOpen, o
     const [timeEnd, setTimeEnd] = useState(item.shootTimeEnd || '');
     const [notes, setNotes] = useState(item.shootNotes || '');
     const [isSaving, setIsSaving] = useState(false);
+
+    const [activeTimePicker, setActiveTimePicker] = useState<'START' | 'END' | null>(null);
 
     // Autocomplete State
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -144,7 +148,7 @@ const ShootPlanningModal: React.FC<ShootPlanningModalProps> = ({ item, isOpen, o
                                     }`}
                                 >
                                     <Sparkles className="w-2.5 h-2.5 md:w-3 h-3" />
-                                    Shooting Plan
+                                    แผนการถ่ายทำ
                                 </motion.div>
                                 <h2 className="text-xl md:text-3xl font-extrabold text-slate-900 leading-tight tracking-tight">
                                     {item.title}
@@ -165,7 +169,7 @@ const ShootPlanningModal: React.FC<ShootPlanningModalProps> = ({ item, isOpen, o
                             {/* Location */}
                             <div ref={dropdownRef} className="space-y-2 md:space-y-3 relative">
                                 <label className="text-[10px] md:text-xs font-bold text-indigo-500/80 uppercase tracking-widest flex items-center gap-2 px-1 md:px-2">
-                                    <MapPin className="w-3.5 h-3.5 md:w-4 h-4" /> Location / Studio
+                                    <MapPin className="w-3.5 h-3.5 md:w-4 h-4" /> สถานที่ / สตูดิโอ
                                 </label>
                                 
                                 <div className="relative group/loc">
@@ -202,7 +206,7 @@ const ShootPlanningModal: React.FC<ShootPlanningModalProps> = ({ item, isOpen, o
                                                 {filteredOptions.length > 0 ? (
                                                     <div className="overflow-y-auto p-2 md:p-3">
                                                         <div className="px-3 md:px-4 py-1.5 md:py-2 text-[9px] md:text-[10px] font-extrabold text-slate-300 uppercase tracking-[0.2em] flex items-center gap-2">
-                                                            <Search className="w-3 h-3 md:w-3.5 h-3.5" /> Recent Places
+                                                            <Search className="w-3 h-3 md:w-3.5 h-3.5" /> สถานที่ล่าสุด
                                                         </div>
                                                         {filteredOptions.map(opt => (
                                                             <motion.button
@@ -250,28 +254,30 @@ const ShootPlanningModal: React.FC<ShootPlanningModalProps> = ({ item, isOpen, o
                             <div className="grid grid-cols-2 gap-4 md:gap-5">
                                 <div className="space-y-2 md:space-y-3">
                                     <label className="text-[10px] md:text-xs font-bold text-indigo-500/80 uppercase tracking-widest flex items-center gap-2 px-1 md:px-2">
-                                        <Clock className="w-3.5 h-3.5 md:w-4 h-4 text-emerald-500" /> Start Time
+                                        <Clock className="w-3.5 h-3.5 md:w-4 h-4 text-emerald-500" /> เวลาเริ่ม
                                     </label>
-                                    <div className="relative group/time">
-                                        <input 
-                                            type="time"
-                                            value={timeStart}
-                                            onChange={(e) => setTimeStart(e.target.value)}
-                                            className="w-full bg-white/40 border border-white/60 rounded-xl md:rounded-2xl px-4 md:px-6 py-4 md:py-5 focus:ring-[6px] md:focus:ring-[8px] focus:ring-emerald-100/30 focus:border-emerald-400 outline-none transition-all duration-500 font-bold text-slate-700 text-base md:text-lg shadow-sm hover:shadow-md"
-                                        />
+                                    <div className="relative group/time text-left">
+                                        <button 
+                                            type="button"
+                                            onClick={() => setActiveTimePicker('START')}
+                                            className="w-full bg-white/40 border border-white/60 rounded-xl md:rounded-2xl px-4 md:px-6 py-4 md:py-5 focus:ring-[6px] md:focus:ring-[8px] focus:ring-emerald-100/30 focus:border-emerald-400 outline-none transition-all duration-500 font-bold text-slate-700 text-base md:text-lg shadow-sm hover:shadow-md text-left"
+                                        >
+                                            {timeStart || '--:--'}
+                                        </button>
                                     </div>
                                 </div>
                                 <div className="space-y-2 md:space-y-3">
                                     <label className="text-[10px] md:text-xs font-bold text-indigo-500/80 uppercase tracking-widest flex items-center gap-2 px-1 md:px-2">
-                                        <Clock className="w-3.5 h-3.5 md:w-4 h-4 text-rose-500" /> End Time
+                                        <Clock className="w-3.5 h-3.5 md:w-4 h-4 text-rose-500" /> เวลาเลิก
                                     </label>
-                                    <div className="relative group/time">
-                                        <input 
-                                            type="time"
-                                            value={timeEnd}
-                                            onChange={(e) => setTimeEnd(e.target.value)}
-                                            className="w-full bg-white/40 border border-white/60 rounded-xl md:rounded-2xl px-4 md:px-6 py-4 md:py-5 focus:ring-[6px] md:focus:ring-[8px] focus:ring-rose-100/30 focus:border-rose-400 outline-none transition-all duration-500 font-bold text-slate-700 text-base md:text-lg shadow-sm hover:shadow-md"
-                                        />
+                                    <div className="relative group/time text-left">
+                                        <button 
+                                            type="button"
+                                            onClick={() => setActiveTimePicker('END')}
+                                            className="w-full bg-white/40 border border-white/60 rounded-xl md:rounded-2xl px-4 md:px-6 py-4 md:py-5 focus:ring-[6px] md:focus:ring-[8px] focus:ring-rose-100/30 focus:border-rose-400 outline-none transition-all duration-500 font-bold text-slate-700 text-base md:text-lg shadow-sm hover:shadow-md text-left"
+                                        >
+                                            {timeEnd || '--:--'}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -279,7 +285,7 @@ const ShootPlanningModal: React.FC<ShootPlanningModalProps> = ({ item, isOpen, o
                             {/* Precautions / Notes */}
                             <div className="space-y-2 md:space-y-3">
                                 <label className="text-[10px] md:text-xs font-medium font-kanit text-amber-500 uppercase tracking-widest flex items-center gap-2 px-1 md:px-2">
-                                    <AlertTriangle className="w-3.5 h-3.5 md:w-4 h-4 animate-bounce" /> Production Notes
+                                    <AlertTriangle className="w-3.5 h-3.5 md:w-4 h-4 animate-bounce" /> บันทึกการถ่ายทำ
                                 </label>
                                 <div className="relative">
                                     <textarea 
@@ -320,6 +326,19 @@ const ShootPlanningModal: React.FC<ShootPlanningModalProps> = ({ item, isOpen, o
                             </motion.button>
                         </div>
                     </motion.div>
+
+                    <TimePickerModal 
+                        isOpen={activeTimePicker === 'START'}
+                        onClose={() => setActiveTimePicker(null)}
+                        initialTime={timeStart}
+                        onSelect={(time) => setTimeStart(time)}
+                    />
+                    <TimePickerModal 
+                        isOpen={activeTimePicker === 'END'}
+                        onClose={() => setActiveTimePicker(null)}
+                        initialTime={timeEnd}
+                        onSelect={(time) => setTimeEnd(time)}
+                    />
                 </div>
             )}
         </AnimatePresence>

@@ -5,6 +5,7 @@ import { Settings, Save, Heart, Edit2, Trash2, MapPin, Crosshair, Clock } from '
 import { useGameConfig } from '../../../../context/GameConfigContext';
 import { useGlobalDialog } from '../../../../context/GlobalDialogContext'; // Added
 import { supabase } from '../../../../lib/supabase'; // Needed for direct inserts
+import TimePickerModal from '../../../ui/TimePickerModal';
 
 interface AttendanceRulesViewProps {
     masterOptions: MasterOption[];
@@ -68,6 +69,8 @@ const AttendanceRulesView: React.FC<AttendanceRulesViewProps> = ({
 
     // Attendance Rules Local State
     const [tempTimeConfig, setTempTimeConfig] = useState<{ start: string, end: string, buffer: string, minHours: string }>({ start: '10:00', end: '19:00', buffer: '15', minHours: '9' });
+    const [isStartTimeOpen, setIsStartTimeOpen] = useState(false);
+    const [isEndTimeOpen, setIsEndTimeOpen] = useState(false);
     
     // Location Config State
     const [officeConfig, setOfficeConfig] = useState<{ lat: string, lng: string, radius: string }>({ lat: '', lng: '', radius: '500' });
@@ -257,22 +260,38 @@ const AttendanceRulesView: React.FC<AttendanceRulesViewProps> = ({
                 </h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 mb-1">เวลาเข้างาน (Start Time)</label>
-                            <input 
-                                type="time" 
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-800 focus:ring-2 focus:ring-indigo-100 outline-none"
-                                value={tempTimeConfig.start}
-                                onChange={e => setTempTimeConfig(prev => ({ ...prev, start: e.target.value }))}
+                        <div className="space-y-2">
+                            <label className="block text-xs font-bold text-gray-500 mb-1 ml-1">เวลาเข้างาน (Start Time)</label>
+                            <button
+                                type="button"
+                                onClick={() => setIsStartTimeOpen(true)}
+                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl font-bold text-gray-800 flex items-center justify-between group hover:border-indigo-400 transition-all shadow-sm"
+                            >
+                                {tempTimeConfig.start}
+                                <Clock className="w-4 h-4 text-gray-300 group-hover:text-indigo-400 transition-colors" />
+                            </button>
+                            <TimePickerModal 
+                                isOpen={isStartTimeOpen}
+                                onClose={() => setIsStartTimeOpen(false)}
+                                initialTime={tempTimeConfig.start}
+                                onSelect={(val) => setTempTimeConfig(prev => ({ ...prev, start: val }))}
                             />
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 mb-1">เวลาเลิกงาน (End Time)</label>
-                            <input 
-                                type="time" 
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-800 focus:ring-2 focus:ring-indigo-100 outline-none"
-                                value={tempTimeConfig.end}
-                                onChange={e => setTempTimeConfig(prev => ({ ...prev, end: e.target.value }))}
+                        <div className="space-y-2">
+                            <label className="block text-xs font-bold text-gray-500 mb-1 ml-1">เวลาเลิกงาน (End Time)</label>
+                            <button
+                                type="button"
+                                onClick={() => setIsEndTimeOpen(true)}
+                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl font-bold text-gray-800 flex items-center justify-between group hover:border-indigo-400 transition-all shadow-sm"
+                            >
+                                {tempTimeConfig.end}
+                                <Clock className="w-4 h-4 text-gray-300 group-hover:text-indigo-400 transition-colors" />
+                            </button>
+                            <TimePickerModal 
+                                isOpen={isEndTimeOpen}
+                                onClose={() => setIsEndTimeOpen(false)}
+                                initialTime={tempTimeConfig.end}
+                                onSelect={(val) => setTempTimeConfig(prev => ({ ...prev, end: val }))}
                             />
                         </div>
                         <div>
@@ -299,7 +318,6 @@ const AttendanceRulesView: React.FC<AttendanceRulesViewProps> = ({
                                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-bold">Min</span>
                             </div>
                         </div>
-                        
                 </div>
                 <div className="mt-6 flex justify-end">
                      <button 

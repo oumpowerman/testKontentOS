@@ -159,7 +159,7 @@ export const useGoals = (currentUser: User) => {
 
                 // Reward each owner
                 for (const userId of goal.owners) {
-                    const { data: profile } = await supabase.from('profiles').select('xp, coins').eq('id', userId).single();
+                    const { data: profile } = await supabase.from('profiles').select('xp, coins').eq('id', userId).maybeSingle();
                     if (profile) {
                         await supabase.from('profiles').update({
                             xp: (profile.xp || 0) + finalXp,

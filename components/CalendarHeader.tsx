@@ -1,6 +1,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, SlidersHorizontal, MonitorPlay, CheckSquare, Plus, CalendarDays, Kanban, Maximize2, Minimize2, Check, Ban, Eye, LayoutList, AlignLeft, Circle, Package, Sparkles, Smartphone, RotateCcw, Inbox } from 'lucide-react';
+import { format } from 'date-fns';
+import { 
+    ChevronLeft, ChevronRight, SlidersHorizontal, MonitorPlay, CheckSquare, Plus, 
+    CalendarDays, Kanban, Maximize2, Minimize2, Check, Ban, Eye, LayoutList, 
+    AlignLeft, Circle, Package, Sparkles, Smartphone, RotateCcw, Inbox, Wrench 
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Channel, ChipConfig, TaskType } from '../types';
 import { COLOR_THEMES } from '../constants';
 import NotificationBellBtn from './NotificationBellBtn';
@@ -50,6 +56,10 @@ interface CalendarHeaderProps {
     // Mobile Landscape
     isMobileLandscape: boolean;
     onToggleMobileLandscape: () => void;
+    
+    // New Props for Weekly View
+    calendarViewType?: 'MONTH' | 'WEEK';
+    setCalendarViewType?: (type: 'MONTH' | 'WEEK') => void;
 }
 
 const CalendarHeader: React.FC<CalendarHeaderProps> = ({
@@ -72,10 +82,34 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
     isStockOpen, onToggleStock,
     onToggleWorkbox,
     isWorkboxOpen,
-    isMobileLandscape, onToggleMobileLandscape
+    isMobileLandscape, onToggleMobileLandscape,
+    calendarViewType = 'MONTH', setCalendarViewType
 }) => {
     const safeChips = (customChips && Array.isArray(customChips)) ? customChips : [];
     const safeActiveIds = (activeChipIds && Array.isArray(activeChipIds)) ? activeChipIds : [];
+
+    const [isToolsExpanded, setIsToolsExpanded] = useState(false);
+
+    // Navigation Step logic
+    const handlePrev = () => {
+        if (calendarViewType === 'WEEK' && prevMonth) {
+            // For now, these are named Month but they just modify currentDate
+            // I'll add special logic in CalendarView if needed, or just use these as-is for months
+            // However, the user expects 'Weekly' to move by week.
+            // I will implement move by week in CalendarView and pass it here.
+            prevMonth();
+        } else {
+            prevMonth();
+        }
+    };
+
+    const handleNext = () => {
+        if (calendarViewType === 'WEEK' && nextMonth) {
+            nextMonth();
+        } else {
+            nextMonth();
+        }
+    };
 
     // View Options Dropdown
     const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
@@ -120,9 +154,9 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                     {/* 1. Navigation Pill */}
                     <div className="group flex flex-1 lg:flex-none items-center justify-between lg:justify-start bg-white rounded-2xl shadow-sm border border-gray-100 h-12 p-1.5 hover:shadow-md hover:border-indigo-200 transition-all duration-300">
                         <button 
-                            onClick={prevMonth} 
+                            onClick={handlePrev} 
                             className="w-9 h-full flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all active:scale-90"
-                            title="เดือนก่อนหน้า"
+                            title={calendarViewType === 'WEEK' ? "สัปดาห์ก่อนหน้า" : "เดือนก่อนหน้า"}
                         >
                             <ChevronLeft className="w-5 h-5" />
                         </button>
@@ -133,7 +167,15 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                             title={isExpanded ? "ย่อมุมมอง" : "ขยายเต็มจอ"}
                         >
                             <span className="text-base lg:text-lg font-black text-slate-700 tracking-tight group-hover/date:text-indigo-900 transition-colors flex items-center gap-2">
-                                {thaiMonth} <span className="text-indigo-500 font-bold">{year}</span>
+                                {calendarViewType === 'WEEK' ? (
+                                    <>
+                                        สัปดาห์ที่ <span className="text-indigo-500 font-bold">{format(safeDate, 'w')}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        {thaiMonth} <span className="text-indigo-500 font-bold">{year}</span>
+                                    </>
+                                )}
                             </span>
                             
                             {/* Hover Expand Icon */}
@@ -143,9 +185,9 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                         </button>
 
                         <button 
-                            onClick={nextMonth} 
+                            onClick={handleNext} 
                             className="w-9 h-full flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all active:scale-90"
-                            title="เดือนถัดไป"
+                            title={calendarViewType === 'WEEK' ? "สัปดาห์ถัดไป" : "เดือนถัดไป"}
                         >
                             <ChevronRight className="w-5 h-5" />
                         </button>
@@ -269,189 +311,214 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                 <div className="w-full lg:w-auto shrink-0 border-t lg:border-t-0 border-gray-100 pt-3 lg:pt-0 overflow-x-auto lg:overflow-x-visible scrollbar-hide">
                     <div className="flex items-center justify-start lg:justify-between gap-4 lg:gap-6 min-w-max lg:min-w-0 px-1 py-1">
                         
-                        <div className="flex items-center gap-2">
-                         {/* Notifications Bell */}
-                        <NotificationBellBtn 
-                            onClick={() => { if (onOpenNotifications) onOpenNotifications(); else onOpenSettings(); }}
-                            unreadCount={unreadCount}
-                            className="hidden md:flex"
-                        />
+                        <div className="flex items-center gap-3">
+                            <AnimatePresence mode="wait">
+                                {isToolsExpanded ? (
+                                    <motion.div
+                                        key="expanded"
+                                        initial={{ width: 0, opacity: 0 }}
+                                        animate={{ width: 'auto', opacity: 1 }}
+                                        exit={{ width: 0, opacity: 0 }}
+                                        className="flex items-center gap-3 overflow-hidden"
+                                    >
+                                        <div className="flex items-center gap-2 p-1.5 bg-slate-50/80 backdrop-blur-md rounded-2xl border border-slate-200/60 shadow-inner">
+                                            {/* Notifications Bell */}
+                                            <NotificationBellBtn 
+                                                onClick={() => { if (onOpenNotifications) onOpenNotifications(); else onOpenSettings(); }}
+                                                unreadCount={unreadCount}
+                                                className="hidden md:flex"
+                                            />
 
-                        {/* Workbox Toggle */}
-                        {onToggleWorkbox && (
-                            <button 
-                                onClick={onToggleWorkbox}
-                                className={`
-                                    p-2.5 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 group
-                                    ${isWorkboxOpen 
-                                        ? 'bg-gradient-to-br from-indigo-500 to-violet-600 text-white border-transparent shadow-lg shadow-indigo-200 ring-2 ring-indigo-100 ring-offset-1' 
-                                        : 'bg-white text-slate-400 border-slate-200 hover:text-indigo-500 hover:border-indigo-200 hover:bg-indigo-50'}
-                                `}
-                                title="เปิด WorkBox"
-                            >
-                                <Inbox className={`w-4 h-4 ${isWorkboxOpen ? 'animate-bounce-slow' : 'group-hover:scale-110 transition-transform'}`} />
-                            </button>
-                        )}
-
-                        {/* Stock Panel Toggle */}
-                        <button 
-                            onClick={onToggleStock}
-                            className={`
-                                p-2.5 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 group
-                                ${isStockOpen 
-                                    ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white border-transparent shadow-lg shadow-orange-200 ring-2 ring-orange-100 ring-offset-1' 
-                                    : 'bg-white text-slate-400 border-slate-200 hover:text-orange-500 hover:border-orange-200 hover:bg-orange-50'}
-                            `}
-                            title="เปิดคลังงาน (Stock)"
-                        >
-                            <Package className={`w-4 h-4 ${isStockOpen ? 'animate-bounce-slow' : 'group-hover:scale-110 transition-transform'}`} />
-                        </button>
-
-                        {/* View Options Dropdown */}
-                        <div className="relative" ref={viewMenuRef}>
-                            <button 
-                                onClick={() => setIsViewMenuOpen(!isViewMenuOpen)} 
-                                className={`
-                                    p-2.5 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 group
-                                    ${isViewMenuOpen 
-                                        ? 'bg-sky-50 text-sky-600 border-sky-200 ring-2 ring-sky-100' 
-                                        : 'bg-white text-slate-400 border-slate-200 hover:text-sky-600 hover:border-sky-200 hover:bg-sky-50'}
-                                `}
-                                title="ตัวเลือกมุมมอง (View Options)"
-                            >
-                                <Eye className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                            </button>
-                            {isViewMenuOpen && (
-                                <>
-                                    {/* Mobile Backdrop */}
-                                    <div 
-                                        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[90] lg:hidden" 
-                                        onClick={() => setIsViewMenuOpen(false)}
-                                    />
-                                    
-                                    <div className={`
-                                        fixed inset-x-0 bottom-0 z-[100] p-6 bg-white rounded-t-[2.5rem] shadow-[0_-20px_40px_-12px_rgba(0,0,0,0.2)] border-t border-gray-100 animate-in slide-in-from-bottom duration-300
-                                        lg:absolute lg:inset-auto lg:right-0 lg:top-full lg:mt-2 lg:w-48 lg:rounded-xl lg:shadow-xl lg:border lg:p-2 lg:z-[100] lg:animate-in lg:fade-in lg:zoom-in-95 lg:origin-top-right
-                                    `}>
-                                        {/* Mobile Handle */}
-                                        <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 lg:hidden" />
-                                        
-                                        <p className="text-[10px] font-bold text-gray-400 px-2 py-1 mb-2 lg:mb-1 uppercase tracking-wider">Display Mode</p>
-                                        <div className="space-y-1 lg:space-y-0">
-                                            {[
-                                                { mode: 'MINIMAL', label: 'Minimal (Clean)', icon: AlignLeft },
-                                                { mode: 'DOT', label: 'Dot (Compact)', icon: Circle },
-                                                { mode: 'EMOJI', label: 'Emoji (Iconic)', icon: React.Fragment, emoji: '📝' },
-                                                { mode: 'FULL', label: 'Full Badge', icon: LayoutList },
-                                            ].map((opt: any) => (
+                                            {/* Workbox Toggle */}
+                                            {onToggleWorkbox && (
                                                 <button 
-                                                    key={opt.mode}
-                                                    onClick={() => { setTaskDisplayMode(opt.mode); setIsViewMenuOpen(false); }}
-                                                    className={`w-full flex items-center justify-between px-4 py-3 lg:px-3 lg:py-2 rounded-xl lg:rounded-lg text-sm lg:text-xs font-bold transition-all ${taskDisplayMode === opt.mode ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                                                    onClick={onToggleWorkbox}
+                                                    className={`
+                                                        p-2.5 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 group shrink-0
+                                                        ${isWorkboxOpen 
+                                                            ? 'bg-gradient-to-br from-indigo-500 to-violet-600 text-white border-transparent shadow-lg shadow-indigo-200' 
+                                                            : 'bg-white text-slate-400 border-slate-200 hover:text-indigo-500 hover:border-indigo-200 hover:bg-indigo-50'}
+                                                    `}
+                                                    title="เปิด WorkBox"
                                                 >
-                                                    <span className="flex items-center gap-3 lg:gap-2">
-                                                        {opt.emoji ? <span className="text-lg lg:text-sm">{opt.emoji}</span> : <opt.icon className="w-4 h-4 lg:w-3.5 lg:h-3.5" />}
-                                                        {opt.label}
-                                                    </span>
-                                                    {taskDisplayMode === opt.mode && <Check className="w-4 h-4 lg:w-3.5 lg:h-3.5 text-indigo-600" />}
+                                                    <Inbox className={`w-4 h-4 ${isWorkboxOpen ? 'animate-bounce-slow' : 'group-hover:scale-110 transition-transform'}`} />
                                                 </button>
-                                            ))}
+                                            )}
+
+                                            {/* Stock Panel Toggle */}
+                                            <button 
+                                                onClick={onToggleStock}
+                                                className={`
+                                                    p-2.5 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 group shrink-0
+                                                    ${isStockOpen 
+                                                        ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white border-transparent shadow-lg shadow-orange-200' 
+                                                        : 'bg-white text-slate-400 border-slate-200 hover:text-orange-500 hover:border-orange-200 hover:bg-orange-50'}
+                                                `}
+                                                title="เปิดคลังงาน (Stock)"
+                                            >
+                                                <Package className={`w-4 h-4 ${isStockOpen ? 'animate-bounce-slow' : 'group-hover:scale-110 transition-transform'}`} />
+                                            </button>
+
+                                            {/* View Options Dropdown */}
+                                            <div className="relative" ref={viewMenuRef}>
+                                                <button 
+                                                    onClick={() => setIsViewMenuOpen(!isViewMenuOpen)} 
+                                                    className={`
+                                                        p-2.5 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 group shrink-0
+                                                        ${isViewMenuOpen 
+                                                            ? 'bg-sky-50 text-sky-600 border-sky-200' 
+                                                            : 'bg-white text-slate-400 border-slate-200 hover:text-sky-600 hover:border-sky-200 hover:bg-sky-50'}
+                                                    `}
+                                                    title="ตัวเลือกมุมมอง (View Options)"
+                                                >
+                                                    <Eye className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                                </button>
+                                                {isViewMenuOpen && (
+                                                    <>
+                                                        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[90] lg:hidden" onClick={() => setIsViewMenuOpen(false)} />
+                                                        <div className={`
+                                                            fixed inset-x-0 bottom-0 z-[100] p-6 bg-white rounded-t-[2.5rem] shadow-2xl border-t border-gray-100
+                                                            lg:absolute lg:inset-auto lg:right-0 lg:top-full lg:mt-2 lg:w-48 lg:rounded-xl lg:border lg:p-2 lg:z-[100] lg:origin-top-right
+                                                        `}>
+                                                            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 lg:hidden" />
+                                                            <p className="text-[10px] font-bold text-gray-400 px-2 py-1 mb-2 lg:mb-1 uppercase tracking-wider">Display Mode</p>
+                                                            <div className="space-y-1 lg:space-y-0">
+                                                                {[
+                                                                    { mode: 'MINIMAL', label: 'Minimal (Clean)', icon: AlignLeft },
+                                                                    { mode: 'DOT', label: 'Dot (Compact)', icon: Circle },
+                                                                    { mode: 'EMOJI', label: 'Emoji (Iconic)', icon: React.Fragment, emoji: '📝' },
+                                                                    { mode: 'FULL', label: 'Full Badge', icon: LayoutList },
+                                                                ].map((opt: any) => (
+                                                                    <button 
+                                                                        key={opt.mode}
+                                                                        onClick={() => { setTaskDisplayMode(opt.mode); setIsViewMenuOpen(false); }}
+                                                                        className={`w-full flex items-center justify-between px-4 py-3 lg:px-3 lg:py-2 rounded-xl lg:rounded-lg text-sm lg:text-xs font-bold transition-all ${taskDisplayMode === opt.mode ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                                                                    >
+                                                                        <span className="flex items-center gap-3 lg:gap-2">
+                                                                            {opt.emoji ? <span className="text-lg lg:text-sm">{opt.emoji}</span> : <opt.icon className="w-4 h-4 lg:w-3.5 lg:h-3.5" />}
+                                                                            {opt.label}
+                                                                        </span>
+                                                                        {taskDisplayMode === opt.mode && <Check className="w-4 h-4 lg:w-3.5 lg:h-3.5 text-indigo-600" />}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+
+                                            {/* Mobile Landscape Toggle */}
+                                            <button
+                                                onClick={onToggleMobileLandscape}
+                                                className={`
+                                                    lg:hidden p-2.5 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 group shrink-0
+                                                    ${isMobileLandscape 
+                                                        ? 'bg-indigo-600 text-white border-indigo-600' 
+                                                        : 'bg-white text-slate-400 border-slate-200 hover:text-indigo-600'}
+                                                `}
+                                                title="หมุนจอ (Landscape)"
+                                            >
+                                                <Smartphone className={`w-4 h-4 ${isMobileLandscape ? 'rotate-90' : ''} transition-transform`} />
+                                            </button>
+
+                                            {/* Separation for Switchers in Expanded Mode */}
+                                            <div className="w-px h-4 bg-slate-200 mx-1 hidden lg:block" />
+
+                                            {/* Display Mode Switcher (Cal/Board) */}
+                                            <div className="relative bg-gray-100/80 p-0.5 rounded-xl flex items-center shrink-0 border border-gray-200/60 overflow-hidden w-[76px] h-8">
+                                                <div className={`absolute top-0.5 bottom-0.5 w-[34px] bg-white rounded-lg shadow-sm transition-all duration-300 ${displayMode === 'CALENDAR' ? 'left-0.5' : 'left-[38px]'}`} />
+                                                <button onClick={() => setDisplayMode('CALENDAR')} className={`relative z-10 flex-1 flex justify-center items-center h-full rounded-lg transition-colors ${displayMode === 'CALENDAR' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`} title="Calendar View">
+                                                    <CalendarDays className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button onClick={() => setDisplayMode('BOARD')} className={`relative z-10 flex-1 flex justify-center items-center h-full rounded-lg transition-colors ${displayMode === 'BOARD' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`} title="Board View">
+                                                    <Kanban className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+
+                                            {/* View Type Switcher (Month/Week) */}
+                                            {displayMode === 'CALENDAR' && (
+                                                <div className="relative bg-gray-100/80 p-0.5 rounded-xl flex items-center shrink-0 border border-gray-200/60 overflow-hidden w-[86px] h-8">
+                                                    <div className={`absolute top-0.5 bottom-0.5 w-[38px] bg-white rounded-lg shadow-sm transition-all duration-300 ${calendarViewType === 'MONTH' ? 'left-0.5' : 'left-[44px]'}`} />
+                                                    <button onClick={() => setCalendarViewType?.('MONTH')} className={`relative z-10 flex-1 flex justify-center items-center h-full rounded-lg text-[9px] font-black transition-colors ${calendarViewType === 'MONTH' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>MO</button>
+                                                    <button onClick={() => setCalendarViewType?.('WEEK')} className={`relative z-10 flex-1 flex justify-center items-center h-full rounded-lg text-[9px] font-black transition-colors ${calendarViewType === 'WEEK' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>WK</button>
+                                                </div>
+                                            )}
+
+                                            {/* View Mode Switcher (Content/Task) */}
+                                            <div className="relative bg-gray-100/80 p-0.5 rounded-xl flex items-center shrink-0 border border-gray-200/60 overflow-hidden h-8 w-[130px]">
+                                                <div className={`absolute top-0.5 bottom-0.5 w-[62px] bg-white rounded-lg shadow-sm transition-all duration-300 ${viewMode === 'CONTENT' ? 'left-0.5' : 'left-[65px]'}`} />
+                                                <button onClick={() => setViewMode('CONTENT')} className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 h-full rounded-lg text-[9px] font-bold transition-colors ${viewMode === 'CONTENT' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>
+                                                    <MonitorPlay className="w-3 h-3" /> Content
+                                                </button>
+                                                <button onClick={() => setViewMode('TASK')} className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 h-full rounded-lg text-[9px] font-bold transition-colors ${viewMode === 'TASK' ? 'text-emerald-600' : 'text-gray-400 hover:text-gray-600'}`}>
+                                                    <CheckSquare className="w-3 h-3" /> Task
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
 
-                         {/* Mobile Landscape Toggle (NEW) */}
-                        <button
-                            onClick={onToggleMobileLandscape}
-                            className={`
-                                lg:hidden p-2.5 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 group
-                                ${isMobileLandscape 
-                                    ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-200 ring-offset-1' 
-                                    : 'bg-white text-slate-400 border-slate-200 hover:text-indigo-600'}
-                            `}
-                            title="หมุนจอ (Landscape)"
-                        >
-                            <Smartphone className={`w-4 h-4 ${isMobileLandscape ? 'rotate-90' : ''} transition-transform`} />
-                        </button>
-                    </div>
+                                        <button 
+                                            onClick={() => setIsToolsExpanded(false)}
+                                            className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-400 rounded-2xl border border-slate-200 transition-all active:scale-95 shrink-0"
+                                        >
+                                            <ChevronRight className="w-4 h-4" />
+                                        </button>
+                                    </motion.div>
+                                ) : (
+                                    <motion.div
+                                        key="collapsed"
+                                        initial={{ scale: 0.9, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        exit={{ scale: 0.9, opacity: 0 }}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <button
+                                            onClick={() => setIsToolsExpanded(true)}
+                                            className="flex items-center gap-2 px-4 md:px-5 py-3 md:py-3.5 bg-white border border-slate-200 rounded-[1.25rem] text-slate-500 hover:text-indigo-600 hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-500/5 transition-all shadow-sm group active:scale-95"
+                                        >
+                                            <Wrench className="w-4 h-4 group-hover:rotate-45 transition-transform duration-500 text-slate-400 group-hover:text-indigo-500" />
+                                            <span className="text-[11px] font-black uppercase tracking-tight hidden sm:inline">Tools</span>
+                                            <ChevronLeft className="ml-1 w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-300 transition-colors" />
+                                        </button>
 
-                    <div className="flex items-center gap-2 ml-auto">
-                        {/* Display Mode Switcher (Cal/Board) - Sliding Segment */}
-                        <div className="relative bg-gray-100/80 p-1 rounded-xl flex items-center shrink-0 border border-gray-200/60 overflow-hidden w-[80px] lg:w-[88px] h-9 lg:h-10">
-                            {/* Sliding Background */}
-                            <div 
-                                className={`absolute top-1 bottom-1 w-[34px] lg:w-[38px] bg-white rounded-lg shadow-sm transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${displayMode === 'CALENDAR' ? 'left-1' : 'left-[42px] lg:left-[46px]'}`}
-                            ></div>
-                            
+                                        {/* Keep notifications visible on desktop even when collapsed? Or hide? 
+                                            Let's hide them for maximum cleanliness as requested by "retracted at first" */}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Create Button (Gradient Pop) - Always Visible */}
                             <button 
-                                onClick={() => setDisplayMode('CALENDAR')}
-                                className={`relative z-10 flex-1 flex justify-center items-center h-full rounded-lg transition-colors duration-300 ${displayMode === 'CALENDAR' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
-                                title="Calendar View"
-                            >
-                                <CalendarDays className="w-4 h-4" />
-                            </button>
-                            <button 
-                                onClick={() => setDisplayMode('BOARD')}
-                                className={`relative z-10 flex-1 flex justify-center items-center h-full rounded-lg transition-colors duration-300 ${displayMode === 'BOARD' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
-                                title="Board View"
-                            >
-                                <Kanban className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        {/* View Mode Switcher (Content/Task) - Sliding Segment */}
-                        <div className="relative bg-gray-100/80 p-1 rounded-xl flex items-center shrink-0 border border-gray-200/60 overflow-hidden h-9 lg:h-10 w-[140px] lg:w-[180px]">
-                             {/* Sliding Background */}
-                             <div 
-                                className={`absolute top-1 bottom-1 w-[66px] lg:w-[86px] bg-white rounded-lg shadow-sm transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${viewMode === 'CONTENT' ? 'left-1' : 'left-[70px] lg:left-[90px]'}`}
-                            ></div>
-
-                            <button 
-                                onClick={() => setViewMode('CONTENT')}
+                                onClick={() => onSelectDate(new Date(), viewMode)}
                                 className={`
-                                    relative z-10 flex-1 flex items-center justify-center gap-1.5 h-full rounded-lg text-[10px] lg:text-xs font-bold transition-colors duration-300
-                                    ${viewMode === 'CONTENT' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}
+                                    relative overflow-hidden group h-10 lg:h-12 px-4 lg:px-6 py-2.5 rounded-2xl lg:rounded-[1.5rem] text-white shadow-lg transition-all duration-500 active:scale-95 flex items-center justify-center shrink-0
+                                    ${viewMode === 'CONTENT' ? 'shadow-indigo-300/50' : 'shadow-emerald-300/50'}
+                                    hover:scale-105 hover:shadow-2xl
                                 `}
                             >
-                                <MonitorPlay className="w-3.5 h-3.5" /> Content
+                                <div className={`absolute inset-0 bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 bg-[length:200%_100%] animate-shimmer transition-opacity duration-500 ${viewMode === 'CONTENT' ? 'opacity-100' : 'opacity-0'}`} />
+                                <div className={`absolute inset-0 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 bg-[length:200%_100%] animate-shimmer transition-opacity duration-500 ${viewMode !== 'CONTENT' ? 'opacity-100' : 'opacity-0'}`} />
+                                
+                                <div className="relative z-10 flex items-center gap-2">
+                                    <Plus className={`w-5 h-5 stroke-[3px] transition-transform duration-500 ${viewMode === 'CONTENT' ? 'group-hover:rotate-90' : 'group-hover:rotate-180'}`} />
+                                    <span className="hidden md:inline text-sm font-black tracking-wide">
+                                        {viewMode === 'CONTENT' ? 'สร้างคอนเทนต์' : 'สร้างงานทั่วไป'}
+                                    </span>
+                                </div>
+                                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </button>
+
+                            {/* Desktop Today Button */}
                             <button 
-                                onClick={() => setViewMode('TASK')}
-                                className={`
-                                    relative z-10 flex-1 flex items-center justify-center gap-1.5 h-full rounded-lg text-[10px] lg:text-xs font-bold transition-colors duration-300
-                                    ${viewMode === 'TASK' ? 'text-emerald-600' : 'text-gray-400 hover:text-gray-600'}
-                                `}
+                                onClick={goToToday} 
+                                className="hidden lg:flex px-4 py-3 bg-white border border-gray-200 text-gray-500 text-[10px] font-black rounded-xl shadow-sm hover:border-indigo-300 hover:text-indigo-600 transition-all active:scale-95"
                             >
-                                <CheckSquare className="w-3.5 h-3.5" /> Task
+                                TODAY
                             </button>
                         </div>
-
-                         {/* Create Button (Gradient Pop) */}
-                        <button 
-                            onClick={() => onSelectDate(new Date(), viewMode)}
-                            className={`
-                                relative overflow-hidden group h-9 lg:h-11 px-3 lg:px-5 py-2.5 rounded-xl lg:rounded-2xl text-white shadow-lg transition-all duration-500 active:scale-95 flex items-center justify-center shrink-0
-                                ${viewMode === 'CONTENT' ? 'shadow-indigo-300/50' : 'shadow-emerald-300/50'}
-                                hover:scale-105
-                            `}
-                        >
-                            <div className={`absolute inset-0 bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 bg-[length:200%_100%] animate-shimmer transition-opacity duration-500 ${viewMode === 'CONTENT' ? 'opacity-100' : 'opacity-0'}`} />
-                            <div className={`absolute inset-0 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 bg-[length:200%_100%] animate-shimmer transition-opacity duration-500 ${viewMode !== 'CONTENT' ? 'opacity-100' : 'opacity-0'}`} />
-                            
-                            <div className="relative z-10 flex items-center gap-2">
-                                <Plus className={`w-4 h-4 lg:w-5 lg:h-5 stroke-[3px] transition-transform duration-500 ${viewMode === 'CONTENT' ? 'group-hover:rotate-90' : 'group-hover:rotate-180'}`} />
-                                <span className="hidden lg:inline text-sm font-bold tracking-wide">
-                                    {viewMode === 'CONTENT' ? 'สร้างคอนเทนต์' : 'สร้างงานทั่วไป'}
-                                </span>
-                            </div>
-                        </button>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
     );
 };
 

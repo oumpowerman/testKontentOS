@@ -59,6 +59,7 @@ const GeneralTaskInputs: React.FC<GeneralTaskInputsProps> = ({
         priority, setPriority,
         startDate, setStartDate,
         endDate, setEndDate,
+        scheduledTime, setScheduledTime,
         assigneeType, setAssigneeType,
         assigneeIds, setAssigneeIds,
         targetPosition, setTargetPosition,
@@ -467,6 +468,8 @@ const GeneralTaskInputs: React.FC<GeneralTaskInputsProps> = ({
                             setStartDate={setStartDate}
                             endDate={endDate}
                             setEndDate={setEndDate}
+                            scheduledTime={scheduledTime}
+                            setScheduledTime={setScheduledTime}
                             isEndDateLocked={!!initialData && !isAdmin}
                             onRequestExtension={() => setIsExtensionModalOpen(true)}
                         />

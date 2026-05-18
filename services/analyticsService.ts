@@ -51,9 +51,10 @@ export const saveContentAnalytics = async (analytics: Partial<ContentAnalytics>)
         .from('content_analytics')
         .insert(payload)
         .select()
-        .single();
+        .maybeSingle();
 
     if (analyticsError) throw analyticsError;
+    if (!analyticsData) throw new Error('Failed to save analytics: No data returned');
 
     return mapSupabaseToAnalytics(analyticsData);
 };

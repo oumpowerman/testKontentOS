@@ -23,6 +23,7 @@ export const useGeneralTaskForm = ({ initialData, selectedDate, masterOptions, o
     const [priority, setPriority] = useState<Priority>('MEDIUM');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [scheduledTime, setScheduledTime] = useState(''); 
     
     // Task Specifics
     const [assigneeType, setAssigneeType] = useState<AssigneeType>('INDIVIDUAL'); 
@@ -55,9 +56,10 @@ export const useGeneralTaskForm = ({ initialData, selectedDate, masterOptions, o
             setTitle(initialData.title);
             setDescription(initialData.description);
             setStatus(initialData.status);
-            setPriority(initialData.priority);
+            setPriority(initialData.priority ?? 'MEDIUM');
             setStartDate(initialData.startDate ? format(initialData.startDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
             setEndDate(initialData.endDate ? format(initialData.endDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+            setScheduledTime(initialData.scheduledTime || '');
             
             setAssigneeType(initialData.assigneeType || 'INDIVIDUAL');
             setAssigneeIds(initialData.assigneeIds || []);
@@ -86,6 +88,7 @@ export const useGeneralTaskForm = ({ initialData, selectedDate, masterOptions, o
             const defaultDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
             setStartDate(initialData?.startDate ? format(initialData.startDate, 'yyyy-MM-dd') : defaultDate);
             setEndDate(initialData?.endDate ? format(initialData.endDate, 'yyyy-MM-dd') : defaultDate);
+            setScheduledTime(initialData?.scheduledTime || '');
             
             setAssigneeType('INDIVIDUAL'); 
             setAssigneeIds(currentUser ? [currentUser.id] : []);
@@ -140,6 +143,7 @@ export const useGeneralTaskForm = ({ initialData, selectedDate, masterOptions, o
                 startDate: startObj,
                 endDate: endObj,
                 isUnscheduled: false,
+                scheduledTime: scheduledTime || undefined,
 
                 // People & Type
                 assigneeType,
@@ -199,6 +203,7 @@ export const useGeneralTaskForm = ({ initialData, selectedDate, masterOptions, o
         priority, setPriority,
         startDate, setStartDate,
         endDate, setEndDate,
+        scheduledTime, setScheduledTime,
         
         assigneeType, setAssigneeType,
         assigneeIds, setAssigneeIds,

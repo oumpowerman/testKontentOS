@@ -377,7 +377,7 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
             )}
 
             {/* Main Workspace */}
-            <div className="flex-1 flex gap-0 md:gap-0 overflow-hidden bg-white/60 backdrop-blur-xl rounded-t-[1.5rem] md:rounded-[2.5rem] shadow-sm border border-white/80 ring-1 ring-indigo-50 p-2 md:p-4 relative">
+            <div className="flex-1 flex gap-0 md:gap-0 overflow-hidden bg-white/60 backdrop-blur-xl rounded-t-[1.5rem] md:rounded-[2.5rem] shadow-sm border border-white/80 ring-1 ring-indigo-50 p-1 md:p-4 relative">
                 
                 {/* Sidebar Container */}
                 <AnimatePresence>
@@ -385,7 +385,7 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
                         <motion.div 
                             initial={{ width: 0, opacity: 0, x: -20, marginRight: 0 }}
                             animate={{ 
-                                width: isMobile ? '100%' : 500, 
+                                width: isMobile ? 'calc(100% - 8px)' : 500, 
                                 marginRight: isMobile ? 0 : 24,
                                 opacity: 1, 
                                 x: 0,
@@ -406,7 +406,7 @@ const MeetingView: React.FC<MeetingViewProps> = ({ users, currentUser, tasks, ma
                                     opacity: { duration: 0.2 }
                                 }
                             }}
-                            className={`flex flex-col bg-white/80 backdrop-blur-md rounded-[1.5rem] md:rounded-[2rem] border border-indigo-50 shadow-sm overflow-hidden h-full shrink-0 relative z-[70] w-full md:w-[500px] absolute md:relative inset-1 md:inset-auto`}
+                            className={`flex flex-col bg-white/80 backdrop-blur-md rounded-[1.5rem] md:rounded-[2rem] border border-indigo-50 shadow-sm overflow-hidden h-full shrink-0 relative z-[70] w-full md:w-[500px] absolute md:relative inset-1 md:inset-auto mb-1 md:mb-0`}
                         >
                              <MeetingListSidebar 
                                 meetings={meetings}
