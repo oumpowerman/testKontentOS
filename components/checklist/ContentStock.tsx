@@ -1,18 +1,12 @@
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useMemo } from 'react';
 import { Task, Channel, User, MasterOption } from '../../types';
-import { Loader2, Upload, Download, Plus, PackageSearch, Archive, History, Sparkles, Search } from 'lucide-react';
+import { Plus, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MentorTip from '../MentorTip';
-import { useToast } from '../../context/ToastContext';
-import { useContentStock } from '../../hooks/useContentStock';
-import NotificationBellBtn from '../NotificationBellBtn';
 import { useStockSync } from '../../hooks/useStockSync';
-import { parseContentStockCSV } from '../../services/csvService';
-import { supabase } from '../../lib/supabase';
 import AppBackground, { BackgroundTheme } from '../common/AppBackground';
-import { isStockTerminalStatus } from '../../config/status';
+import { useContentStockController } from '../../hooks/useContentStockController';
 
 // Sub-Components
 import StockFilterBar from './stock/StockFilterBar';
@@ -22,9 +16,9 @@ import StockInventoryModal from './stock/inventory/StockInventoryModal';
 import StockUtilities from './stock/StockUtilities';
 import StockCountBadge from './stock/StockCountBadge';
 import StockShootQueue from './stock/StockShootQueue';
+import StockChannelStack from './stock/StockChannelStack';
 import AnalyticsEntryModal from '../analytics/AnalyticsEntryModal';
-import ContentAnalyticsView from '../analytics/ContentAnalyticsView';
-import { BarChart3 } from 'lucide-react';
+import NotificationBellBtn from '../NotificationBellBtn';
 
 interface ContentStockProps {
   tasks: Task[]; // Sync Source
@@ -39,190 +33,44 @@ interface ContentStockProps {
   onEditScript?: (scriptId: string) => void;
 }
 
-type SortKey = 'title' | 'status' | 'date' | 'remark' | 'publishDate' | 'shootDate' | 'shortNote' | 'ideaOwner' | 'editor' | 'helper' | 'createdAt';
-type SortDirection = 'asc' | 'desc';
-
-const ITEMS_PER_PAGE = 20;
-
 const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channels, users, masterOptions, onSchedule, onEdit, onAdd, onOpenSettings, onAddToWorkbox, onEditScript }) => {
-  const { showToast } = useToast();
-
-  // --- Filter States ---
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterChannel, setFilterChannel] = useState<string>('ALL');
-  const [filterFormat, setFilterFormat] = useState<string[]>([]);
-  const [filterPillar, setFilterPillar] = useState<string[]>([]);
-  const [filterCategory, setFilterCategory] = useState<string[]>([]);
-  const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
-  const [filterOnlyOverdue, setFilterOnlyOverdue] = useState(false);
-  
-  // Updated: Range Filter
-  const [filterHasShootDate, setFilterHasShootDate] = useState(false);
-  const [filterShootDateStart, setFilterShootDateStart] = useState('');
-  const [filterShootDateEnd, setFilterShootDateEnd] = useState('');
-  
-  const [showStockOnly, setShowStockOnly] = useState(false);
-  const [isFiltering, setIsFiltering] = useState(false);
-  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
-  const [selectedContentForAnalytics, setSelectedContentForAnalytics] = useState<Task | null>(null);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const viewTab = (searchParams.get('stockMode') as 'LIST' | 'QUEUE') || 'LIST';
-  const contentSubTab = (searchParams.get('stockTab') as 'ACTIVE' | 'ARCHIVE') || 'ACTIVE';
-
-  const setViewTab = (tab: 'LIST' | 'QUEUE') => {
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      // HARD PRESERVE: Never allow view to be stripped in this view
-      next.set('view', 'ContentStock');
-
-      if (tab === 'QUEUE') {
-        next.set('stockMode', 'QUEUE');
-        next.delete('stockTab');
-      } else {
-        next.delete('stockMode');
-      }
-      return next;
-    }, { replace: true });
-  };
-
-  const setContentSubTab = (tab: 'ACTIVE' | 'ARCHIVE' | ((prev: 'ACTIVE' | 'ARCHIVE') => 'ACTIVE' | 'ARCHIVE')) => {
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      // HARD PRESERVE: Never allow view to be stripped in this view
-      next.set('view', 'ContentStock');
-
-      const currentTab = (next.get('stockTab') as 'ACTIVE' | 'ARCHIVE') || 'ACTIVE';
-      const nextTab = typeof tab === 'function' ? tab(currentTab) : tab;
-      
-      if (nextTab === 'ARCHIVE') {
-        next.set('stockTab', 'ARCHIVE');
-      } else {
-        next.delete('stockTab');
-      }
-      return next;
-    }, { replace: true });
-  };
-
-  // --- Sort States ---
-  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>({ key: 'createdAt', direction: 'desc' });
-
-  // --- Pagination State ---
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // --- CSV Import State ---
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isImporting, setIsImporting] = useState(false);
-
-  // Reset pagination when filters change
-  useEffect(() => {
-      setCurrentPage(1);
-  }, [searchQuery, filterChannel, filterFormat, filterPillar, filterCategory, filterStatuses, filterHasShootDate, filterShootDateStart, filterShootDateEnd, showStockOnly, sortConfig]);
-
-  // --- MEMOIZED FILTERS (Fixes Infinite Loop) ---
-  const filters = useMemo(() => ({
-      channelId: filterChannel,
-      format: filterFormat,
-      pillar: filterPillar,
-      category: filterCategory,
-      statuses: filterStatuses,
-      hasShootDate: filterHasShootDate, // Added
-      shootDateStart: filterShootDateStart, // Added
-      shootDateEnd: filterShootDateEnd,     // Added
-      showStockOnly: showStockOnly,
-      onlyOverdue: filterOnlyOverdue,
-      contentSubTab: contentSubTab
-  }), [filterChannel, filterFormat, filterPillar, filterCategory, filterStatuses, filterHasShootDate, filterShootDateStart, filterShootDateEnd, showStockOnly, filterOnlyOverdue, contentSubTab]);
-
-  // Transition Effect
-  useEffect(() => {
-      setIsFiltering(true);
-      const timer = setTimeout(() => setIsFiltering(false), 500);
-      return () => clearTimeout(timer);
-  }, [filters]);
-
-  // --- SERVER SIDE HOOK ---
-  const { contents: paginatedTasks, totalCount, isLoading, isRefreshing, fetchContents, updateLocalItem, toggleShootQueue } = useContentStock({
-      page: currentPage,
-      pageSize: ITEMS_PER_PAGE,
-      searchQuery: searchQuery,
-      filters: filters,
-      sortConfig: sortConfig
-  });
+  const {
+      searchQuery, setSearchQuery,
+      filterChannel, setFilterChannel,
+      filterFormat, setFilterFormat,
+      filterPillar, setFilterPillar,
+      filterCategory, setFilterCategory,
+      filterStatuses, setFilterStatuses,
+      filterOnlyOverdue, setFilterOnlyOverdue,
+      filterHasShootDate, setFilterHasShootDate,
+      filterShootDateStart, setFilterShootDateStart,
+      filterShootDateEnd, setFilterShootDateEnd,
+      showStockOnly, setShowStockOnly,
+      isFiltering,
+      isInventoryModalOpen, setIsInventoryModalOpen,
+      selectedContentForAnalytics, setSelectedContentForAnalytics,
+      viewTab, setViewTab,
+      contentSubTab, setContentSubTab,
+      sortConfig,
+      currentPage, setCurrentPage,
+      ITEMS_PER_PAGE,
+      fileInputRef,
+      isImporting,
+      handleFileUpload,
+      handleDownloadTemplate,
+      clearFilters,
+      handleSort,
+      paginatedTasks,
+      totalCount,
+      overdueCount,
+      isLoading,
+      setSearchParams,
+      updateLocalItem,
+      toggleShootQueue
+  } = useContentStockController({ globalTasks, channels, users, masterOptions });
 
   // --- HYBRID SYNC: Watch Global Tasks ---
   useStockSync(globalTasks, paginatedTasks, updateLocalItem, () => setCurrentPage(1));
-
-  // --- Handle Sorting ---
-  const handleSort = (key: SortKey) => {
-      setSortConfig(current => {
-          if (current && current.key === key) {
-              return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
-          }
-          // Default to desc for date-related columns, asc for others
-          const isDateKey = key === 'date' || key === 'publishDate' || key === 'shootDate';
-          return { key, direction: isDateKey ? 'desc' : 'asc' };
-      });
-  };
-
-  const handlePageChange = (newPage: number) => {
-      setCurrentPage(newPage);
-  };
-
-  const clearFilters = () => {
-    setSearchQuery('');
-    setFilterChannel('ALL');
-    setFilterFormat([]);
-    setFilterPillar([]);
-    setFilterCategory([]);
-    setFilterHasShootDate(false);
-    setFilterShootDateStart(''); 
-    setFilterShootDateEnd('');
-    setFilterStatuses([]);
-    setFilterOnlyOverdue(false);
-  };
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsImporting(true);
-    try {
-        // Use Service for Parsing
-        const newTasksPayload = await parseContentStockCSV(file, users, channels, masterOptions);
-
-        if (newTasksPayload.length > 0) {
-            const { error } = await supabase.from('contents').insert(newTasksPayload);
-            if (error) throw error;
-            showToast(`นำเข้าสำเร็จ ${newTasksPayload.length} รายการ 🎉`, 'success');
-            // Jump to Page 1 to see new items
-            setCurrentPage(1);
-            // Refresh list
-            fetchContents();
-        } else {
-            showToast('ไม่พบข้อมูลในไฟล์ หรือรูปแบบไม่ถูกต้อง', 'warning');
-        }
-    } catch (err: any) {
-        console.error(err);
-        showToast('เกิดข้อผิดพลาดในการนำเข้า: ' + err.message, 'error');
-    } finally {
-        setIsImporting(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const handleDownloadTemplate = () => {
-        const exampleFormat = masterOptions.filter(o => o.type === 'FORMAT').length > 0 ? masterOptions.filter(o => o.type === 'FORMAT')[0].key : "Short Form";
-        const headers = ["Content Format","Pillar","Category","Content Topic","Status","Publish Date","Chanel","Owner","IDEA","Edit","Sub","Help","Remark หมายเหตุ","Post"];
-        const exampleRow = [`"${exampleFormat}"`,"Education","Review",`"ตัวอย่าง: รีวิวกล้องใหม่"`,`"TODO"`,`"01/01/2024"`,`"Juijui Vlog"`,`"Admin"`,`"รายละเอียด"`,`"Editor"`,`"Support"`,``,`"หมายเหตุ"`,`"TikTok"`].join(",");
-        const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + headers.join(",") + "\n" + exampleRow;
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `juijui_template.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-  };
 
   const bgTheme = useMemo(() => {
     const themes: BackgroundTheme[] = [
@@ -230,23 +78,6 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
     ];
     return themes[Math.floor(Math.random() * themes.length)];
   }, []);
-
-  const overdueCount = useMemo(() => {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    return globalTasks.filter(task => {
-        const isTerminal = isStockTerminalStatus(task.status);
-        
-        if (task.type !== 'CONTENT' || task.isUnscheduled !== false || !task.endDate || !isTerminal) return false;
-        
-        // Use comprehensive analyticsStatus check
-        if (task.analyticsStatus === 'COMPLETE') return false;
-        
-        const endDateObj = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
-        return endDateObj <= sevenDaysAgo;
-    }).length;
-  }, [globalTasks]);
 
   return (
     <AppBackground theme={bgTheme} pattern="icons" className="p-4 md:p-8 min-h-screen overflow-x-hidden">
@@ -261,15 +92,50 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
           {/* Header */}
           <div className="flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-6 bg-white/70 backdrop-blur-2xl pt-6 pb-5 px-6 md:px-8 rounded-[2.5rem] border border-white/80 shadow-2xl shadow-indigo-500/10">
               <div className="flex-1 w-full xl:w-auto min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-5">
-                      <h1 className="text-2xl md:text-3xl font-black text-slate-800 flex items-center tracking-tight shrink-0">
-                          <span className="text-3xl md:text-4xl mr-3 transform group-hover:scale-110 transition-transform">{viewTab === 'LIST' ? '📑' : '🎬'}</span>
-                          <span className="truncate">{viewTab === 'LIST' ? 'รายการคอนเทนต์' : 'คิวถ่ายทำวันนี้'}</span>
-                          {viewTab === 'LIST' && <StockCountBadge count={totalCount} isLoading={isLoading} />}
-                      </h1>
+                  <motion.div 
+                      layout
+                      transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                      className="flex flex-col sm:flex-row sm:items-center gap-4 mb-5"
+                  >
+                      <motion.h1 
+                          layout
+                          transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                          className="text-2xl md:text-3xl font-black text-slate-800 flex items-center tracking-tight shrink-0 overflow-hidden min-h-[44px] relative"
+                      >
+                          <AnimatePresence mode="popLayout">
+                              <motion.span
+                                  key={viewTab}
+                                  initial={{ y: 20, opacity: 0, filter: "blur(4px)" }}
+                                  animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+                                  exit={{ y: -20, opacity: 0, filter: "blur(4px)" }}
+                                  transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                                  className="inline-flex items-center whitespace-nowrap"
+                              >
+                                  <span className="text-3xl md:text-4xl mr-3 transform group-hover:scale-110 transition-transform">{viewTab === 'LIST' ? '📑' : '🎬'}</span>
+                                  <span className="truncate">{viewTab === 'LIST' ? 'รายการคอนเทนต์' : 'คิวถ่ายทำวันนี้'}</span>
+                                  <AnimatePresence>
+                                      {viewTab === 'LIST' && (
+                                          <motion.div
+                                              initial={{ width: 0, opacity: 0, scale: 0.8, marginLeft: 0 }}
+                                              animate={{ width: "auto", opacity: 1, scale: 1, marginLeft: 8 }}
+                                              exit={{ width: 0, opacity: 0, scale: 0.8, marginLeft: 0 }}
+                                              transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                                              className="inline-flex overflow-hidden"
+                                          >
+                                              <StockCountBadge count={totalCount} isLoading={isLoading} />
+                                          </motion.div>
+                                      )}
+                                  </AnimatePresence>
+                              </motion.span>
+                          </AnimatePresence>
+                      </motion.h1>
 
                       {/* Tab Switcher */}
-                      <div className="inline-flex items-center bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/60 shadow-inner w-full sm:w-auto">
+                      <motion.div 
+                          layout
+                          transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                          className="relative inline-flex items-center bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/60 shadow-inner w-full sm:w-auto overflow-hidden"
+                      >
                           <button 
                             onClick={() => {
                               setSearchParams(prev => {
@@ -280,47 +146,45 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
                                 return next;
                               }, { replace: true });
                             }}
-                            className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-black transition-all duration-300 ${viewTab === 'LIST' && contentSubTab === 'ACTIVE' ? 'bg-white text-indigo-600 shadow-md ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}
+                            className={`relative flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-black transition-colors duration-300 ${viewTab === 'LIST' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
                           >
-                            คลังคอนเทนต์
+                            {viewTab === 'LIST' && (
+                              <motion.div 
+                                layoutId="activeStockTabPill" 
+                                transition={{ type: "spring", stiffness: 380, damping: 30 }} 
+                                className="absolute inset-0 bg-white rounded-xl shadow-md border border-slate-200/60"
+                                style={{ zIndex: 0 }}
+                              />
+                            )}
+                            <span className="relative z-10">คลังคอนเทนต์</span>
                           </button>
                           <button 
                             onClick={() => {
                                 setViewTab('QUEUE');
                             }}
-                            className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-black transition-all duration-300 ${viewTab === 'QUEUE' ? 'bg-white text-indigo-600 shadow-md ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}
+                            className={`relative flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-black transition-colors duration-300 ${viewTab === 'QUEUE' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
                           >
-                            คิวถ่ายวันนี้
+                            {viewTab === 'QUEUE' && (
+                              <motion.div 
+                                layoutId="activeStockTabPill" 
+                                transition={{ type: "spring", stiffness: 380, damping: 30 }} 
+                                className="absolute inset-0 bg-white rounded-xl shadow-md border border-slate-200/60"
+                                style={{ zIndex: 0 }}
+                              />
+                            )}
+                            <span className="relative z-10">คิวถ่ายวันนี้</span>
                           </button>
-                      </div>
-                  </div>
+                      </motion.div>
+                  </motion.div>
 
                   {/* Quick Channel Chips */}
                   {viewTab === 'LIST' && (
-                    <div className="w-full overflow-hidden">
-                        <div className="w-full overflow-x-auto scrollbar-hide -mx-2 px-2 pb-1">
-                        <div className="flex items-center gap-2.5 pt-1 flex-nowrap min-w-max pr-4">
-                            <button
-                                onClick={() => setFilterChannel('ALL')}
-                                className={`px-4 py-2 rounded-xl text-xs font-black transition-all border shadow-sm shrink-0 ${filterChannel === 'ALL' ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-200' : 'bg-white/90 text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'}`}
-                            >
-                                🔥 รวมมิตร (All)
-                            </button>
-                            {channels.map(ch => {
-                                const bgClass = (ch.color || 'bg-slate-100').split(' ')[0].replace('bg-', 'bg-');
-                                return (
-                                    <button
-                                        key={ch.id}
-                                        onClick={() => setFilterChannel(ch.id)}
-                                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all border flex items-center gap-2 shadow-sm shrink-0 ${filterChannel === ch.id ? 'ring-2 ring-indigo-500 border-transparent text-slate-800 bg-white ring-offset-2' : 'border-slate-200 hover:border-indigo-300 bg-white/90 text-slate-600 hover:text-indigo-600'}`}
-                                    >
-                                    <span className={`w-2.5 h-2.5 rounded-full ${bgClass} shadow-sm`}></span>
-                                    {ch.name}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
+                    <div className="pt-2 pb-1">
+                      <StockChannelStack 
+                        channels={channels}
+                        selectedChannelIds={filterChannel}
+                        onSelectChannels={setFilterChannel}
+                      />
                     </div>
                   )}
               </div>
@@ -396,17 +260,26 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
           </div>
         </div>
 
-        {viewTab === 'LIST' ? (
-            <div className="relative overflow-hidden">
+        <AnimatePresence mode="wait">
+          {viewTab === 'LIST' ? (
+            <motion.div 
+              key="content-list-tab"
+              initial={{ opacity: 0, y: 15, scale: 0.99 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -15, scale: 0.99 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              className="relative overflow-hidden w-full"
+            >
+              <div className="relative overflow-hidden">
                 <AnimatePresence mode="wait">
-                    <motion.div 
-                        key={contentSubTab}
-                        initial={{ opacity: 0, scale: 0.99 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 1.01 }}
-                        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-                        className="space-y-3"
-                    >
+                  <motion.div 
+                    key={contentSubTab}
+                    initial={{ opacity: 0, scale: 0.99 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.01 }}
+                    transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                    className="space-y-3"
+                  >
                         {/* Quick Filters */}
                         <motion.div
                             initial={{ y: 20, opacity: 0 }}
@@ -508,20 +381,29 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
                         )}
                     </AnimatePresence>
                 </motion.div>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
             </motion.div>
+          ) : (
+            <motion.div
+              key="shoot-queue-tab"
+              initial={{ opacity: 0, y: 15, scale: 0.99 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -15, scale: 0.99 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full"
+            >
+              <StockShootQueue 
+                  channels={channels}
+                  users={users}
+                  masterOptions={masterOptions}
+                  onEditContent={onEdit}
+                  onEditScript={onEditScript}
+              />
+            </motion.div>
+          )}
         </AnimatePresence>
-    </div>
-) : (
-            <div className="animate-in slide-in-from-bottom-4 duration-500">
-                <StockShootQueue 
-                    channels={channels}
-                    users={users}
-                    masterOptions={masterOptions}
-                    onEditContent={onEdit}
-                    onEditScript={onEditScript}
-                />
-            </div>
-        )}
 
         <StockInventoryModal 
           isOpen={isInventoryModalOpen}

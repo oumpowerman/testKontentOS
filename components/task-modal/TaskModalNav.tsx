@@ -158,7 +158,7 @@ const TaskModalNav: React.FC<TaskModalNavProps> = ({
                                     title={`งานย่อย: ${subTaskCount} รายการ`}
                                 >
                                     <Truck className="w-3.5 h-3.5 stroke-[2.2px]" />
-                                    <span className="text-[9px] sm:text-[10px] font-black leading-none">{subTaskCount}</span>
+                                    <span className="text-[9px] sm:text-[10px] font-bold leading-none">{subTaskCount}</span>
                                 </motion.div>
                             )}
                             
@@ -179,7 +179,7 @@ const TaskModalNav: React.FC<TaskModalNavProps> = ({
                                     title={`คอมเมนต์แชท: ${commentCount} รายการ`}
                                 >
                                     <MessageSquare className="w-3.5 h-3.5 stroke-[2.2px]" />
-                                    <span className="text-[9px] sm:text-[10px] font-black leading-none">{commentCount}</span>
+                                    <span className="text-[9px] sm:text-[10px] font-bold leading-none">{commentCount}</span>
                                 </motion.div>
                             )}
 
@@ -190,7 +190,7 @@ const TaskModalNav: React.FC<TaskModalNavProps> = ({
                                     title={`ไฟล์แนบ: ${assetCount} ไฟล์`}
                                 >
                                     <Paperclip className="w-3.5 h-3.5 stroke-[2.2px]" />
-                                    <span className="text-[9px] sm:text-[10px] font-black leading-none">{assetCount}</span>
+                                    <span className="text-[9px] sm:text-[10px] font-bold leading-none">{assetCount}</span>
                                 </motion.div>
                             )}
                         </div>
@@ -249,18 +249,51 @@ const TaskModalNav: React.FC<TaskModalNavProps> = ({
                                             }}
                                             className={`
                                                 flex-1 py-1.5 sm:py-2.5 px-3 sm:px-4 rounded-lg sm:rounded-xl text-[10px] sm:text-sm font-bold transition-all duration-300 ease-out flex items-center justify-center gap-2 whitespace-nowrap relative snap-start z-10
-                                                ${isActive ? `text-${config.color}-600` : `text-slate-500 hover:text-slate-700`}
+                                                ${tab.id === 'SCRIPT'
+                                                    ? isActive
+                                                        ? 'bg-gradient-to-r from-pink-100/90 via-purple-100/90 via-blue-100/90 via-emerald-100/90 via-yellow-100/90 to-pink-100/90 text-purple-700 shadow-[0_4px_14px_rgba(168,85,247,0.18)] border border-purple-200/50 hover:scale-[1.01]'
+                                                        : 'bg-gradient-to-r from-pink-50/50 via-purple-50/50 via-blue-50/50 via-emerald-50/50 via-yellow-50/50 to-pink-50/50 text-slate-500 border border-slate-200/40 hover:border-slate-350/50 hover:bg-slate-50 hover:text-slate-800 hover:scale-[1.01] shadow-[0_1px_3px_rgba(0,0,0,0.02)]'
+                                                    : isActive 
+                                                        ? `text-${config.color}-600` 
+                                                        : `text-slate-500 hover:text-slate-700`
+                                                }
                                             `}
                                         >
-                                            <tab.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isActive ? 'stroke-[2.5px]' : ''}`} />
-                                            <span className="hidden sm:inline">{tab.label}</span>
+                                            <tab.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isActive ? 'stroke-[2.5px]' : ''} ${tab.id === 'SCRIPT' ? 'text-purple-600' : ''}`} />
+                                            {tab.id === 'SCRIPT' ? (
+                                                <span className="hidden sm:inline bg-gradient-to-r from-violet-500 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent font-bold">
+                                                    {tab.label}
+                                                </span>
+                                            ) : (
+                                                <span className="hidden sm:inline">{tab.label}</span>
+                                            )}
+                                            
+                                            {tab.id === 'SCRIPT' && (
+                                                <span className="relative flex h-2.5 w-2.5 ml-0.5">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-300/50 opacity-50 blur-[0.5px]"></span>
+                                                    
+                                                    <span
+                                                        className="
+                                                            relative inline-flex 
+                                                            rounded-full 
+                                                            h-2.5 w-2.5 
+                                                            bg-gradient-to-r 
+                                                            from-pink-200 
+                                                            via-violet-200 
+                                                            to-cyan-200
+                                                            border border-white/80
+                                                            shadow-[0_0_10px_rgba(196,181,253,0.45)]
+                                                        "
+                                                    />
+                                                </span>
+                                            )}
                                             
                                             {tab.count !== undefined && tab.count > 0 && (
                                                 <motion.span 
                                                     initial={{ scale: 0, y: 5 }}
                                                     animate={{ scale: 1, y: 0 }}
                                                     className={`
-                                                        min-w-[12px] sm:min-w-[16px] h-[12px] sm:h-[16px] px-1 flex items-center justify-center rounded-full text-[7px] sm:text-[9px] font-black border border-white/40 shadow-sm
+                                                        min-w-[12px] sm:min-w-[16px] h-[12px] sm:h-[16px] px-1 flex items-center justify-center rounded-full text-[7px] sm:text-[9px] font-bold border border-white/40 shadow-sm
                                                         ${isActive 
                                                             ? `bg-${config.color}-500 text-white` 
                                                             : 'bg-slate-500/80 text-white'}

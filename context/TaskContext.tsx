@@ -121,7 +121,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             channelId: data.channel_id || data.channelId,
             targetPlatforms: platforms,
             scheduledTime: data.scheduled_time || data.scheduledTime,
-            isUnscheduled: data.is_unscheduled || data.isUnscheduled,
+            isUnscheduled: data.is_unscheduled ?? data.isUnscheduled ?? false,
             assigneeIds: data.assignee_ids || data.assigneeIds || [],
             ideaOwnerIds: data.idea_owner_ids || data.ideaOwnerIds || [],
             editorIds: data.editor_ids || data.editorIds || [],

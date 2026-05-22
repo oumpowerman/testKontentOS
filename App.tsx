@@ -21,6 +21,7 @@ import { UserSessionProvider, useUserSession } from './context/UserSessionContex
 import { ShootQueueProvider } from './context/ShootQueueContext';
 import { StorageProvider } from './context/StorageContext';
 import { GlobalRealtimeSync } from './components/GlobalRealtimeSync';
+import { ScreenSessionLimiter } from './components/ScreenSessionLimiter';
 import PWAReloadPrompt from './components/PWAReloadPrompt';
 import { Loader2 } from 'lucide-react';
 
@@ -154,6 +155,7 @@ function AuthenticatedAppInner({ user }: { user: any }) {
                     <TaskProvider>
                       <ShootQueueProvider>
                         <GlobalRealtimeSync />
+                        <ScreenSessionLimiter user={user} />
                         <AppRouter user={user} />
                       </ShootQueueProvider>
                     </TaskProvider>

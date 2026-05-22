@@ -61,7 +61,7 @@ const StockTableRow = React.memo(React.forwardRef<HTMLTableRowElement, StockTabl
         const isTerminal = isStockTerminalStatus(task.status);
             
         // Must be explicitly scheduled (not in stock), terminal status, incomplete analytics (not COMPLETE), and > 7 days old
-        if (task.type !== 'CONTENT' || task.isUnscheduled !== false || !isTerminal || !task.endDate || task.analyticsStatus === 'COMPLETE') return false;
+        if (task.type !== 'CONTENT' || task.isUnscheduled || !isTerminal || !task.endDate || task.analyticsStatus === 'COMPLETE') return false;
             
         const endDateObj = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
         const daysSincePublish = differenceInDays(startOfToday(), endDateObj);

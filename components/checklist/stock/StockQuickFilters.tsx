@@ -74,7 +74,7 @@ const StockQuickFilters: React.FC<StockQuickFiltersProps> = ({
               <motion.span 
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black text-white bg-rose-500 rounded-full animate-pulse shadow-sm shadow-rose-200"
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-kanit font-medium text-white bg-rose-500 rounded-full animate-pulse shadow-sm shadow-rose-200"
               >
                 <BarChart3 className="w-2.5 h-2.5" />
                 ค้างกรอก {overdueCount} รายการ 🚦
@@ -161,7 +161,7 @@ const StockQuickFilters: React.FC<StockQuickFiltersProps> = ({
                    if (!showOnlyOverdue) setStatuses([]); // Clear status filter if focusing on overdue
                 }}
                 className={`
-                  flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all
+                  flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium transition-all
                   ${showOnlyOverdue 
                     ? 'bg-rose-500 text-white shadow-lg shadow-rose-200 ring-2 ring-rose-500 ring-offset-2' 
                     : 'bg-white text-slate-500 border border-slate-200 hover:border-rose-300 hover:text-rose-600 hover:bg-rose-50/30'}

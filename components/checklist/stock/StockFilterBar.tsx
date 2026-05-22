@@ -11,8 +11,8 @@ import MultiSelectFilter from '../../common/MultiSelectFilter';
 interface StockFilterBarProps {
     searchQuery: string;
     setSearchQuery: (val: string) => void;
-    filterChannel: string;
-    setFilterChannel: (val: string) => void;
+    filterChannel: string[];
+    setFilterChannel: React.Dispatch<React.SetStateAction<string[]>>;
     filterFormat: string[];
     setFilterFormat: React.Dispatch<React.SetStateAction<string[]>>;
     filterPillar: string[];
@@ -180,7 +180,7 @@ const StockFilterBar: React.FC<StockFilterBarProps> = React.memo(({
         };
       }, [datePickerRef]);
 
-    const hasActiveFilters = searchQuery || filterChannel !== 'ALL' || filterFormat.length > 0 || filterPillar.length > 0 || filterCategory.length > 0 || filterStatuses.length > 0 || filterHasShootDate || filterShootDateStart || filterShootDateEnd;
+    const hasActiveFilters = searchQuery || filterChannel.length > 0 || filterFormat.length > 0 || filterPillar.length > 0 || filterCategory.length > 0 || filterStatuses.length > 0 || filterHasShootDate || filterShootDateStart || filterShootDateEnd;
 
     const handleDateClick = (date: Date) => {
         const dateStr = format(date, 'yyyy-MM-dd');

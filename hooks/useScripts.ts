@@ -66,13 +66,13 @@ export const useScripts = (currentUser: User) => {
         
         if (!options.append) setIsLoading(true);
         try {
-            // OPTIMIZATION: Select specific columns excluding 'content'
+            // OPTIMIZATION: Select specific columns excluding 'content' and 'sheets'
             let query = supabase
                 .from('scripts')
                 .select(`
                     id, title, status, version, author_id, content_id, created_at, updated_at, 
                     estimated_duration, script_type, is_in_shoot_queue, channel_id, category, tags, objective,
-                    idea_owner_id, locked_by, locked_at, share_token, is_public, is_personal, sheets,
+                    idea_owner_id, locked_by, locked_at, share_token, is_public, is_personal,
                     author:profiles!scripts_author_id_fkey(full_name, avatar_url),
                     idea_owner:profiles!scripts_idea_owner_id_fkey(full_name, avatar_url),
                     locker:profiles!scripts_locked_by_fkey(full_name, avatar_url),
@@ -216,7 +216,7 @@ export const useScripts = (currentUser: User) => {
                 .select(`
                     id, title, status, version, author_id, content_id, created_at, updated_at, 
                     estimated_duration, script_type, is_in_shoot_queue, channel_id, category, tags, objective,
-                    idea_owner_id, locked_by, locked_at, share_token, is_public, is_personal, sheets,
+                    idea_owner_id, locked_by, locked_at, share_token, is_public, is_personal,
                     author:profiles!scripts_author_id_fkey(full_name, avatar_url),
                     idea_owner:profiles!scripts_idea_owner_id_fkey(full_name, avatar_url),
                     locker:profiles!scripts_locked_by_fkey(full_name, avatar_url)

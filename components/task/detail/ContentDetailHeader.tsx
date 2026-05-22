@@ -5,6 +5,8 @@ import { ChevronUp, ChevronDown, ChevronRight, Trash2, Edit3, FileText, Activity
 import { Task, User, Channel } from '../../../types';
 import { useToast } from '../../../context/ToastContext';
 import { useGlobalDialog } from '../../../context/GlobalDialogContext';
+import { isStockTerminalStatus } from '../../../config/status';
+import { isBefore, startOfToday } from 'date-fns';
 
 interface ContentDetailHeaderProps {
     task: Task;
@@ -30,6 +32,91 @@ const ContentDetailHeader: React.FC<ContentDetailHeaderProps> = ({
     const { showConfirm } = useGlobalDialog();
 
     const getUserById = (id: string) => users.find(u => u.id === id);
+
+    const isTerminal = isStockTerminalStatus(task.status);
+    const hasPendingStats = isInsightOverdue || (isTerminal && (insightStatus === 'NONE' || insightStatus === 'PARTIAL'));
+
+    const isOverdue = React.useMemo(() => {
+        if (!task.endDate) return false;
+        const finishedKeywords = ['DONE', 'PUBLISH', 'FINISH', 'COMPLETE', 'APPROVE', 'SUCCESS', 'ARCHIVE', 'POSTED'];
+        const currentStatus = (task.status || '').toUpperCase();
+        const isFinished = finishedKeywords.some(keyword => currentStatus.includes(keyword));
+        if (isFinished) return false;
+        
+        const endDateObj = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
+        return isBefore(endDateObj, startOfToday());
+    }, [task.status, task.endDate]);
+
+    const renderCollapsedOverdueAlert = () => {
+        if (!isOverdue) return null;
+        return (
+            <motion.div 
+                animate={{ scale: [1, 1.03, 1] }}
+                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-50 border border-red-100/50 text-red-600 text-[10px] font-medium shadow-[0_2px_8px_rgba(239,68,68,0.08)] select-none mr-2 shrink-0 animate-pulse"
+            >
+                <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
+                </span>
+                <span>งานค้างเกินกำหนด! ⏰</span>
+            </motion.div>
+        );
+    };
+
+    const renderCollapsedInsightAlert = () => {
+        if (!isTerminal) return null;
+        
+        if (isInsightOverdue) {
+            return (
+                <motion.div 
+                    animate={{ scale: [1, 1.03, 1] }}
+                    transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                    className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-100/50 text-rose-600 text-[10px] font-medium shadow-[0_2px_8px_rgba(244,63,94,0.08)] select-none mr-2 shrink-0"
+                >
+                    <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
+                    </span>
+                    <span>เกินกำหนดกรอกสถิติ ⚠️</span>
+                </motion.div>
+            );
+        }
+        
+        if (insightStatus === 'PARTIAL') {
+            return (
+                <motion.div 
+                    animate={{ scale: [1, 1.02, 1] }}
+                    transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                    className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-100/50 text-amber-600 text-[10px] font-medium shadow-[0_2px_8px_rgba(245,158,11,0.08)] select-none mr-2 shrink-0"
+                >
+                    <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
+                    </span>
+                    <span>ค้างกรอกบางส่วน 📊</span>
+                </motion.div>
+            );
+        }
+        
+        if (insightStatus === 'NONE') {
+            return (
+                <motion.div 
+                    animate={{ scale: [1, 1.02, 1] }}
+                    transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                    className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-100/50 text-indigo-600 text-[10px] font-bold shadow-[0_2px_8px_rgba(99,102,241,0.08)] select-none mr-2 shrink-0"
+                >
+                    <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
+                    </span>
+                    <span>ยังไม่กรอกสถิติ 📊</span>
+                </motion.div>
+            );
+        }
+        
+        return null;
+    };
     
     const handleDeleteClick = async () => {
         if (!onDelete) return;
@@ -62,14 +149,26 @@ const ContentDetailHeader: React.FC<ContentDetailHeaderProps> = ({
                         className="h-[44px] flex items-center justify-between px-6 cursor-pointer hover:bg-slate-50/50 transition-colors group absolute inset-0 z-10"
                     >
                         <div className="flex items-center gap-3">
-                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-indigo-50 text-indigo-400 border border-indigo-100/40`}>
-                                <ChevronDown className="w-3.5 h-3.5" />
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all relative
+                                ${(isOverdue || hasPendingStats) 
+                                    ? 'bg-rose-50 text-rose-500 border-rose-100/60 shadow-[0_0_12px_rgba(244,63,94,0.15)]' 
+                                    : 'bg-indigo-50 text-indigo-400 border-indigo-100/40'}`}
+                            >
+                                <ChevronDown className={`w-3.5 h-3.5 ${(isOverdue || hasPendingStats) ? 'animate-bounce' : ''}`} />
+                                {(isOverdue || hasPendingStats) && (
+                                    <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                    </span>
+                                )}
                             </div>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-indigo-400 transition-colors">
                                 PROJECT CONTROLS
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
+                            {renderCollapsedOverdueAlert()}
+                            {renderCollapsedInsightAlert()}
                             <div className="flex -space-x-2 mr-2">
                                 {task.assigneeIds?.slice(0, 3).map((id, index) => {
                                     const user = getUserById(id);
@@ -109,7 +208,7 @@ const ContentDetailHeader: React.FC<ContentDetailHeaderProps> = ({
                                     {[
                                         { id: 'INFO', label: 'ข้อมูลทั่วไป', labelMobile: 'ข้อมูล', icon: FileText, color: 'text-indigo-600', activeBg: 'bg-white shadow-[0_4px_12px_rgba(99,102,241,0.08)] ring-1 ring-indigo-100/50' },
                                         { id: 'INSIGHT', label: 'สถิติ (INSIGHT)', labelMobile: 'สถิติ', icon: Activity, color: 'text-amber-600', activeBg: 'bg-white shadow-[0_4px_12px_rgba(245,158,11,0.08)] ring-1 ring-amber-100/50' },
-                                        { id: 'EDIT', label: 'แก้ไขโครงการ', labelMobile: 'แก้ไข', icon: Edit3, color: 'text-rose-600', activeBg: 'bg-slate-900 border-slate-950 text-white shadow-md' }
+                                        { id: 'EDIT', label: 'แก้ไขโครงการ', labelMobile: 'แก้ไข', icon: Edit3, color: 'text-rose-600', activeBg: 'bg-white/90 backdrop-blur-md border border-rose-100 text-rose-600 shadow-[0_4px_14px_rgba(244,63,94,0.12)]' }
                                     ].map((tab) => {
                                         const currentMode = activeTab === 'EDIT' ? 'EDIT' : (viewSubTab === 'INSIGHT' ? 'INSIGHT' : 'INFO');
                                         const isActive = currentMode === tab.id;
@@ -143,7 +242,7 @@ const ContentDetailHeader: React.FC<ContentDetailHeaderProps> = ({
                                                 onClick={handleTabClick}
                                                 className={`
                                                     relative flex items-center gap-1.5 xs:gap-2 px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.05em] sm:tracking-[0.1em] transition-all duration-300 z-10
-                                                    ${isActive ? (isEdit ? 'text-white' : tab.color) : 'text-slate-400 hover:text-slate-600'}
+                                                    ${isActive ? tab.color : 'text-slate-400 hover:text-slate-600'}
                                                 `}
                                                 title={tab.label}
                                             >
@@ -174,8 +273,22 @@ const ContentDetailHeader: React.FC<ContentDetailHeaderProps> = ({
                                                     </div>
                                                 )}
                                                 {isInsight && insightStatus === 'PARTIAL' && (
-                                                    <div className={`ml-1.5 px-2 py-0.5 rounded-[0.5rem] text-[9px]/[1] font-bold tracking-normal flex items-center justify-center whitespace-nowrap ${isActive ? 'bg-amber-500 text-white shadow-sm' : 'bg-amber-50 text-amber-600 border border-amber-100'} transition-all`} title="บันทึกสถิติบางส่วนแล้ว แต่ยังมีบางแพลตฟอร์มที่ยังไม่บันทึกครับ">
+                                                    <div className={`ml-1.5 px-2 py-0.5 rounded-[0.5rem] text-[10px]/[1] font-medium tracking-normal flex items-center justify-center whitespace-nowrap ${isActive ? 'bg-amber-500 text-white shadow-sm' : 'bg-amber-50 text-amber-600 border border-amber-100'} transition-all`} title="บันทึกสถิติบางส่วนแล้ว แต่ยังมีบางแพลตฟอร์มที่ยังไม่บันทึกครับ">
                                                         บางส่วน
+                                                    </div>
+                                                )}
+
+                                                {/* Badge indicators for EDIT (Overdue) */}
+                                                {isEdit && isOverdue && (
+                                                    <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border border-white"></span>
+                                                    </span>
+                                                )}
+                                                
+                                                {isEdit && isOverdue && (
+                                                    <div className={`ml-1.5 px-2 py-0.5 rounded-[0.5rem] text-[10px]/[1] font-medium tracking-normal flex items-center justify-center whitespace-nowrap gap-0.5 ${isActive ? 'bg-red-500 text-white shadow-sm ring-1 ring-white/25 animate-pulse' : 'bg-red-50 text-red-600 border border-red-105 animate-pulse'}`} title="งานชิ้นนี้อยู่ในสถานะเกินกำหนดส่ง กรุณาอัพเดทสถานะงานครับ!">
+                                                        ค้างส่ง ⏰
                                                     </div>
                                                 )}
                                             </button>

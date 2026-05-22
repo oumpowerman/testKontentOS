@@ -97,6 +97,7 @@ const ScriptStatsGrid: React.FC<ScriptStatsGridProps> = React.memo(({
     });
     const [isLoading, setIsLoading] = useState(false);
     const statsRef = useRef(stats);
+    const lastFetchedKeyRef = useRef<string>('');
 
     // Keep ref in sync for realtime logic
     useEffect(() => {
@@ -104,7 +105,38 @@ const ScriptStatsGrid: React.FC<ScriptStatsGridProps> = React.memo(({
     }, [stats]);
 
     const fetchStats = useCallback(async (silent = false) => {
-        if (!silent) setIsLoading(true);
+        // ENTERPRISE DECOMPOSITION: Normalize and build cache fingerprint for this stats request
+        const sortedOwner = [...filterOwner].sort();
+        const sortedChannel = [...filterChannel].sort();
+        const sortedTags = [...filterTags].sort();
+        
+        // If searchQuery is empty, Deep Search generates the exact same SQL count queries.
+        // Normalize to false when searchQuery is absent to prevent useless duplicate count fetches.
+        const normalizedIsDeepSearch = searchQuery ? isDeepSearch : false;
+
+        const serializationKey = JSON.stringify({
+            filterOwner: sortedOwner,
+            filterChannel: sortedChannel,
+            filterCategory,
+            filterTags: sortedTags,
+            searchQuery,
+            isDeepSearch: normalizedIsDeepSearch,
+            isPersonal,
+            currentUser: currentUser?.id,
+            refreshTrigger
+        });
+
+        // Only deduplicate standard UI/filter triggers.
+        // PostgreSQL realtime updates bypass deduplication since physical DB records shifted.
+        if (!silent && serializationKey === lastFetchedKeyRef.current) {
+            return;
+        }
+
+        if (!silent) {
+            setIsLoading(true);
+            lastFetchedKeyRef.current = serializationKey;
+        }
+
         try {
             // Base filter helper
             const applyFilters = (query: any) => {
@@ -131,7 +163,7 @@ const ScriptStatsGrid: React.FC<ScriptStatsGridProps> = React.memo(({
                 }
                 // NEW: Apply Search Query
                 if (searchQuery) {
-                    if (isDeepSearch) {
+                    if (normalizedIsDeepSearch) {
                         q = q.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%,tags.cs.{${searchQuery}},sheets_text.ilike.%${searchQuery}%`);
                     } else {
                         q = q.or(`title.ilike.%${searchQuery}%,tags.cs.{${searchQuery}}`);

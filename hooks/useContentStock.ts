@@ -10,7 +10,7 @@ interface UseContentStockProps {
     pageSize: number;
     searchQuery: string;
     filters: {
-        channelId: string;
+        channelId: string[];
         format: string[];
         pillar: string[];
         category: string[];
@@ -28,6 +28,7 @@ interface UseContentStockProps {
 export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConfig }: UseContentStockProps) => {
     const [contents, setContents] = useState<Task[]>([]);
     const [totalCount, setTotalCount] = useState(0);
+    const [overdueCount, setOverdueCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -67,7 +68,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         contentFormats: data.content_formats || [],
         category: data.category,
         scheduledTime: data.scheduled_time || data.scheduledTime,
-        isUnscheduled: data.is_unscheduled,
+        isUnscheduled: data.is_unscheduled ?? false,
         
         assigneeIds: Array.isArray(data.assignee_ids) ? data.assignee_ids : [],
         ideaOwnerIds: Array.isArray(data.idea_owner_ids) ? data.idea_owner_ids : [],
@@ -145,7 +146,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         }
 
         // Filter Match
-        if (activeFilters.channelId !== 'ALL' && task.channelId !== activeFilters.channelId) return false;
+        if (activeFilters.channelId && activeFilters.channelId.length > 0 && (!task.channelId || !activeFilters.channelId.includes(task.channelId))) return false;
         
         if (activeFilters.format.length > 0) {
             const taskFormats = task.contentFormats || [];
@@ -167,7 +168,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
             
             const endDateObj = task.endDate ? (task.endDate instanceof Date ? task.endDate : new Date(task.endDate)) : null;
             const isActuallyOverdue = 
-                task.isUnscheduled === false && 
+                !task.isUnscheduled && 
                 isTerminalStatus && 
                 task.analyticsStatus !== 'COMPLETE' && 
                 endDateObj && 
@@ -237,7 +238,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
             }
 
             // 2. Filters
-            if (filters.channelId !== 'ALL') query = query.eq('channel_id', filters.channelId);
+            if (filters.channelId && filters.channelId.length > 0) query = query.in('channel_id', filters.channelId);
             
             if (filters.format.length > 0) {
                 // Use overlaps for array column
@@ -247,6 +248,11 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
             if (filters.pillar.length > 0) query = query.in('pillar', filters.pillar);
             if (filters.category.length > 0) query = query.in('category', filters.category);
             
+            // Filter by stock only if showStockOnly is active
+            if (filters.showStockOnly) {
+                query = query.eq('is_unscheduled', true);
+            }
+
             // 2.1 Content Tab: Active vs Archive
             if (filters.onlyOverdue) {
                 // 2.3 Overdue Analytics Filter overrides standard Status/Tab logic
@@ -256,7 +262,8 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
                 query = query
                     .or('status.ilike.%done%,status.ilike.%publish%,status.ilike.%posted%,status.ilike.%complete%,status.ilike.%success%')
                     .lte('end_date', sevenDaysAgo.toISOString())
-                    .eq('is_unscheduled', false);
+                    .eq('is_unscheduled', false)
+                    .neq('analytics_status', 'COMPLETE'); // DB-level indexing optimization
 
                 // If specific statuses were selected AND onlyOverdue is on, 
                 // we should respect them but stay within terminal statuses
@@ -283,6 +290,12 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
             // 2.2 Shoot Date Range Filter
             if (filters.hasShootDate) {
                 query = query.not('shoot_date', 'is', null);
+            }
+            if (filters.shootDateStart) {
+                query = query.gte('shoot_date', filters.shootDateStart);
+            }
+            if (filters.shootDateEnd) {
+                query = query.lte('shoot_date', filters.shootDateEnd);
             }
 
             // 3. Sort
@@ -322,18 +335,38 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
             const to = from + pageSize - 1;
             query = query.range(from, to);
 
-            const { data, error, count } = await query;
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+            let overdueQuery = supabase
+                .from('contents')
+                .select('*', { count: 'exact', head: true })
+                .or('status.ilike.%done%,status.ilike.%publish%,status.ilike.%posted%,status.ilike.%complete%,status.ilike.%success%')
+                .lte('end_date', sevenDaysAgo.toISOString())
+                .eq('is_unscheduled', false)
+                .neq('analytics_status', 'COMPLETE'); // DB-level indexing optimization
+
+            if (filters.channelId && filters.channelId.length > 0) overdueQuery = overdueQuery.in('channel_id', filters.channelId);
+
+            const [response, overdueResponse] = await Promise.all([
+                query,
+                overdueQuery
+            ]);
+
+            const { data, error, count } = response;
+            const { count: overdueDbCount, error: overdueError } = overdueResponse;
 
             if (error) throw error;
+            if (overdueError) throw overdueError;
 
             if (data) {
                 const mapped = data.map(mapSupabaseToTask);
-                // Since we can't filter by virtual 'has_analytics' on the server easily without a column/view,
-                // we apply the filter again in memory to ensure accuracy for the 'onlyOverdue' mode.
-                const filtered = mapped.filter(item => checkDoesItMatchFilters(item, filters, searchQuery));
-                
-                setContents(filtered);
-                setTotalCount(filters.onlyOverdue ? filtered.length : (count || 0));
+                // Fully database-driven pagination & filtering!
+                setContents(mapped);
+                setTotalCount(count || 0);
+                if (overdueDbCount !== null) {
+                    setOverdueCount(overdueDbCount);
+                }
                 // Reset tracked IDs since we have a fresh baseline from server
                 trackedAddedIds.current.clear();
             }
@@ -515,5 +548,5 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         }
     };
 
-    return { contents, totalCount, isLoading, isRefreshing, fetchContents, updateLocalItem, toggleShootQueue };
+    return { contents, totalCount, overdueCount, isLoading, isRefreshing, fetchContents, updateLocalItem, toggleShootQueue };
 };

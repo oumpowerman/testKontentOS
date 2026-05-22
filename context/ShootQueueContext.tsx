@@ -75,7 +75,7 @@ export const ShootQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (includeScripts) {
             const { data: scripts, error: scriptError } = await supabase
                 .from('scripts')
-                .select('*, contents(title)')
+                .select('id, title, status, is_soft_finished, shoot_location, shoot_time_start, shoot_time_end, shoot_notes, channel_id, content_id, sort_order, contents(title)')
                 .eq('is_in_shoot_queue', true)
                 .order('sort_order', { ascending: true });
 

@@ -115,7 +115,7 @@ const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
             onDragLeave={onDragLeave}
             onDrop={(e) => onDrop(e, day)}
             className={`
-                relative flex flex-col group transition-all cursor-pointer select-none hover:z-30
+                relative flex flex-col group transition-all cursor-pointer select-none hover:z-50
                 ${isExpanded ? 'p-1.5 md:p-3' : 'p-1 md:p-2'}
                 ${bgClass}
             `}
@@ -166,6 +166,7 @@ const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
                             customChips={customChips}
                             masterOptions={masterOptions}
                             channels={channels}
+                            dayOfWeek={day.getDay()}
                             onDragStart={onTaskDragStart}
                             onClick={onTaskClick}
                         />
@@ -198,6 +199,7 @@ const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
                                 customChips={customChips}
                                 masterOptions={masterOptions}
                                 channels={channels}
+                                dayOfWeek={day.getDay()}
                                 onDragStart={onTaskDragStart}
                                 onClick={onTaskClick}
                             />

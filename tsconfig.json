@@ -27,6 +27,6 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
     },
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": ["**/*.ts", "**/*.tsx", "components/ChannelFormModal.tsx", "components/script/useScriptHubActions.ts"],
   "exclude": ["node_modules", "dist", "build"]
 }
