@@ -50,6 +50,29 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
 
 // --- HELPERS: Intelligent Status Check (The Brains 🧠) ---
 
+export const isStockTerminalStatus = (status: string | undefined | null): boolean => {
+    if (!status) return false;
+    const s = status.trim().toUpperCase();
+    
+    // Terminal keywords signifying complete/posted/published
+    const isDone = s.includes('DONE');
+    const isPublish = s.includes('PUBLISH');
+    const isPosted = s.includes('POSTED');
+    const isComplete = s.includes('COMPLETE');
+    const isSuccess = s.includes('SUCCESS');
+    
+    // Active keywords that signify work-in-progress or review
+    const isFinal = s.includes('FINAL');
+    const isApprove = s.includes('APPROVE');
+    // "POST" means "Post-Production" (editing) - active, UNLESS it is "POSTED" (uploaded)
+    const isPostProduction = s.includes('POST') && !s.includes('POSTED');
+    
+    const hasMatch = isDone || isPublish || isPosted || isComplete || isSuccess;
+    const hasExcluded = isFinal || isApprove || isPostProduction;
+    
+    return hasMatch && !hasExcluded;
+};
+
 export const isTaskCompleted = (status: string): boolean => {
     if (!status) return false;
     const s = status.trim().toUpperCase();

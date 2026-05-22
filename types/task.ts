@@ -181,6 +181,7 @@ export interface Task {
     is_penalized?: boolean;
     last_penalized_at?: Date;
     hasAnalytics?: boolean;
+    analyticsStatus?: 'NONE' | 'PARTIAL' | 'COMPLETE' | string;
 }
 
 export interface ChipConfig {

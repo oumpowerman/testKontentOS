@@ -9,6 +9,8 @@ import SingleContentInsight from '../analytics/SingleContentInsight';
 import ContentDetailHeader from './detail/ContentDetailHeader';
 import ContentInfoView from './detail/ContentInfoView';
 import ContentForm from './ContentForm';
+import Skeleton from '../ui/Skeleton';
+import { isStockTerminalStatus } from '../../config/status';
 
 interface ContentDetailProps {
     task: Task;
@@ -29,25 +31,56 @@ const ContentDetail: React.FC<ContentDetailProps> = ({
 }) => {
     const [isHeaderExpanded, setIsHeaderExpanded] = React.useState(false);
     const [viewSubTab, setViewSubTab] = React.useState<'INFO' | 'INSIGHT'>(initialTab === 'INSIGHT' ? 'INSIGHT' : 'INFO');
+    const [localHasAnalytics, setLocalHasAnalytics] = React.useState<boolean>(!!task.hasAnalytics);
+    const [localHasAllAnalytics, setLocalHasAllAnalytics] = React.useState<boolean>(false);
+
+    // Tab Switching Transition and Lazy Request Optimization
+    const [isTabTransitioning, setIsTabTransitioning] = React.useState(false);
+    const prevTabRef = React.useRef<string>('');
+
+    React.useEffect(() => {
+        const currentTabKey = `${mode}-${viewSubTab}`;
+        if (prevTabRef.current && prevTabRef.current !== currentTabKey) {
+            setIsTabTransitioning(true);
+            const timer = setTimeout(() => {
+                setIsTabTransitioning(false);
+            }, 300); // Super-snappy 300ms loading transition
+            return () => clearTimeout(timer);
+        }
+        prevTabRef.current = currentTabKey;
+    }, [mode, viewSubTab]);
+
+    React.useEffect(() => {
+        setLocalHasAnalytics(!!task.hasAnalytics);
+    }, [task.hasAnalytics]);
+
+    const handleAnalyticsUpdate = React.useCallback((hasSome: boolean, hasAll: boolean) => {
+        setLocalHasAnalytics(hasSome);
+        setLocalHasAllAnalytics(hasAll);
+    }, []);
 
     const isInsightOverdue = React.useMemo(() => {
-        const currentStatus = (task.status || '').toUpperCase();
-        const isTerminal = currentStatus.includes('DONE') || ['PUBLISHED', 'FINAL', 'POSTED'].includes(currentStatus);
+        const isTerminal = isStockTerminalStatus(task.status);
         
-        if (task.type !== 'CONTENT' || task.isUnscheduled || !isTerminal || !task.endDate || task.hasAnalytics) return false;
+        if (task.type !== 'CONTENT' || task.isUnscheduled || !isTerminal || !task.endDate || localHasAllAnalytics) return false;
         
         const endDateObj = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
         return differenceInDays(startOfToday(), endDateObj) >= 7;
-    }, [task]);
+    }, [task.type, task.status, task.isUnscheduled, task.endDate, localHasAllAnalytics]);
 
-    const isInsightCompleted = React.useMemo(() => {
-        const currentStatus = (task.status || '').toUpperCase();
-        const isTerminal = currentStatus.includes('DONE') || ['PUBLISHED', 'FINAL', 'POSTED'].includes(currentStatus);
+    const insightStatus = React.useMemo<'NONE' | 'PARTIAL' | 'COMPLETE'>(() => {
+        const isTerminal = isStockTerminalStatus(task.status);
         
-        if (task.type !== 'CONTENT' || !isTerminal) return false;
+        if (task.type !== 'CONTENT' || !isTerminal) return 'NONE';
         
-        return !!task.hasAnalytics;
-    }, [task]);
+        if (localHasAllAnalytics) {
+            return 'COMPLETE';
+        } else if (localHasAnalytics) {
+            return 'PARTIAL';
+        } else {
+            return 'NONE';
+        }
+    }, [task.type, task.status, localHasAnalytics, localHasAllAnalytics]);
 
     const containerVariants = {
         hidden: { opacity: 0, y: 15 },
@@ -97,13 +130,44 @@ const ContentDetail: React.FC<ContentDetailProps> = ({
                     viewSubTab={viewSubTab}
                     setViewSubTab={setViewSubTab}
                     isInsightOverdue={isInsightOverdue}
-                    isInsightCompleted={isInsightCompleted}
+                    insightStatus={insightStatus}
                 />
             </motion.div>
 
             <div className="flex-1 overflow-y-auto scrollbar-hide">
                 <AnimatePresence mode="wait">
-                    {mode === 'EDIT' ? (
+                    {isTabTransitioning ? (
+                        <motion.div
+                            key="skeleton-loading"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="p-6 sm:p-10 space-y-6 sm:space-y-8 select-none"
+                        >
+                            {/* Smart Header Skeleton */}
+                            <div className="space-y-3">
+                                <Skeleton className="h-7 w-1/3 bg-slate-200/60" />
+                                <Skeleton className="h-4 w-1/4 bg-slate-100" />
+                            </div>
+
+                            {/* Responsive Cards Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+                                <Skeleton className="h-28 rounded-2xl bg-slate-50 border border-slate-100" />
+                                <Skeleton className="h-28 rounded-2xl bg-slate-50 border border-slate-100" />
+                                <Skeleton className="h-28 rounded-2xl bg-slate-50 border border-slate-100" />
+                            </div>
+
+                            {/* Main Body Canvas Card */}
+                            <Skeleton className="h-56 w-full rounded-3xl bg-slate-100/50" />
+
+                            {/* Content Description Skeleton Lines */}
+                            <div className="space-y-3">
+                                <Skeleton className="h-4 w-full bg-slate-100/80" />
+                                <Skeleton className="h-4 w-11/12 bg-slate-100/80" />
+                                <Skeleton className="h-4 w-4/5 bg-slate-100/80" />
+                            </div>
+                        </motion.div>
+                    ) : mode === 'EDIT' ? (
                         <motion.div
                             key="edit-mode"
                             initial={{ opacity: 0, x: 20 }}
@@ -154,7 +218,10 @@ const ContentDetail: React.FC<ContentDetailProps> = ({
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -10 }}
                                         >
-                                            <SingleContentInsight task={task} />
+                                            <SingleContentInsight 
+                                                task={task} 
+                                                onAnalyticsUpdate={handleAnalyticsUpdate}
+                                            />
                                         </motion.div>
                                     )}
                                 </AnimatePresence>

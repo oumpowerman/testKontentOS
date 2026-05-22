@@ -10,9 +10,10 @@ interface UseContentFormProps {
     masterOptions: MasterOption[];
     currentUser?: User;
     onSave: (task: Task) => void;
+    tagInputRef?: React.RefObject<any>;
 }
 
-export const useContentForm = ({ initialData, selectedDate, sourceScript, channels, masterOptions, onSave, currentUser }: UseContentFormProps) => {
+export const useContentForm = ({ initialData, selectedDate, sourceScript, channels, masterOptions, onSave, currentUser, tagInputRef }: UseContentFormProps) => {
     // --- State ---
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -164,6 +165,17 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
             return;
         }
 
+        // Process any uncommitted tags from the tag field before saving
+        let finalTags = tags;
+        if (tagInputRef && tagInputRef.current) {
+            const uncommitted = tagInputRef.current.getUncommittedText();
+            if (uncommitted && !tags.includes(uncommitted)) {
+                finalTags = [...tags, uncommitted];
+                setTags(finalTags);
+                tagInputRef.current.clearInput();
+            }
+        }
+
         setIsSaving(true); // Start loading
 
         try {
@@ -188,7 +200,7 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
                 description,
                 remark,
                 status: status as Status,
-                tags,
+                tags: finalTags,
                 
                 // Dates
                 startDate: startObj,
@@ -254,6 +266,7 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
         isStock, setIsStock,
         scheduledTime, setScheduledTime,
         status, setStatus,
+        tags, setTags,
         
         channelId, setChannelId,
         targetPlatforms, 

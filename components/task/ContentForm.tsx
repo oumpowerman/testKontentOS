@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Task, Channel, User, MasterOption, ScriptSummary, Script } from '../../types';
 import { useContentForm } from '../../hooks/useContentForm';
-import { AlertTriangle, Trash2, Send, Loader2, Lock, Eye, Search, FileText, Check, X } from 'lucide-react';
+import { AlertTriangle, Trash2, Send, Loader2, Lock, Eye, Search, FileText, Check, X, Tag } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
@@ -10,6 +10,7 @@ import { isTaskCompleted } from '../../constants';
 import { useScripts } from '../../hooks/useScripts'; 
 import { useSponsorship } from '../../hooks/useSponsorship';
 import { SponsorshipDetail } from '../../types/task';
+import CollapsibleTagInput, { CollapsibleTagInputRef } from '../shared/CollapsibleTagInput';
 
 // Import Refactored Parts
 import CFHeader from './content-parts/CFHeader';
@@ -57,6 +58,8 @@ const ContentForm: React.FC<ContentFormProps> = ({
     const { sponsorship: existingSponsorship } = useSponsorship(initialData?.id);
     const [sponsorshipData, setSponsorshipData] = useState<Partial<SponsorshipDetail> | null>(null);
 
+    const tagInputRef = useRef<CollapsibleTagInputRef>(null);
+
     const {
         title, setTitle,
         description, setDescription,
@@ -65,6 +68,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
         isStock, setIsStock,
         scheduledTime, setScheduledTime,
         status, setStatus,
+        tags, setTags,
         channelId, setChannelId,
         targetPlatforms, 
         pillar, setPillar,
@@ -100,7 +104,8 @@ const ContentForm: React.FC<ContentFormProps> = ({
             };
             onSave(taskWithSponsorship as Task);
         },
-        currentUser
+        currentUser,
+        tagInputRef
     });
 
     const activeUsers = users.filter(u => u.isActive);
@@ -371,8 +376,8 @@ const ContentForm: React.FC<ContentFormProps> = ({
         assigneeIds.includes(currentUser.id)
     )) || currentUser?.role === 'ADMIN';
 
-    // Show QC Button Condition
-    const shouldShowSendQC = initialData && status !== 'FEEDBACK' && status !== 'DONE' && status !== 'APPROVE';
+    // Show QC Button Condition - Set to false since only task type "tasks" will support QC
+    const shouldShowSendQC = false;
 
     return (
         <div className="relative h-full w-full overflow-hidden">
@@ -434,6 +439,14 @@ const ContentForm: React.FC<ContentFormProps> = ({
                                 pillar={pillar} setPillar={setPillar}
                                 category={category} setCategory={setCategory}
                                 formatOptions={formatOptions} pillarOptions={pillarOptions} categoryOptions={categoryOptions}
+                            />
+
+                            {/* Tags / Hashtags Section */}
+                            <CollapsibleTagInput 
+                                ref={tagInputRef}
+                                tags={tags} 
+                                onTagsChange={setTags} 
+                                placeholder="พิมพ์แท็ก (เช่น #ความรู้, #vlog) แล้วกด Enter..." 
                             />
 
                             {/* 7. Platforms & Links */}

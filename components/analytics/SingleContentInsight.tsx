@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { TrendingUp, BarChart3, Clock, AlertCircle, PlusCircle, Search } from 'lucide-react';
+import { Check, X, TrendingUp, BarChart3, Clock, AlertCircle, PlusCircle, Search, Edit2, Trash2 } from 'lucide-react';
 import { Task, ContentAnalytics } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { formatCompactNumber } from '../../lib/utils';
@@ -8,17 +8,51 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import AnalyticsStatsGrid from './dashboard/AnalyticsStatsGrid';
 import AnalyticsEntryModal from './AnalyticsEntryModal';
+import { useToast } from '../../context/ToastContext';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
 
 interface SingleContentInsightProps {
     task: Task;
+    onAnalyticsUpdate?: (hasSomeAnalytics: boolean, hasAllAnalytics: boolean) => void;
 }
 
-const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => {
+const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task, onAnalyticsUpdate }) => {
+    const { showToast } = useToast();
+    const { showAlert, showConfirm } = useGlobalDialog();
     const platforms = task.targetPlatforms && task.targetPlatforms.length > 0 ? task.targetPlatforms : ['OTHER'];
     const [selectedPlatform, setSelectedPlatform] = useState<string>(platforms[0]);
     const [analytics, setAnalytics] = useState<ContentAnalytics[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+    const [editingRecord, setEditingRecord] = useState<ContentAnalytics | null>(null);
+
+    const handleEditRecord = (record: ContentAnalytics) => {
+        setEditingRecord(record);
+        setIsEntryModalOpen(true);
+    };
+
+    const handleDeleteRecord = async (id: string) => {
+        const confirmed = await showConfirm(
+            'การลบนี้จะลบสถิติของ Platform และวันเวลาดังกล่าว ยอดสรุปและกราฟเส้นจะถูกคำนวณใหม่ตามจริงครับ คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?',
+            'ยืนยันการลบสถิตินี้?'
+        );
+
+        if (confirmed) {
+            try {
+                const { error } = await supabase
+                    .from('content_analytics')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+                showToast('ลบรายการสถิติเรียบร้อยแล้วครับ 🎉', 'success');
+                fetchTaskAnalytics();
+            } catch (err) {
+                console.error('Delete Snapshot Error:', err);
+                showToast('ลบรายการสถิติไม่สำเร็จ กรุณาลองอีกครั้งครับ', 'error');
+            }
+        }
+    };
 
     const fetchTaskAnalytics = async () => {
         setIsLoading(true);
@@ -52,6 +86,12 @@ const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => 
             }));
 
             setAnalytics(mappedData);
+
+            if (onAnalyticsUpdate) {
+                const hasSome = mappedData.length > 0;
+                const matches = platforms.every(pt => mappedData.some(a => a.platform === pt));
+                onAnalyticsUpdate(hasSome, matches);
+            }
         } catch (err) {
             console.error('Fetch Single Insight Error:', err);
         } finally {
@@ -115,26 +155,53 @@ const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => 
         <div className="space-y-10 py-6">
             {/* Header / Actions */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex bg-slate-100 p-1 rounded-xl">
-                    {platforms.map(pt => (
-                        <button
-                            key={pt}
-                            onClick={() => setSelectedPlatform(pt)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                                selectedPlatform === pt 
-                                    ? 'bg-white text-slate-800 shadow-sm' 
-                                    : 'text-slate-400 hover:text-slate-600'
-                            }`}
-                        >
-                            <div className={`w-2 h-2 rounded-full ${
-                                pt === 'TIKTOK' ? 'bg-black' : 
-                                pt === 'FACEBOOK' ? 'bg-blue-600' :
-                                pt === 'YOUTUBE' ? 'bg-red-600' :
-                                'bg-indigo-400'
-                            }`} />
-                            {pt}
-                        </button>
-                    ))}
+                <div className="flex bg-slate-100/80 p-1.5 rounded-2xl gap-2 overflow-x-auto scrollbar-none max-w-full border border-slate-200/40">
+                    {platforms.map(pt => {
+                        const isFilled = analytics.some(a => a.platform === pt);
+                        const isActive = selectedPlatform === pt;
+                        return (
+                            <button
+                                key={pt}
+                                onClick={() => setSelectedPlatform(pt)}
+                                className={`flex items-center gap-3 px-4 py-2.5 rounded-[12px] text-xs font-extrabold transition-all shrink-0 group relative ${
+                                    isActive 
+                                        ? 'bg-white text-slate-800 shadow-sm border border-slate-200/50' 
+                                        : 'text-slate-400 hover:text-slate-600 hover:bg-white/40'
+                                }`}
+                            >
+                                <div className={`w-2.5 h-2.5 rounded-full shadow-sm transition-transform group-hover:scale-110 ${
+                                    pt === 'TIKTOK' ? 'bg-black' : 
+                                    pt === 'FACEBOOK' ? 'bg-blue-600' :
+                                    pt === 'YOUTUBE' ? 'bg-red-600' :
+                                    'bg-indigo-500'
+                                }`} />
+                                <span className="tracking-tight uppercase">{pt}</span>
+                                {isFilled ? (
+                                    <div 
+                                        className={`w-4 h-4 rounded-full flex items-center justify-center transition-all shrink-0 ${
+                                            isActive 
+                                                ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-100' 
+                                                : 'bg-emerald-100 text-emerald-600'
+                                        }`}
+                                        title="กรอกสถิติแล้ว 🎉"
+                                    >
+                                        <Check className="w-2.5 h-2.5 stroke-[4.5px]" />
+                                    </div>
+                                ) : (
+                                    <div 
+                                        className={`w-4 h-4 rounded-full flex items-center justify-center border border-dashed transition-all shrink-0 ${
+                                            isActive 
+                                                ? 'border-amber-400 bg-amber-50 text-amber-500 animate-pulse' 
+                                                : 'border-slate-300 text-slate-400 opacity-60'
+                                        }`}
+                                        title="ยังไม่ได้กรอกสถิติครับ ⚡"
+                                    >
+                                        <span className="text-[10px] font-black leading-none select-none">-</span>
+                                    </div>
+                                )}
+                            </button>
+                        );
+                    })}
                 </div>
                 <button 
                     onClick={() => setIsEntryModalOpen(true)}
@@ -240,6 +307,24 @@ const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => 
                                             <p className="text-xs font-bold text-indigo-400">{a.retentionRate || 0}%</p>
                                             <p className="text-[9px] text-slate-400 uppercase font-medium">Retention</p>
                                         </div>
+                                        <div className="flex items-center gap-1.5 pl-4 border-l border-white/10">
+                                            <button 
+                                                onClick={() => handleEditRecord(a)}
+                                                className="p-1 px-2 text-[11px] text-indigo-400 hover:text-white hover:bg-white/10 rounded-md transition-all flex items-center gap-1"
+                                                title="แก้ไข"
+                                            >
+                                                <Edit2 className="w-3 h-3" />
+                                                <span>แก้</span>
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeleteRecord(a.id)}
+                                                className="p-1 px-2 text-[11px] text-red-400 hover:text-white hover:bg-red-500/20 rounded-md transition-all flex items-center gap-1"
+                                                title="ลบ"
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                                <span>ลบ</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -251,7 +336,11 @@ const SingleContentInsight: React.FC<SingleContentInsightProps> = ({ task }) => 
             {isEntryModalOpen && (
                 <AnalyticsEntryModal 
                     content={{ ...task, displayPlatform: selectedPlatform } as any}
-                    onClose={() => setIsEntryModalOpen(false)}
+                    editingRecord={editingRecord}
+                    onClose={() => {
+                        setIsEntryModalOpen(false);
+                        setEditingRecord(null);
+                    }}
                     onSave={fetchTaskAnalytics}
                 />
             )}

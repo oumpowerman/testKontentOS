@@ -238,34 +238,39 @@ const ScriptTextArea: React.FC = () => {
                 ${isChatPreviewOpen && scriptType === 'DIALOGUE' ? 'hidden md:flex md:w-1/2' : ''}
             `} 
         >
-            {/* Character Bar (Sticky Header) */}
-            {!isFocusMode && (
-                <div className="sticky top-0 z-20 w-full bg-[#f8fafc] flex justify-between items-center pr-4">
-                    <CharacterBar />
-                    
-                    {/* Real-time Indicator Badge */}
-                    {isYjsSynced && (
-                        <div className={`
-                            flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold border shadow-sm
-                            ${isReadOnly 
-                                ? 'bg-red-50 text-red-600 border-red-100 animate-pulse' 
-                                : 'bg-green-50 text-green-600 border-green-100'}
-                        `}>
-                            {isReadOnly ? (
-                                <>
-                                    <Eye className="w-3 h-3" />
-                                    <span>LIVE Watching</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Radio className="w-3 h-3" />
-                                    <span>Broadcasting</span>
-                                </>
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
+            {/* Unified Sticky Header for CharacterBar & RichTextToolbar Portal */}
+            <div className="sticky top-0 z-20 w-full bg-[#f8fafc] border-b border-gray-200/50 shadow-sm flex flex-col shrink-0">
+                {!isFocusMode && (
+                    <div className="w-full flex justify-between items-center pr-4">
+                        <CharacterBar />
+                        
+                        {/* Real-time Indicator Badge */}
+                        {isYjsSynced && (
+                            <div className={`
+                                flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold border shadow-sm shrink-0
+                                ${isReadOnly 
+                                    ? 'bg-red-50 text-red-600 border-red-100 animate-pulse' 
+                                    : 'bg-green-50 text-green-600 border-green-100'}
+                            `}>
+                                {isReadOnly ? (
+                                    <>
+                                        <Eye className="w-3 h-3" />
+                                        <span>LIVE Watching</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Radio className="w-3 h-3" />
+                                        <span>Broadcasting</span>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+                
+                {/* Rich Text Editor Toolbar Portal Target */}
+                <div id="rich-text-toolbar-portal-target" className="w-full bg-[#f8fafc] min-h-[45px] empty:hidden"></div>
+            </div>
 
             {/* Find & Replace Bar */}
             <FindReplaceBar 
@@ -302,7 +307,7 @@ const ScriptTextArea: React.FC = () => {
                     >
                         
                         {/* Top Accent Line */}
-                        <div className="h-1.5 w-full bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 rounded-t-[2rem]"></div>
+                        <div className="h-1.5 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 rounded-t-[2rem]"></div>
                         
                         {/* Content Area */}
                         <div className="p-6 md:p-10 lg:p-12 flex-1 cursor-text caret-black">

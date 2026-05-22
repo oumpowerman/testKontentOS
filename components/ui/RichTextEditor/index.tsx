@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 import BubbleMenuExtension from '@tiptap/extension-bubble-menu'
 import { Editor } from '@tiptap/core';
@@ -54,6 +55,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
     const bubbleMenuRef = useRef<HTMLDivElement | null>(null);
     const hasCollaboration = extensions?.some(ext => ext.name === 'collaboration');
+
+    const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
     const editor = useEditor({
         extensions: [
@@ -233,6 +236,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     });
 
     useEffect(() => {
+        const target = document.getElementById('rich-text-toolbar-portal-target');
+        if (target) {
+            setPortalTarget(target);
+        } else {
+            setPortalTarget(null);
+        }
+    }, [editor]);
+
+    useEffect(() => {
         return () => {
             editor?.destroy();
         };
@@ -311,13 +323,27 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
             {/* Toolbar */}
             {!readOnly && (
-                <RichTextToolbar 
-                    editor={editor} 
-                    openLinkModal={openLinkModal} 
-                    isFormattingOpen={isFormattingOpen}
-                    setIsFormattingOpen={setIsFormattingOpen}
-                    variant={variant}
-                />
+                portalTarget ? (
+                    createPortal(
+                        <RichTextToolbar 
+                            editor={editor} 
+                            openLinkModal={openLinkModal} 
+                            isFormattingOpen={isFormattingOpen}
+                            setIsFormattingOpen={setIsFormattingOpen}
+                            variant={variant}
+                            isPortaled={true}
+                        />,
+                        portalTarget
+                    )
+                ) : (
+                    <RichTextToolbar 
+                        editor={editor} 
+                        openLinkModal={openLinkModal} 
+                        isFormattingOpen={isFormattingOpen}
+                        setIsFormattingOpen={setIsFormattingOpen}
+                        variant={variant}
+                    />
+                )
             )}
 
             {/* Editor Content Area */}

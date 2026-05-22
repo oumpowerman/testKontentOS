@@ -83,6 +83,47 @@ const StrategySection: React.FC<StrategySectionProps> = ({ task }) => {
                     </div>
                 </motion.div>
             </div>
+
+            {/* Tags / Hashtags Row */}
+            {task.tags && task.tags.length > 0 && (
+                <motion.div 
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.2 }}
+                    className="bg-white p-5 rounded-[2rem] border border-slate-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.03)] flex flex-col gap-3"
+                >
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 leading-none">
+                        <Tag className="w-3.5 h-3.5 text-slate-400 stroke-[2]" /> แท็กที่เกี่ยวข้อง (Tags)
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                        {task.tags.map((tag, idx) => {
+                            const schemes = [
+                                { cls: 'bg-indigo-50/50 text-indigo-600 hover:bg-indigo-100/70 border-indigo-100/60 shadow-sm' }, // Indigo/Violet
+                                { cls: 'bg-rose-50/50 text-rose-600 hover:bg-rose-100/70 border-rose-100/60 shadow-sm' }, // Rose/Pink
+                                { cls: 'bg-emerald-50/50 text-emerald-600 hover:bg-emerald-100/70 border-emerald-100/60 shadow-sm' }, // Emerald
+                                { cls: 'bg-amber-50/50 text-amber-600 hover:bg-amber-100/70 border-amber-100/60 shadow-sm' }, // Amber
+                                { cls: 'bg-sky-50/50 text-sky-600 hover:bg-sky-100/70 border-sky-100/60 shadow-sm' }, // Sky/Blue
+                            ];
+                            const scheme = schemes[idx % schemes.length];
+                            return (
+                                <motion.span 
+                                    key={tag} 
+                                    whileHover={{ 
+                                        scale: 1.04, 
+                                        y: -1
+                                    }}
+                                    whileTap={{ scale: 0.97 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                    className={`px-3 py-1 ${scheme.cls} rounded-xl text-xs font-semibold border transition-all duration-150 flex items-center select-none cursor-default`}
+                                >
+                                    <span className="opacity-40 mr-1 text-[10px] font-bold">#</span>
+                                    {tag}
+                                </motion.span>
+                            );
+                        })}
+                    </div>
+                </motion.div>
+            )}
         </motion.section>
     );
 };

@@ -38,11 +38,17 @@ const TaskModalHeader: React.FC<TaskModalHeaderProps> = ({
         if (!status) return null;
         const option = masterOptions.find(o => o.key === status && o.type === 'STATUS');
         
-        const color = option?.color || 'slate';
+        let colorKey = option?.color || 'slate';
         let bgClass = 'bg-slate-50 border-slate-200 text-slate-600';
         let dotClass = 'bg-slate-500';
+
+        // Extract color name (e.g., 'emerald' from 'bg-emerald-50 text-emerald-700')
+        const match = colorKey.match(/bg-(\w+)/) || colorKey.match(/text-(\w+)/);
+        if (match && match[1]) {
+            colorKey = match[1];
+        }
         
-        switch (color) {
+        switch (colorKey) {
             case 'emerald': bgClass = 'bg-emerald-50 border-emerald-200 text-emerald-600'; dotClass = 'bg-emerald-500'; break;
             case 'blue': bgClass = 'bg-blue-50 border-blue-200 text-blue-600'; dotClass = 'bg-blue-500'; break;
             case 'amber': bgClass = 'bg-amber-50 border-amber-200 text-amber-600'; dotClass = 'bg-amber-500'; break;
@@ -227,7 +233,7 @@ const TaskModalHeader: React.FC<TaskModalHeaderProps> = ({
                                 <motion.div
                                     initial={{ scale: 0.8, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
-                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] sm:text-[10px] font-black tracking-widest uppercase border-2 bg-white border-indigo-100 text-indigo-500 shadow-sm"
+                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] sm:text-[10px] font-bold tracking-widest uppercase border-2 bg-white border-indigo-100 text-indigo-500 shadow-sm"
                                 >
                                     <Clock className="w-3 h-3" />
                                     <span>{taskData.scheduledTime}</span>

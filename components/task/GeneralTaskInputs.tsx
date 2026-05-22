@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Task, User, MasterOption, ScriptSummary, Channel, DeadlineRequest, ReviewSession } from '../../types';
 import { useGeneralTaskForm } from '../../hooks/useGeneralTaskForm';
-import { AlertTriangle, Trash2, Send, Loader2, Lock, Eye, CheckCircle, XCircle, Calendar as CalendarIcon } from 'lucide-react';
+import { AlertTriangle, Trash2, Send, Loader2, Lock, Eye, CheckCircle, XCircle, Calendar as CalendarIcon, Tag } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { useScripts } from '../../hooks/useScripts'; 
 import { useDeadlineRequests } from '../../hooks/useDeadlineRequests';
 import { useTasks } from '../../hooks/useTasks';
+import CollapsibleTagInput, { CollapsibleTagInputRef } from '../shared/CollapsibleTagInput';
 
 // Import Form Parts
 import GTAssigneeSelector from './form-parts/GTAssigneeSelector';
@@ -52,6 +53,8 @@ const GeneralTaskInputs: React.FC<GeneralTaskInputsProps> = ({
     const isAdmin = currentUser?.role === 'ADMIN';
     const isCreative = currentUser?.position === 'Creative' || isAdmin;
 
+    const tagInputRef = useRef<CollapsibleTagInputRef>(null);
+
     const {
         title, setTitle,
         description, setDescription,
@@ -71,6 +74,7 @@ const GeneralTaskInputs: React.FC<GeneralTaskInputsProps> = ({
         showOnBoard, setShowOnBoard,
         scriptId, setScriptId, 
         assets, addAsset, removeAsset,
+        tags, setTags,
         error,
         isSaving,
         taskStatusOptions,
@@ -83,7 +87,8 @@ const GeneralTaskInputs: React.FC<GeneralTaskInputsProps> = ({
         masterOptions,
         onSave,
         projects,
-        currentUser
+        currentUser,
+        tagInputRef
     });
 
     const { handleSendToQC: sendToQC } = useTasks();
@@ -446,6 +451,14 @@ const GeneralTaskInputs: React.FC<GeneralTaskInputsProps> = ({
                             setCaution={setCaution}
                             importance={importance}
                             setImportance={setImportance}
+                        />
+
+                        {/* Tags / Hashtags Section */}
+                        <CollapsibleTagInput 
+                            ref={tagInputRef}
+                            tags={tags} 
+                            onTagsChange={setTags} 
+                            placeholder="พิมพ์แท็ก (เช่น #ความรู้, #vlog) แล้วกด Enter..." 
                         />
 
                         <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">

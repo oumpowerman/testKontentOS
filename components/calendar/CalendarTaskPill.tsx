@@ -6,6 +6,7 @@ import { TaskDisplayMode } from '../CalendarView';
 import { isBefore, startOfToday, differenceInDays } from 'date-fns';
 import { AlertCircle, Ghost, Clock8, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { isStockTerminalStatus } from '../../config/status';
 
 interface CalendarTaskPillProps {
     task: Task;
@@ -59,8 +60,7 @@ const CalendarTaskPill: React.FC<CalendarTaskPillProps> = ({
 
     // Added: Insight Overdue Logic (Posted but no analytics entered after 7 days)
     const isInsightOverdue = useMemo(() => {
-        const currentStatus = (task.status || '').toUpperCase();
-        const isTerminal = currentStatus.includes('DONE') || ['PUBLISHED', 'FINAL', 'POSTED'].includes(currentStatus);
+        const isTerminal = isStockTerminalStatus(task.status);
         
         // Only show overdue if it's content, terminal, has no analytics yet, and > 7 days since end date
         if (task.type !== 'CONTENT' || task.isUnscheduled || !isTerminal || !task.endDate || task.hasAnalytics) return false;
@@ -165,15 +165,25 @@ const CalendarTaskPill: React.FC<CalendarTaskPillProps> = ({
 
     // --- RENDER LOGIC BASED ON DISPLAY MODE ---
     const renderContent = () => {
-        const hasAnalyticsIndicator = task.hasAnalytics && (
+        const analyticsStatus = task.analyticsStatus || (task.hasAnalytics ? 'COMPLETE' : 'NONE');
+
+        const hasAnalyticsIndicator = (analyticsStatus === 'COMPLETE' || analyticsStatus === 'PARTIAL') && (
             <motion.div 
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                whileHover={{ scale: 1.2, rotate: 15 }}
-                className="shrink-0 flex items-center justify-center w-4 h-4 bg-purple-100 rounded-full border border-purple-200"
-                title="Performance Data Entry Complete ✨"
+                whileHover={{ scale: 1.25, rotate: analyticsStatus === 'COMPLETE' ? 15 : -10 }}
+                className={`shrink-0 flex items-center justify-center w-4 h-4 rounded-full border shadow-sm ${
+                    analyticsStatus === 'COMPLETE'
+                        ? 'bg-purple-100 border-purple-200 text-purple-600'
+                        : 'bg-amber-50 border-amber-200 border-dashed text-amber-500 animate-pulse'
+                }`}
+                title={
+                    analyticsStatus === 'COMPLETE'
+                        ? "Performance Data Entry Complete ✨"
+                        : "Performance Data Entry Partially Complete (Some channels missing) ⚡"
+                }
             >
-                <Zap className="w-2.5 h-2.5 text-purple-600 fill-purple-600" />
+                <Zap className={`w-2.5 h-2.5 ${analyticsStatus === 'COMPLETE' ? 'text-purple-600 fill-purple-600' : 'text-amber-500 fill-amber-500 opacity-80'}`} />
             </motion.div>
         );
 

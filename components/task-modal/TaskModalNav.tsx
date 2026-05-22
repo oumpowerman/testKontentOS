@@ -15,6 +15,7 @@ interface TaskModalNavProps {
     hasLinkedScript: boolean;
     assetCount: number;
     subTaskCount?: number;
+    commentCount?: number;
 }
 
 const TaskModalNav: React.FC<TaskModalNavProps> = ({
@@ -28,7 +29,8 @@ const TaskModalNav: React.FC<TaskModalNavProps> = ({
     isContent,
     hasLinkedScript,
     assetCount,
-    subTaskCount
+    subTaskCount,
+    commentCount
 }) => {
     return (
         <motion.div 
@@ -137,17 +139,64 @@ const TaskModalNav: React.FC<TaskModalNavProps> = ({
                         onClick={() => setIsNavExpanded(true)}
                         className="h-[46px] flex items-center justify-between px-6 cursor-pointer hover:bg-slate-50/50 transition-colors group absolute inset-0 z-10"
                     >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
                             <div className={`p-1 bg-${themeColor}-50 rounded-lg group-hover:scale-110 transition-transform`}>
                                 {React.createElement(currentTheme.icon, { className: `w-4 h-4 text-${themeColor}-500` })}
                             </div>
-                            <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">
-                                MENU: <span className={`text-${themeColor}-600 ml-1`}>{currentTheme.label}</span>
+                            <span className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-widest">
+                                <span className="hidden sm:inline">MENU: </span>
+                                <span className={`text-${themeColor}-600`}>{currentTheme.label}</span>
                             </span>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-slate-400 group-hover:text-indigo-600 transition-colors tracking-widest">TAP FOR TOOLS</span>
+                        {/* PREMIUM MINI MARKERS (COLLAPSED NAVIGATION HUB) */}
+                        <div className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-slate-50/60 border border-slate-100/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
+                            {isContent && subTaskCount !== undefined && subTaskCount > 0 && (
+                                <motion.div 
+                                    whileHover={{ scale: 1.05 }}
+                                    className="flex items-center gap-1 px-1 sm:px-1.5 py-0.5 rounded-md bg-cyan-50 border border-cyan-100 text-cyan-600 shadow-[0_1px_1px_rgba(0,0,0,0.02)]" 
+                                    title={`งานย่อย: ${subTaskCount} รายการ`}
+                                >
+                                    <Truck className="w-3.5 h-3.5 stroke-[2.2px]" />
+                                    <span className="text-[9px] sm:text-[10px] font-black leading-none">{subTaskCount}</span>
+                                </motion.div>
+                            )}
+                            
+                            {hasLinkedScript && (
+                                <motion.div 
+                                    whileHover={{ scale: 1.05 }}
+                                    className="flex items-center px-1 sm:px-1.5 py-0.5 rounded-md bg-rose-50 border border-rose-100 text-rose-500 shadow-[0_1px_1px_rgba(0,0,0,0.02)]" 
+                                    title="มีบทภาพยนตร์ / สคริปต์"
+                                >
+                                    <FileText className="w-3.5 h-3.5 stroke-[2.2px]" />
+                                </motion.div>
+                            )}
+
+                            {commentCount !== undefined && commentCount > 0 && (
+                                <motion.div 
+                                    whileHover={{ scale: 1.05 }}
+                                    className="flex items-center gap-1 px-1 sm:px-1.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-100 text-emerald-600 shadow-[0_1px_1px_rgba(0,0,0,0.02)]" 
+                                    title={`คอมเมนต์แชท: ${commentCount} รายการ`}
+                                >
+                                    <MessageSquare className="w-3.5 h-3.5 stroke-[2.2px]" />
+                                    <span className="text-[9px] sm:text-[10px] font-black leading-none">{commentCount}</span>
+                                </motion.div>
+                            )}
+
+                            {assetCount > 0 && (
+                                <motion.div 
+                                    whileHover={{ scale: 1.05 }}
+                                    className="flex items-center gap-1 px-1 sm:px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-100 text-amber-600 shadow-[0_1px_1px_rgba(0,0,0,0.02)]" 
+                                    title={`ไฟล์แนบ: ${assetCount} ไฟล์`}
+                                >
+                                    <Paperclip className="w-3.5 h-3.5 stroke-[2.2px]" />
+                                    <span className="text-[9px] sm:text-[10px] font-black leading-none">{assetCount}</span>
+                                </motion.div>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-1 sm:gap-2">
+                            <span className="hidden md:inline text-[10px] font-bold text-slate-400 group-hover:text-indigo-600 transition-colors tracking-widest">TAP FOR TOOLS</span>
                             <ChevronRight className="w-4 h-4 text-slate-200 group-hover:translate-x-1 transition-transform" />
                         </div>
                     </motion.div>
@@ -183,7 +232,7 @@ const TaskModalNav: React.FC<TaskModalNavProps> = ({
                                     { id: 'DETAILS', label: 'ดีเทล', icon: Layout },
                                     ...(isContent ? [{ id: 'LOGISTICS', label: 'งานย่อย', icon: Truck, count: subTaskCount }] : []),
                                     ...(hasLinkedScript ? [{ id: 'SCRIPT', label: 'สคริปต์', icon: FileText }] : []),
-                                    { id: 'COMMENTS', label: 'แชท', icon: MessageSquare },
+                                    { id: 'COMMENTS', label: 'แชท', icon: MessageSquare, count: commentCount },
                                     { id: 'ASSETS', label: 'ไฟล์', icon: Paperclip, count: assetCount },
                                     { id: 'HISTORY', label: 'ประวัติ', icon: History },
                                     { id: 'WIKI', label: 'คู่มือ', icon: Book }

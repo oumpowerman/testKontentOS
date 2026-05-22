@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Task, User, TaskType, Script } from '../types';
 import { useTaskContext } from '../context/TaskContext';
 import { useScripts } from './useScripts';
+import { supabase } from '../lib/supabase';
 
 export interface UseTaskModalStateProps {
     isOpen: boolean;
@@ -23,6 +24,13 @@ export const useTaskModalState = ({
 
     // Subtask count
     const [subTaskCount, setSubTaskCount] = useState<number>(0);
+
+    // Comment count
+    const [commentCount, setCommentCount] = useState<number>(0);
+
+    // Script relationship states
+    const [hasLinkedScript, setHasLinkedScript] = useState(false);
+    const [contentScriptId, setContentScriptId] = useState<string | null>(null);
 
     // Main View State
     const [viewMode, setViewMode] = useState<'DETAILS' | 'COMMENTS' | 'ASSETS' | 'HISTORY' | 'WIKI' | 'LOGISTICS' | 'SCRIPT'>((initialViewMode as any) || 'DETAILS');
@@ -103,16 +111,67 @@ export const useTaskModalState = ({
 
     const taskData = detailedData || initialData;
 
+    // Sync whether a script exists for CONTENT tasks or TASK tasks
+    useEffect(() => {
+        if (isOpen && taskData?.id) {
+            if (taskData.type === 'TASK') {
+                const hasScript = !!taskData.scriptId;
+                setHasLinkedScript(hasScript);
+                setContentScriptId(null);
+            } else if (taskData.type === 'CONTENT') {
+                const checkScript = async () => {
+                    const { data, error } = await supabase
+                        .from('scripts')
+                        .select('id')
+                        .eq('content_id', taskData.id)
+                        .maybeSingle();
+                    if (!error && data) {
+                        setHasLinkedScript(true);
+                        setContentScriptId(data.id);
+                    } else {
+                        setHasLinkedScript(false);
+                        setContentScriptId(null);
+                    }
+                };
+                checkScript();
+
+                // Live subscription to keep tab up to date if a script gets created/deleted
+                const scriptChannel = supabase
+                    .channel(`nav-script-link-${taskData.id}`)
+                    .on(
+                        'postgres_changes',
+                        { event: '*', schema: 'public', table: 'scripts', filter: `content_id=eq.${taskData.id}` },
+                        () => {
+                            checkScript();
+                        }
+                    )
+                    .subscribe();
+
+                return () => {
+                    supabase.removeChannel(scriptChannel);
+                };
+            }
+        } else {
+            setHasLinkedScript(false);
+            setContentScriptId(null);
+        }
+    }, [isOpen, taskData?.id, taskData?.type, taskData?.scriptId]);
+
     // Load Script if viewing script tab
     useEffect(() => {
-        if (viewMode === 'SCRIPT' && taskData?.scriptId) {
-            const loadScript = async () => {
-                const script = await getScriptById(taskData.scriptId!);
-                setTaskScript(script);
-            };
-            loadScript();
+        if (viewMode === 'SCRIPT') {
+            const targetScriptId = taskData?.type === 'TASK' ? taskData?.scriptId : contentScriptId;
+            if (targetScriptId) {
+                const loadScript = async () => {
+                    const script = await getScriptById(targetScriptId);
+                    setTaskScript(script);
+                };
+                loadScript();
+            } else {
+                setTaskScript(null);
+            }
         }
-    }, [viewMode, taskData?.scriptId, getScriptById]);
+    }, [viewMode, taskData?.type, taskData?.scriptId, contentScriptId, getScriptById]);
 
     // Fetch Subtask Count if it's a CONTENT type
     useEffect(() => {
@@ -127,6 +186,42 @@ export const useTaskModalState = ({
         }
     }, [isOpen, taskData?.id, taskData?.type, fetchSubTasksCount]);
 
+    // Fetch Comment Count and Sync Real-time
+    useEffect(() => {
+        if (isOpen && taskData?.id) {
+            const loadCommentCount = async () => {
+                const foreignKey = taskData.type === 'CONTENT' ? 'content_id' : 'task_id';
+                const { count, error } = await supabase
+                    .from('task_comments')
+                    .select('*', { count: 'exact', head: true })
+                    .eq(foreignKey, taskData.id);
+                    
+                if (!error && count !== null) {
+                    setCommentCount(count);
+                }
+            };
+            loadCommentCount();
+            
+            const foreignKey = taskData.type === 'CONTENT' ? 'content_id' : 'task_id';
+            const channel = supabase
+                .channel(`nav-comment-count-${taskData.id}`)
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'task_comments', filter: `${foreignKey}=eq.${taskData.id}` },
+                    () => {
+                        loadCommentCount();
+                    }
+                )
+                .subscribe();
+                
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        } else {
+            setCommentCount(0);
+        }
+    }, [isOpen, taskData?.id, taskData?.type]);
+
     return {
         viewMode, setViewMode,
         mode, setMode,
@@ -138,6 +233,8 @@ export const useTaskModalState = ({
         taskScript,
         updateScript,
         subTaskCount,
-        assetCount: taskData?.assets?.length || 0
+        assetCount: taskData?.assets?.length || 0,
+        commentCount,
+        hasLinkedScript
     };
 };

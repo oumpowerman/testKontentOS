@@ -11,9 +11,10 @@ interface UseGeneralTaskFormProps {
     currentUser?: User;
     onSave: (task: Task) => void;
     projects?: Task[]; // Add projects prop
+    tagInputRef?: React.RefObject<any>;
 }
 
-export const useGeneralTaskForm = ({ initialData, selectedDate, masterOptions, onSave, projects = [], currentUser }: UseGeneralTaskFormProps) => {
+export const useGeneralTaskForm = ({ initialData, selectedDate, masterOptions, onSave, projects = [], currentUser, tagInputRef }: UseGeneralTaskFormProps) => {
     // --- State ---
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -44,6 +45,7 @@ export const useGeneralTaskForm = ({ initialData, selectedDate, masterOptions, o
     const [difficulty, setDifficulty] = useState<Difficulty>('MEDIUM');
     const [estimatedHours, setEstimatedHours] = useState<number>(0);
     const [assets, setAssets] = useState<TaskAsset[]>([]);
+    const [tags, setTags] = useState<string[]>([]);
 
     const [error, setError] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -76,6 +78,7 @@ export const useGeneralTaskForm = ({ initialData, selectedDate, masterOptions, o
             setDifficulty(initialData.difficulty || 'MEDIUM');
             setEstimatedHours(initialData.estimatedHours || 0);
             setAssets(initialData.assets || []);
+            setTags(initialData.tags || []);
         } else {
             // Defaults
             setTitle(initialData?.title || '');
@@ -104,6 +107,7 @@ export const useGeneralTaskForm = ({ initialData, selectedDate, masterOptions, o
             setDifficulty('MEDIUM');
             setEstimatedHours(0);
             setAssets([]);
+            setTags([]);
         }
         setError('');
     }, [initialData, selectedDate, masterOptions]);
@@ -119,6 +123,17 @@ export const useGeneralTaskForm = ({ initialData, selectedDate, masterOptions, o
         if (new Date(startDate) > new Date(endDate)) {
             setError('วันเริ่มต้องมาก่อนวันจบสิครับผม');
             return;
+        }
+
+        // Process any uncommitted tags from the tag field before saving
+        let finalTags = tags;
+        if (tagInputRef && tagInputRef.current) {
+            const uncommitted = tagInputRef.current.getUncommittedText();
+            if (uncommitted && !tags.includes(uncommitted)) {
+                finalTags = [...tags, uncommitted];
+                setTags(finalTags);
+                tagInputRef.current.clearInput();
+            }
         }
 
         setIsSaving(true);
@@ -137,7 +152,7 @@ export const useGeneralTaskForm = ({ initialData, selectedDate, masterOptions, o
                 description,
                 status: status as Status, 
                 priority,
-                tags: initialData?.tags || [], // Preserve Tags
+                tags: finalTags,
                 
                 // Dates
                 startDate: startObj,
@@ -218,6 +233,7 @@ export const useGeneralTaskForm = ({ initialData, selectedDate, masterOptions, o
         difficulty, setDifficulty,
         estimatedHours, setEstimatedHours,
         assets, addAsset, removeAsset,
+        tags, setTags,
         
         error,
         isSaving,

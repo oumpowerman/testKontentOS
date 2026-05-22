@@ -44,7 +44,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
       taskScript,
       updateScript,
       subTaskCount,
-      assetCount
+      assetCount,
+      commentCount,
+      hasLinkedScript
   } = useTaskModalState({
       isOpen,
       initialData,
@@ -54,7 +56,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
   });
 
   const isContent = taskData?.type === 'CONTENT' || activeTab === 'CONTENT';
-  const hasLinkedScript = taskData?.type === 'TASK' && !!taskData.scriptId;
 
   // --- Theme Logic ---
   const currentTheme = TAB_CONFIGS[viewMode] || TAB_CONFIGS.DETAILS;
@@ -117,6 +118,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     hasLinkedScript={hasLinkedScript}
                     assetCount={assetCount}
                     subTaskCount={subTaskCount}
+                    commentCount={commentCount}
                 />
             )}
 

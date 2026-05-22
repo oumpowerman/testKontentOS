@@ -19,6 +19,7 @@ interface RichTextToolbarProps {
     isFormattingOpen: boolean;
     setIsFormattingOpen: (isOpen: boolean) => void;
     variant?: 'light' | 'dark';
+    isPortaled?: boolean;
 }
 
 const MenuButton = ({ onClick, isActive, icon: Icon, title, label, disabled, variant }: any) => (
@@ -54,7 +55,8 @@ const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
     openLinkModal,
     isFormattingOpen,
     setIsFormattingOpen,
-    variant = 'light'
+    variant = 'light',
+    isPortaled = false
 }) => {
     const [isColorOpen, setIsColorOpen] = useState(false);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -64,11 +66,14 @@ const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
 
     // Handle scroll for sticky shadow
     useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 10);
+        const handleScroll = (e: Event) => {
+            const target = e.target as HTMLElement;
+            if (target && typeof target.scrollTop === 'number') {
+                setIsScrolled(target.scrollTop > 10);
+            }
         };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleScroll, true);
+        return () => window.removeEventListener('scroll', handleScroll, true);
     }, []);
 
     // Click outside handler for Color Menu
@@ -128,8 +133,9 @@ const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
 
     return (
         <div className={`
-            flex flex-wrap items-center gap-1 p-2 border-b ${variant === 'dark' ? 'border-white/10 bg-[#1a1a1a]' : 'border-gray-100 bg-white/80'} backdrop-blur-md sticky top-0 z-30 overflow-visible rounded-t-[1.5rem] md:rounded-t-[2rem] transition-shadow duration-300
-            ${isScrolled ? 'shadow-[0_4px_20px_rgba(0,0,0,0.03)]' : ''}
+            flex flex-wrap items-center gap-1 p-2 border-b ${variant === 'dark' ? 'border-white/10 bg-[#1a1a1a]' : 'border-gray-100 bg-white/80'} backdrop-blur-md sticky top-0 z-30 overflow-visible transition-shadow duration-300
+            ${isPortaled ? 'rounded-none border-b-0 shadow-none bg-transparent backdrop-blur-none' : 'rounded-t-[1.5rem] md:rounded-t-[2rem]'}
+            ${isScrolled && !isPortaled ? 'shadow-[0_4px_20px_rgba(0,0,0,0.03)]' : ''}
         `}>
             <div className="flex flex-wrap items-center gap-1 w-full sm:w-auto">
             <ImageInsertModal 

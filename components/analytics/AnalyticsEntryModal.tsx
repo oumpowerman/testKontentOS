@@ -11,9 +11,10 @@ interface AnalyticsEntryModalProps {
     content: Task;
     onClose: () => void;
     onSave: (analytics: ContentAnalytics) => void;
+    editingRecord?: ContentAnalytics | null;
 }
 
-const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onClose, onSave }) => {
+const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onClose, onSave, editingRecord }) => {
     const { showToast } = useToast();
     const [isAILoading, setIsAILoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -35,26 +36,52 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
         const fetchExistingAnalytics = async () => {
             setIsLoadingData(true);
             try {
-                const targetPlatform = (content as any).displayPlatform || (content.targetPlatforms && content.targetPlatforms.length > 0 ? content.targetPlatforms[0] : 'OTHER');
-                
-                const { data, error } = await supabase
-                    .from('content_analytics')
-                    .select('*')
-                    .eq('content_id', content.id)
-                    .eq('platform', targetPlatform)
-                    .maybeSingle(); // Use maybeSingle instead of single to prevent errors if no row
-                
-                if (data && !error) {
+                if (editingRecord) {
                     setFormData({
-                        views: data.views || 0,
-                        likes: data.likes || 0,
-                        comments: data.comments || 0,
-                        shares: data.shares || 0,
-                        saves: data.saves || 0,
-                        retentionRate: data.retention_rate || 0,
-                        avgWatchTime: data.avg_watch_time || 0,
-                        reach: data.reach || 0,
+                        views: editingRecord.views || 0,
+                        likes: editingRecord.likes || 0,
+                        comments: editingRecord.comments || 0,
+                        shares: editingRecord.shares || 0,
+                        saves: editingRecord.saves || 0,
+                        retentionRate: editingRecord.retentionRate || 0,
+                        avgWatchTime: editingRecord.avgWatchTime || 0,
+                        reach: editingRecord.reach || 0,
                     });
+                } else {
+                    const targetPlatform = (content as any).displayPlatform || (content.targetPlatforms && content.targetPlatforms.length > 0 ? content.targetPlatforms[0] : 'OTHER');
+                    
+                    const { data, error } = await supabase
+                        .from('content_analytics')
+                        .select('*')
+                        .eq('content_id', content.id)
+                        .eq('platform', targetPlatform)
+                        .order('captured_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle(); // Use maybeSingle instead of single to prevent errors if no row
+                    
+                    if (data && !error) {
+                        setFormData({
+                            views: data.views || 0,
+                            likes: data.likes || 0,
+                            comments: data.comments || 0,
+                            shares: data.shares || 0,
+                            saves: data.saves || 0,
+                            retentionRate: data.retention_rate || 0,
+                            avgWatchTime: data.avg_watch_time || 0,
+                            reach: data.reach || 0,
+                        });
+                    } else {
+                        setFormData({
+                            views: 0,
+                            likes: 0,
+                            comments: 0,
+                            shares: 0,
+                            saves: 0,
+                            retentionRate: 0,
+                            avgWatchTime: 0,
+                            reach: 0,
+                        });
+                    }
                 }
             } catch (err) {
                 console.error("No existing analytics found or error fetching", err);
@@ -66,7 +93,7 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
         if (content?.id) {
             fetchExistingAnalytics();
         }
-    }, [content?.id, (content as any).displayPlatform]);
+    }, [content?.id, (content as any).displayPlatform, editingRecord]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -116,7 +143,7 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
         setIsSaving(true);
         try {
             const platform = (content as any).displayPlatform || (content.targetPlatforms && content.targetPlatforms.length > 0 ? content.targetPlatforms[0] : 'OTHER');
-            const analyticsData = {
+            const analyticsData: any = {
                 content_id: content.id,
                 platform: platform,
                 views: formData.views,
@@ -127,30 +154,23 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
                 retention_rate: formData.retentionRate,
                 avg_watch_time: formData.avgWatchTime,
                 reach: formData.reach,
-                captured_at: new Date().toISOString(),
                 is_ai_extracted: false,
             };
 
-            // Check if exists
-            const { data: existing } = await supabase
-                .from('content_analytics')
-                .select('id')
-                .eq('content_id', content.id)
-                .eq('platform', platform)
-                .maybeSingle();
-
             let data, error;
 
-            if (existing) {
+            if (editingRecord) {
+                analyticsData.captured_at = editingRecord.capturedAt;
                 const res = await supabase
                     .from('content_analytics')
                     .update(analyticsData)
-                    .eq('id', existing.id)
+                    .eq('id', editingRecord.id)
                     .select()
                     .single();
                 data = res.data;
                 error = res.error;
             } else {
+                analyticsData.captured_at = new Date().toISOString();
                 const res = await supabase
                     .from('content_analytics')
                     .insert([analyticsData])
@@ -162,7 +182,7 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
 
             if (error) throw error;
 
-            showToast('บันทึกสถิติเรียบร้อยแล้ว 🎉', 'success');
+            showToast(editingRecord ? 'แก้ไขข้อมูลสถิติเรียบร้อยแล้ว 🎉' : 'บันทึกสถิติเรียบร้อยแล้ว 🎉', 'success');
             onSave(data as any);
             onClose();
         } catch (error) {
@@ -209,7 +229,7 @@ const AnalyticsEntryModal: React.FC<AnalyticsEntryModalProps> = ({ content, onCl
                         </div>
                         <div>
                             <h2 className="text-2xl font-semibold text-slate-900 tracking-tight flex items-center gap-2">
-                                บันทึกผลประสิทธิภาพ
+                                {editingRecord ? 'แก้ไขรายการสถิติ' : 'บันทึกผลประสิทธิภาพ'}
                                 <span className="text-xs font-bold px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md uppercase tracking-wider border border-indigo-100">
                                     {(content as any).displayPlatform || (content.targetPlatforms && content.targetPlatforms.length > 0 ? content.targetPlatforms[0] : 'OTHER')}
                                 </span>

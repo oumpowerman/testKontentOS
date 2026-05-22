@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { format, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import { Task } from '../types';
+import { isStockTerminalStatus } from '../config/status';
 
 interface UseContentStockProps {
     page: number;
@@ -61,7 +62,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         // Safety: Ensure arrays are never null
         tags: Array.isArray(data.tags) ? data.tags : [],
         
-        targetPlatforms: Array.isArray(data.target_platform) ? data.target_platform : [],
+        targetPlatforms: Array.isArray(data.target_platform) ? data.target_platform : (data.target_platform ? [data.target_platform] : []),
         pillar: data.pillar,
         contentFormats: data.content_formats || [],
         category: data.category,
@@ -87,6 +88,23 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         driveLabel: data.drive_label,
         isInShootQueue: data.is_in_shoot_queue || false,
         hasAnalytics: !!data.content_analytics && (Array.isArray(data.content_analytics) ? data.content_analytics.length > 0 : !!data.content_analytics.id),
+        analyticsStatus: (() => {
+            if (!data.content_analytics) return 'NONE';
+            const rows = Array.isArray(data.content_analytics) ? data.content_analytics : [data.content_analytics];
+            const filledPlatforms = rows.map((r: any) => r.platform).filter(Boolean);
+            if (filledPlatforms.length === 0) return 'NONE';
+            
+            let platforms: string[] = [];
+            if (Array.isArray(data.target_platform)) {
+                platforms = data.target_platform;
+            } else if (data.target_platform) {
+                platforms = [data.target_platform];
+            }
+            
+            if (platforms.length === 0) return 'COMPLETE';
+            const allMatched = platforms.every((p: string) => filledPlatforms.includes(p));
+            return allMatched ? 'COMPLETE' : 'PARTIAL';
+        })(),
         
         reviews: Array.isArray(data.task_reviews) ? data.task_reviews.map((r: any) => ({
              id: r.id, taskId: r.content_id, round: r.round, scheduledAt: new Date(r.scheduled_at), 
@@ -96,36 +114,54 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
     }), []);
 
     // --- SMART HYDRATION LOGIC ---
-    const checkDoesItMatchFilters = useCallback((task: Task, currentFilters = filters) => {
-        const currentSearch = searchQuery.toLowerCase();
+    // Stable match function using refs to prevent stale closure and avoid resubscribing socket channels on typing.
+    const checkDoesItMatchFilters = useCallback((task: Task, currentFilters?: any, customSearch?: string) => {
+        const activeFilters = currentFilters !== undefined ? currentFilters : filtersRef.current;
+        const activeSearch = (customSearch !== undefined ? customSearch : (currentFilters !== undefined ? searchQuery : searchRef.current)).toLowerCase();
 
         // Search Match
-        if (currentSearch) {
-            const titleMatch = (task.title || '').toLowerCase().includes(currentSearch);
-            const remarkMatch = (task.remark || '').toLowerCase().includes(currentSearch);
-            const locMatch = (task.shootLocation || '').toLowerCase().includes(currentSearch);
-            if (!titleMatch && !remarkMatch && !locMatch) return false;
+        if (activeSearch) {
+            let searchTags: string[] = [];
+            let cleanSearchQuery = activeSearch;
+            
+            const hashTags = activeSearch.match(/#\S+/g);
+            if (hashTags) {
+                searchTags = hashTags.map(tag => tag.slice(1).toLowerCase().trim()).filter(Boolean);
+                cleanSearchQuery = activeSearch.replace(/#\S+/g, '').trim();
+            }
+
+            if (searchTags.length > 0) {
+                const taskTagsLower = (task.tags || []).map(t => (t || '').toLowerCase().trim());
+                const hasAllTags = searchTags.every(st => taskTagsLower.includes(st));
+                if (!hasAllTags) return false;
+            }
+
+            if (cleanSearchQuery) {
+                const titleMatch = (task.title || '').toLowerCase().includes(cleanSearchQuery);
+                const remarkMatch = (task.remark || '').toLowerCase().includes(cleanSearchQuery);
+                const locMatch = (task.shootLocation || '').toLowerCase().includes(cleanSearchQuery);
+                if (!titleMatch && !remarkMatch && !locMatch) return false;
+            }
         }
 
         // Filter Match
-        if (currentFilters.channelId !== 'ALL' && task.channelId !== currentFilters.channelId) return false;
+        if (activeFilters.channelId !== 'ALL' && task.channelId !== activeFilters.channelId) return false;
         
-        if (currentFilters.format.length > 0) {
+        if (activeFilters.format.length > 0) {
             const taskFormats = task.contentFormats || [];
-            const hasMatch = taskFormats.some(f => currentFilters.format.includes(f));
+            const hasMatch = taskFormats.some(f => activeFilters.format.includes(f));
             if (!hasMatch) return false;
         }
         
-        if (currentFilters.pillar.length > 0 && (!task.pillar || !currentFilters.pillar.includes(task.pillar))) return false;
-        if (currentFilters.category.length > 0 && (!task.category || !currentFilters.category.includes(task.category))) return false;
+        if (activeFilters.pillar.length > 0 && (!task.pillar || !activeFilters.pillar.includes(task.pillar))) return false;
+        if (activeFilters.category.length > 0 && (!task.category || !activeFilters.category.includes(task.category))) return false;
         
         // 2.1 Content Tab: Active vs Archive Invariant
-        const isArchive = currentFilters.contentSubTab === 'ARCHIVE';
-        const currentStatus = (task.status || '').toUpperCase();
-        const isTerminalStatus = currentStatus.includes('DONE') || ['PUBLISHED', 'FINAL', 'POSTED', 'DONE'].some(s => currentStatus === s || currentStatus.startsWith(s + ' '));
+        const isArchive = activeFilters.contentSubTab === 'ARCHIVE';
+        const isTerminalStatus = isStockTerminalStatus(task.status);
         
-        if (currentFilters.onlyOverdue) {
-            // Overdue Analytics Match: MUST be explicitly scheduled (false) AND terminal AND > 7 days AND no analytics
+        if (activeFilters.onlyOverdue) {
+            // Overdue Analytics Match: MUST be explicitly scheduled (false) AND terminal AND > 7 days AND incomplete analytics
             const sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
             
@@ -133,14 +169,14 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
             const isActuallyOverdue = 
                 task.isUnscheduled === false && 
                 isTerminalStatus && 
-                !task.hasAnalytics && 
+                task.analyticsStatus !== 'COMPLETE' && 
                 endDateObj && 
                 endDateObj <= sevenDaysAgo;
             
             if (!isActuallyOverdue) return false;
             
             // Status override check if specific status selected
-            if (currentFilters.statuses.length > 0 && !currentFilters.statuses.includes(task.status as any)) return false;
+            if (activeFilters.statuses.length > 0 && !activeFilters.statuses.includes(task.status as any)) return false;
         } else {
             if (isArchive) {
                 if (!isTerminalStatus) return false;
@@ -148,28 +184,28 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
                 // Active Tab case
                 if (isTerminalStatus) return false;
                 // Additional status filter if any
-                if (currentFilters.statuses.length > 0 && !currentFilters.statuses.includes(task.status as any)) return false;
+                if (activeFilters.statuses.length > 0 && !activeFilters.statuses.includes(task.status as any)) return false;
             }
         }
 
-        if (currentFilters.showStockOnly && !task.isUnscheduled) return false;
+        if (activeFilters.showStockOnly && !task.isUnscheduled) return false;
 
         // Shoot Date Filter
-        if (currentFilters.hasShootDate && !task.shootDate) return false;
+        if (activeFilters.hasShootDate && !task.shootDate) return false;
 
         // Shoot Date Range Match
         if (task.shootDate) {
              const taskShootStr = format(task.shootDate, 'yyyy-MM-dd');
-             if (currentFilters.shootDateStart && taskShootStr < currentFilters.shootDateStart) return false;
-             if (currentFilters.shootDateEnd && taskShootStr > currentFilters.shootDateEnd) return false;
+             if (activeFilters.shootDateStart && taskShootStr < activeFilters.shootDateStart) return false;
+             if (activeFilters.shootDateEnd && taskShootStr > activeFilters.shootDateEnd) return false;
         } else {
              // If filter is active but task has no date, hide it? 
              // Usually yes, if searching for specific date range.
-             if (currentFilters.shootDateStart || currentFilters.shootDateEnd) return false;
+             if (activeFilters.shootDateStart || activeFilters.shootDateEnd) return false;
         }
 
         return true;
-    }, [filters, searchQuery]);
+    }, []);
 
     const fetchContents = useCallback(async (isBackground = false) => {
         if (!isBackground) setIsLoading(true);
@@ -178,11 +214,26 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         try {
             let query = supabase
                 .from('contents')
-                .select(`*, task_reviews(id, round, scheduled_at, reviewer_id, status, feedback, is_completed, content_id), content_analytics(id)`, { count: 'exact' });
+                .select(`*, task_reviews(id, round, scheduled_at, reviewer_id, status, feedback, is_completed, content_id), content_analytics(id, platform)`, { count: 'exact' });
 
             // 1. Search
             if (searchQuery) {
-                query = query.or(`title.ilike.%${searchQuery}%,remark.ilike.%${searchQuery}%,shoot_location.ilike.%${searchQuery}%`);
+                let searchTags: string[] = [];
+                let cleanSearchQuery = searchQuery;
+                
+                const hashTags = searchQuery.match(/#\S+/g);
+                if (hashTags) {
+                    searchTags = hashTags.map(tag => tag.slice(1).trim()).filter(Boolean);
+                    cleanSearchQuery = searchQuery.replace(/#\S+/g, '').trim();
+                }
+
+                if (searchTags.length > 0) {
+                    query = query.contains('tags', searchTags);
+                }
+
+                if (cleanSearchQuery) {
+                    query = query.or(`title.ilike.%${cleanSearchQuery}%,remark.ilike.%${cleanSearchQuery}%,shoot_location.ilike.%${cleanSearchQuery}%`);
+                }
             }
 
             // 2. Filters
@@ -203,7 +254,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
                 sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
                 
                 query = query
-                    .or('status.ilike.%DONE%,status.eq.PUBLISHED,status.eq.FINAL,status.eq.POSTED')
+                    .or('status.ilike.%done%,status.ilike.%publish%,status.ilike.%posted%,status.ilike.%complete%,status.ilike.%success%')
                     .lte('end_date', sevenDaysAgo.toISOString())
                     .eq('is_unscheduled', false);
 
@@ -213,10 +264,15 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
                     query = query.in('status', filters.statuses);
                 }
             } else if (filters.contentSubTab === 'ARCHIVE') {
-                query = query.ilike('status', '%DONE%');
+                query = query.or('status.ilike.%done%,status.ilike.%publish%,status.ilike.%posted%,status.ilike.%complete%,status.ilike.%success%');
             } else {
-                // Default to ACTIVE: show everything EXCEPT statuses containing 'DONE'
-                query = query.not('status', 'ilike', '%DONE%');
+                // Default to ACTIVE: show everything EXCEPT statuses containing terminal keywords
+                query = query
+                    .not('status', 'ilike', '%done%')
+                    .not('status', 'ilike', '%publish%')
+                    .not('status', 'ilike', '%posted%')
+                    .not('status', 'ilike', '%complete%')
+                    .not('status', 'ilike', '%success%');
                 
                 // If statuses are selected in the Active tab, apply them
                 if (filters.statuses.length > 0) {
@@ -274,7 +330,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
                 const mapped = data.map(mapSupabaseToTask);
                 // Since we can't filter by virtual 'has_analytics' on the server easily without a column/view,
                 // we apply the filter again in memory to ensure accuracy for the 'onlyOverdue' mode.
-                const filtered = mapped.filter(item => checkDoesItMatchFilters(item, filters));
+                const filtered = mapped.filter(item => checkDoesItMatchFilters(item, filters, searchQuery));
                 
                 setContents(filtered);
                 setTotalCount(filters.onlyOverdue ? filtered.length : (count || 0));
@@ -304,7 +360,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         try {
             const { data, error } = await supabase
                 .from('contents')
-                .select(`*, task_reviews(id, round, scheduled_at, reviewer_id, status, feedback, is_completed, content_id), content_analytics(id)`)
+                .select(`*, task_reviews(id, round, scheduled_at, reviewer_id, status, feedback, is_completed, content_id), content_analytics(id, platform)`)
                 .eq('id', id)
                 .single();
 
@@ -346,7 +402,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         } catch (err) {
             console.error("Smart Hydration Error:", err);
         }
-    }, [mapSupabaseToTask]);
+    }, [mapSupabaseToTask, checkDoesItMatchFilters]);
 
     const triggerCountRefresh = useCallback(() => {
         // Background refresh to update total counts
@@ -399,7 +455,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
                 return prevList;
             }
         });
-    }, []);
+    }, [checkDoesItMatchFilters]);
 
     // Realtime Subscription
     useEffect(() => {

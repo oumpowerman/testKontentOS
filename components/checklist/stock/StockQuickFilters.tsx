@@ -59,16 +59,28 @@ const StockQuickFilters: React.FC<StockQuickFiltersProps> = ({
   };
 
   return (
-    <div className="bg-white/40 backdrop-blur-md rounded-3xl border border-white/60 overflow-hidden shadow-sm transition-all duration-300">
+    <div className={`bg-white/40 backdrop-blur-md rounded-3xl border overflow-hidden shadow-sm transition-all duration-300 ${!isExpanded && overdueCount > 0 ? 'border-rose-200 shadow-rose-100/30 shadow-md ring-1 ring-rose-300/20' : 'border-white/60'}`}>
       <button 
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full px-5 py-3 flex items-center justify-between hover:bg-white/40 transition-colors group"
       >
         <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-indigo-100 rounded-lg group-hover:scale-110 transition-transform">
-            <Zap className="w-3.5 h-3.5 text-indigo-600" />
+          <div className={`p-1.5 rounded-lg group-hover:scale-110 transition-transform ${!isExpanded && overdueCount > 0 ? 'bg-rose-100' : 'bg-indigo-100'}`}>
+            <Zap className={`w-3.5 h-3.5 ${!isExpanded && overdueCount > 0 ? 'text-rose-600 animate-pulse' : 'text-indigo-600'}`} />
           </div>
-          <span className="text-[11px] font-black uppercase tracking-widest text-slate-600">Quick Filters & Views</span>
+          <span className="text-[11px] font-black uppercase tracking-widest text-slate-600 flex items-center gap-2">
+            Quick Filters & Views
+            {!isExpanded && overdueCount > 0 && (
+              <motion.span 
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black text-white bg-rose-500 rounded-full animate-pulse shadow-sm shadow-rose-200"
+              >
+                <BarChart3 className="w-2.5 h-2.5" />
+                ค้างกรอก {overdueCount} รายการ 🚦
+              </motion.span>
+            )}
+          </span>
         </div>
         <div className="flex items-center gap-3">
           {currentTab === 'ARCHIVE' && (
@@ -76,7 +88,18 @@ const StockQuickFilters: React.FC<StockQuickFiltersProps> = ({
               ARCHIVE ACTIVE
             </span>
           )}
-          {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          {!isExpanded && overdueCount > 0 && (
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+            </span>
+          )}
+          <motion.div
+            animate={(!isExpanded && overdueCount > 0) ? { y: [0, 3, 0] } : {}}
+            transition={(!isExpanded && overdueCount > 0) ? { repeat: Infinity, duration: 1.5, ease: "easeInOut" } : {}}
+          >
+            {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className={`w-4 h-4 ${overdueCount > 0 ? 'text-rose-500' : 'text-slate-400'}`} />}
+          </motion.div>
         </div>
       </button>
 

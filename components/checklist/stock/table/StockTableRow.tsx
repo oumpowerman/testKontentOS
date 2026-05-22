@@ -7,6 +7,7 @@ import th from 'date-fns/locale/th';
 import { Task, Channel, User, MasterOption } from '../../../../types';
 import { ColumnKey } from './StockTableSettings';
 import { useGlobalDialog } from '../../../../context/GlobalDialogContext';
+import { isStockTerminalStatus } from '../../../../config/status';
 
 interface StockTableRowProps {
     task: Task;
@@ -57,16 +58,15 @@ const StockTableRow = React.memo(React.forwardRef<HTMLTableRowElement, StockTabl
     const channelStyle = channel ? channel.color : 'bg-gray-100 text-gray-500 border-gray-200';
 
     const isInsightOverdue = useMemo(() => {
-        const currentStatus = (task.status || '').toUpperCase();
-        const isTerminal = currentStatus.includes('DONE') || ['PUBLISHED', 'FINAL', 'POSTED'].includes(currentStatus);
+        const isTerminal = isStockTerminalStatus(task.status);
             
-        // Must be explicitly scheduled (not in stock), terminal status, no analytics, and > 7 days old
-        if (task.type !== 'CONTENT' || task.isUnscheduled !== false || !isTerminal || !task.endDate || task.hasAnalytics) return false;
+        // Must be explicitly scheduled (not in stock), terminal status, incomplete analytics (not COMPLETE), and > 7 days old
+        if (task.type !== 'CONTENT' || task.isUnscheduled !== false || !isTerminal || !task.endDate || task.analyticsStatus === 'COMPLETE') return false;
             
         const endDateObj = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
         const daysSincePublish = differenceInDays(startOfToday(), endDateObj);
         return daysSincePublish >= 7;
-    }, [task.type, task.status, task.endDate, task.isUnscheduled, task.hasAnalytics]);
+    }, [task.type, task.status, task.endDate, task.isUnscheduled, task.analyticsStatus]);
 
     const handleDragStart = (e: React.DragEvent) => {
         setIsDragging(true);
@@ -208,6 +208,43 @@ const StockTableRow = React.memo(React.forwardRef<HTMLTableRowElement, StockTabl
                     )}
                     {task.pillar && <span className="text-[9px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 font-bold flex items-center">{getPillarLabel(task.pillar)}</span>}
                     {task.category && <span className="text-[9px] text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100 font-bold flex items-center"><Tag className="w-2.5 h-2.5 mr-1 opacity-50" />{getCategoryLabel(task.category)}</span>}
+                    {task.tags && task.tags.length > 0 && (
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            {task.tags.slice(0, 2).map((tag) => (
+                                <span 
+                                    key={tag} 
+                                    className="text-[9px] text-indigo-600 bg-indigo-50/60 hover:bg-indigo-100/70 px-2 py-0.5 rounded-full border border-indigo-100/60 font-black transition-colors"
+                                >
+                                    #{tag}
+                                </span>
+                            ))}
+                            {task.tags.length > 2 && (
+                                <div className="relative group/tag-tooltip">
+                                    <motion.span 
+                                        whileHover={{ scale: 1.15 }}
+                                        className="text-[9px] text-indigo-500 bg-indigo-100/40 px-1.5 py-0.5 rounded-full border border-indigo-200 font-extrabold cursor-help flex items-center justify-center transition-all"
+                                    >
+                                        +{task.tags.length - 2}
+                                    </motion.span>
+                                    
+                                    {/* Custom Animated Tooltip */}
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/tag-tooltip:opacity-100 pointer-events-none transition-all duration-300 translate-y-2 group-hover/tag-tooltip:translate-y-0 z-50">
+                                        <div className="bg-white/95 backdrop-blur-xl text-indigo-900 text-[10px] font-bold px-3 py-2 rounded-2xl shadow-xl border border-indigo-100 flex flex-col gap-1.5 min-w-max">
+                                            <div className="text-[8px] text-indigo-400 uppercase tracking-widest mb-0.5 opacity-80">แท็กทั้งหมด</div>
+                                            {task.tags.slice(2).map(t => (
+                                                <div key={t} className="flex items-center gap-1.5 text-indigo-700 font-extrabold">
+                                                    <span className="text-indigo-400">#</span>
+                                                    {t}
+                                                </div>
+                                            ))}
+                                            {/* Arrow */}
+                                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-[6px] border-transparent border-t-white" />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </td>
 

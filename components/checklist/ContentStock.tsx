@@ -12,6 +12,7 @@ import { useStockSync } from '../../hooks/useStockSync';
 import { parseContentStockCSV } from '../../services/csvService';
 import { supabase } from '../../lib/supabase';
 import AppBackground, { BackgroundTheme } from '../common/AppBackground';
+import { isStockTerminalStatus } from '../../config/status';
 
 // Sub-Components
 import StockFilterBar from './stock/StockFilterBar';
@@ -235,10 +236,12 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
     return globalTasks.filter(task => {
-        const currentStatus = (task.status || '').toUpperCase();
-        const isTerminal = currentStatus.includes('DONE') || ['PUBLISHED', 'FINAL', 'POSTED'].includes(currentStatus);
+        const isTerminal = isStockTerminalStatus(task.status);
         
-        if (task.type !== 'CONTENT' || task.isUnscheduled !== false || task.hasAnalytics || !task.endDate || !isTerminal) return false;
+        if (task.type !== 'CONTENT' || task.isUnscheduled !== false || !task.endDate || !isTerminal) return false;
+        
+        // Use comprehensive analyticsStatus check
+        if (task.analyticsStatus === 'COMPLETE') return false;
         
         const endDateObj = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
         return endDateObj <= sevenDaysAgo;
@@ -456,6 +459,7 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
                     clearFilters={clearFilters}
                     channels={channels}
                     masterOptions={masterOptions}
+                    tasks={globalTasks}
                 />
                 </motion.div>
 
