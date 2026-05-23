@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { LayoutGrid, FileText, CheckCircle2, Info, ArrowRight, Loader2, Trash2, MapPin, Clock, AlertTriangle, Calendar } from 'lucide-react';
+import { Film, FileEdit, LayoutGrid, FileText, CheckCircle2, Info, ArrowRight, Loader2, Trash2, MapPin, Clock, AlertTriangle, Calendar } from 'lucide-react';
 import { MergedQueueItem } from './types';
 import { Channel, Task, ScriptSummary, MasterOption } from '../../../../types';
 
@@ -83,12 +83,12 @@ const QueueItemCard: React.FC<QueueItemCardProps> = ({
                     <div className="flex items-center gap-2">
                         {isContent ? (
                             <div className="px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-bold border border-amber-100 flex items-center gap-1">
-                                <LayoutGrid className="w-3 h-3" />
+                                <Film className="w-3 h-3" />
                                 CONTENT STOCK (CLIP)
                             </div>
                         ) : (
                             <div className="px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold border border-blue-100 flex items-center gap-1">
-                                <FileText className="w-3 h-3" />
+                                <FileEdit className="w-3 h-3" />
                                 SCRIPT HUB
                             </div>
                         )}

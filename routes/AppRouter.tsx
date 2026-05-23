@@ -420,6 +420,7 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
                           const next = new URLSearchParams(prev);
                           next.set('view', 'SCRIPT_HUB');
                           next.set('scriptId', id);
+                          next.set('origin', 'SHOOT_QUEUE');
                           return next;
                       }, { replace: true });
                   }}

@@ -254,7 +254,7 @@ const ContentDetail: React.FC<ContentDetailProps> = ({
                     
                     <button 
                         onClick={onClose}
-                        className="hidden sm:block px-8 py-3 bg-slate-50 text-slate-400 font-semibold text-xs uppercase tracking-widest rounded-2xl hover:bg-slate-100 transition-all active:scale-95"
+                        className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 bg-slate-50 text-slate-400 hover:text-slate-600 font-bold text-[10px] sm:text-xs uppercase tracking-widest rounded-xl sm:rounded-2xl hover:bg-slate-100 transition-all active:scale-95 text-center"
                     >
                         Close Window
                     </button>

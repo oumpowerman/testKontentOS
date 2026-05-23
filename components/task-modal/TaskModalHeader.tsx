@@ -36,7 +36,7 @@ const TaskModalHeader: React.FC<TaskModalHeaderProps> = ({
 
     const getStatusInfo = (status: string | undefined) => {
         if (!status) return null;
-        const option = masterOptions.find(o => o.key === status && o.type === 'STATUS');
+        const option = masterOptions.find(o => o.key.toUpperCase() === status.toUpperCase() && o.type === 'STATUS');
         
         let colorKey = option?.color || 'slate';
         let bgClass = 'bg-slate-50 border-slate-200 text-slate-600';
@@ -50,14 +50,31 @@ const TaskModalHeader: React.FC<TaskModalHeaderProps> = ({
         
         switch (colorKey) {
             case 'emerald': bgClass = 'bg-emerald-50 border-emerald-200 text-emerald-600'; dotClass = 'bg-emerald-500'; break;
+            case 'green': bgClass = 'bg-green-50 border-green-200 text-green-600'; dotClass = 'bg-green-500'; break;
             case 'blue': bgClass = 'bg-blue-50 border-blue-200 text-blue-600'; dotClass = 'bg-blue-500'; break;
             case 'amber': bgClass = 'bg-amber-50 border-amber-200 text-amber-600'; dotClass = 'bg-amber-500'; break;
+            case 'yellow': bgClass = 'bg-yellow-50 border-yellow-200 text-yellow-600'; dotClass = 'bg-yellow-500'; break;
             case 'red': bgClass = 'bg-red-50 border-red-200 text-red-600'; dotClass = 'bg-red-500'; break;
             case 'orange': bgClass = 'bg-orange-50 border-orange-200 text-orange-600'; dotClass = 'bg-orange-500'; break;
             case 'indigo': bgClass = 'bg-indigo-50 border-indigo-200 text-indigo-600'; dotClass = 'bg-indigo-500'; break;
             case 'purple': bgClass = 'bg-purple-50 border-purple-200 text-purple-600'; dotClass = 'bg-purple-500'; break;
             case 'pink': bgClass = 'bg-pink-50 border-pink-200 text-pink-600'; dotClass = 'bg-pink-500'; break;
             case 'rose': bgClass = 'bg-rose-50 border-rose-200 text-rose-600'; dotClass = 'bg-rose-500'; break;
+            case 'gray': bgClass = 'bg-gray-50 border-gray-200 text-gray-600'; dotClass = 'bg-gray-500'; break;
+            case 'slate': bgClass = 'bg-slate-50 border-slate-200 text-slate-600'; dotClass = 'bg-slate-500'; break;
+        }
+
+        // Dynamic fallback to safely handle any color configuration present in MasterDataContext status options
+        if (option?.color) {
+            const classes = option.color.split(' ');
+            const bg = classes.find(c => c.startsWith('bg-')) || 'bg-slate-50';
+            const text = classes.find(c => c.startsWith('text-')) || 'text-slate-600';
+            const colorNameMatch = bg.match(/bg-(\w+)/);
+            const colorName = colorNameMatch ? colorNameMatch[1] : colorKey;
+            
+            // Reconstruct perfectly matching Tailwind classes
+            bgClass = `${bg} border-${colorName}-200/60 ${text}`;
+            dotClass = `bg-${colorName}-500`;
         }
 
         return {

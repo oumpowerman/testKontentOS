@@ -45,10 +45,10 @@ const InactiveCreatorModal: React.FC<InactiveCreatorModalProps> = ({
 
     const hasMore = inactiveUsers.length > displayLimit;
 
-    return (
+    const modalContent = (
         <AnimatePresence>
-            {isOpen && createPortal(
-                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6">
+            {isOpen && (
+                <div className="fixed inset-0 z-[12000] flex items-center justify-center p-4 sm:p-6">
                     <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -68,7 +68,7 @@ const InactiveCreatorModal: React.FC<InactiveCreatorModalProps> = ({
                             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
                             <div className="relative z-10 flex justify-between items-center">
                                 <div>
-                                    <h3 className="text-2xl font-black flex items-center gap-3">
+                                    <h3 className="text-2xl font-bold flex items-center gap-3">
                                         <History className="w-6 h-6 text-indigo-400" />
                                         อดีตทีมงาน (Ex-Staff)
                                     </h3>
@@ -104,7 +104,7 @@ const InactiveCreatorModal: React.FC<InactiveCreatorModalProps> = ({
                                     <div key={position} className="space-y-4">
                                         <div className="flex items-center gap-3">
                                             <div className="h-px flex-1 bg-slate-100" />
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">{position}</span>
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] px-2">{position}</span>
                                             <div className="h-px flex-1 bg-slate-100" />
                                         </div>
                                         
@@ -135,7 +135,7 @@ const InactiveCreatorModal: React.FC<InactiveCreatorModalProps> = ({
                                                                         referrerPolicy="no-referrer"
                                                                     />
                                                                 ) : (
-                                                                    <div className="w-full h-full flex items-center justify-center bg-slate-300 text-slate-500 font-black">
+                                                                    <div className="w-full h-full flex items-center justify-center bg-slate-300 text-slate-500 font-bold">
                                                                         {user.name.charAt(0).toUpperCase()}
                                                                     </div>
                                                                 )}
@@ -148,7 +148,7 @@ const InactiveCreatorModal: React.FC<InactiveCreatorModalProps> = ({
                                                         </div>
                                                         
                                                         <div className="flex-1 min-w-0">
-                                                            <div className={`font-black text-sm truncate ${isSelected ? 'text-indigo-700' : 'text-slate-700'}`}>
+                                                            <div className={`font-bold text-sm truncate ${isSelected ? 'text-indigo-700' : 'text-slate-700'}`}>
                                                                 {user.name}
                                                             </div>
                                                             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -183,7 +183,7 @@ const InactiveCreatorModal: React.FC<InactiveCreatorModalProps> = ({
                                 <div className="pt-4 flex justify-center">
                                     <button
                                         onClick={() => setDisplayLimit(prev => prev + 5)}
-                                        className="flex items-center gap-2 px-6 py-3 bg-slate-50 hover:bg-slate-100 text-slate-500 font-black text-xs rounded-2xl border border-slate-200 transition-all active:scale-95"
+                                        className="flex items-center gap-2 px-6 py-3 bg-slate-50 hover:bg-slate-100 text-slate-500 font-bold text-xs rounded-2xl border border-slate-200 transition-all active:scale-95"
                                     >
                                         <Loader2 className="w-4 h-4 animate-spin" />
                                         ดูเพิ่มเติม ({inactiveUsers.length - displayLimit})
@@ -194,12 +194,12 @@ const InactiveCreatorModal: React.FC<InactiveCreatorModalProps> = ({
 
                         {/* Footer */}
                         <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                 Selected: <span className="text-indigo-500">{selectedIds.filter(id => users.find(u => u.id === id && !u.isActive)).length}</span>
                             </div>
                             <button
                                 onClick={onClose}
-                                className="px-8 py-3 bg-slate-900 text-white font-black text-xs rounded-2xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 active:scale-95"
+                                className="px-8 py-3 bg-slate-900 text-white font-bold text-xs rounded-2xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 active:scale-95"
                             >
                                 ตกลง (DONE)
                             </button>
@@ -221,11 +221,14 @@ const InactiveCreatorModal: React.FC<InactiveCreatorModalProps> = ({
                             background: #cbd5e1;
                         }
                     `}</style>
-                </div>,
-                document.body
+                </div>
             )}
         </AnimatePresence>
     );
+
+    if (typeof document === 'undefined') return null;
+    const portalRoot = document.getElementById('portal-root') || document.body;
+    return createPortal(modalContent, portalRoot);
 };
 
 export default InactiveCreatorModal;

@@ -68,6 +68,8 @@ const StockShootQueue: React.FC<StockShootQueueProps> = ({ channels, users, mast
                         shootNotes: updated.shoot_notes,
                         channelId: updated.channel_id
                     });
+                    // Smart fingerprinted refresh to add newly queued items in real-time
+                    checkAndRefreshIfNeeded(includeScripts);
                 }
             })
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'scripts' }, (payload) => {
@@ -85,6 +87,8 @@ const StockShootQueue: React.FC<StockShootQueueProps> = ({ channels, users, mast
                         shootNotes: updated.shoot_notes,
                         channelId: updated.channel_id
                     });
+                    // Smart fingerprinted refresh to add newly queued items in real-time
+                    checkAndRefreshIfNeeded(includeScripts);
                 }
             })
             .subscribe();

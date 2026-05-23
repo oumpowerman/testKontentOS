@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, DragControls } from 'framer-motion';
-import { LayoutGrid, FileText, CheckCircle2, ArrowRight, Loader2, Clock, GripVertical, Trash2, MapPin, Calendar, AlertTriangle } from 'lucide-react';
+import { Film, FileEdit, CheckCircle2, ArrowRight, Loader2, Clock, GripVertical, Trash2, MapPin, Calendar, AlertTriangle, FileText } from 'lucide-react';
 import { MergedQueueItem } from './types';
 import { Channel, Task, MasterOption } from '../../../../types';
 
@@ -104,11 +104,11 @@ const QueueItemRow: React.FC<QueueItemRowProps> = ({
                     <div className="hidden md:flex justify-center">
                         {isContent ? (
                             <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
-                                <LayoutGrid className="w-4 h-4" />
+                                <Film className="w-4 h-4" />
                             </div>
                         ) : (
                             <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
-                                <FileText className="w-4 h-4" />
+                                <FileEdit className="w-4 h-4" />
                             </div>
                         )}
                     </div>

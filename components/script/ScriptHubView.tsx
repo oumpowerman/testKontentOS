@@ -174,10 +174,11 @@ const ScriptHubView: React.FC<ScriptHubViewProps> = ({ currentUser, users, initi
                 setIsFetchingDetail(false);
                 if (fullScript) {
                     setActiveScript(fullScript);
-                    // Clear the scriptId from URL to avoid re-opening on refresh
+                    // Clear the scriptId and origin from URL to avoid re-opening on refresh
                     setSearchParams(prev => {
                         const newParams = new URLSearchParams(prev);
                         newParams.delete('scriptId');
+                        newParams.delete('origin');
                         return newParams;
                     }, { replace: true });
                 }

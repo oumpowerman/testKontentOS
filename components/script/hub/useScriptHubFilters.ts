@@ -21,14 +21,16 @@ export const useScriptHubFilters = ({
     const location = useLocation();
 
     // Persistent tracking of where we came from (e.g., from Shoot Queue)
-    const originRef = useRef<string | null>(location.state?.from || null);
+    const originRef = useRef<string | null>(location.state?.from || searchParams.get('origin') || null);
 
-    // Update origin if state appears (e.g. on direct navigation)
+    // Update origin if state or query parameters appear
     useEffect(() => {
         if (location.state?.from) {
             originRef.current = location.state.from;
+        } else if (searchParams.get('origin')) {
+            originRef.current = searchParams.get('origin');
         }
-    }, [location.state]);
+    }, [location.state, searchParams]);
 
     // UI state
     const [viewTab, setViewTab] = useState<'QUEUE' | 'LIBRARY' | 'HISTORY'>('LIBRARY');
