@@ -403,10 +403,11 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         const isScheduledInRange = mergedTask.startDate && mergedTask.endDate && 
                             mergedTask.endDate >= dateRange.start && mergedTask.startDate <= dateRange.end;
                         
-                        if (isScheduledInRange || !mergedTask.isUnscheduled) {
+                        // Keep if it is unscheduled (ideas/stocks) or if it is scheduled within the active date range
+                        if (mergedTask.isUnscheduled || isScheduledInRange) {
                             return prev.map(t => t.id === payload.new.id ? mergedTask : t);
                         } else {
-                            // If it is moved out of range or unscheduled of non-onboard tasks, filter it out
+                            // Only filter out if it is a scheduled task that has been moved out of the active date range
                             return prev.filter(t => t.id !== payload.new.id);
                         }
                     } else {
@@ -428,7 +429,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                     
                                     const isScheduledInRange = newTask.startDate && newTask.endDate && 
                                         newTask.endDate >= dateRange.start && newTask.startDate <= dateRange.end;
-                                    if (isScheduledInRange || !newTask.isUnscheduled) {
+                                    // Accept if unscheduled or if scheduled within range
+                                    if (newTask.isUnscheduled || isScheduledInRange) {
                                         return [...current, newTask];
                                     }
                                     return current;
