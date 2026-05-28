@@ -233,6 +233,18 @@ export const useAutoJudge = (currentUser: User | null) => {
                     const daysRemaining = 7 - workingDaysPassed;
                     
                     if (daysRemaining <= 3 && !hasNotification('DEATH_WARNING', `${daysRemaining} วันสุดท้าย`)) {
+                        try {
+                            // Clear out older DEATH_WARNING notifications by marking them as read (to avoid stacks of modals)
+                            await supabase
+                                .from('notifications')
+                                .update({ is_read: true })
+                                .eq('user_id', currentUser.id)
+                                .eq('type', 'DEATH_WARNING')
+                                .eq('is_read', false);
+                        } catch (cleanErr) {
+                            console.error("Error cleaning old death warning notifications:", cleanErr);
+                        }
+
                         await supabase.from('notifications').insert({
                             user_id: currentUser.id,
                             type: 'DEATH_WARNING',

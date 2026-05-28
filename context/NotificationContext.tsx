@@ -259,6 +259,18 @@ export const NotificationProvider: React.FC<{ currentUser: User | null, children
 
     const markNotificationAsRead = async (id: string) => {
         if (!currentUser) return;
+        
+        // Robust localStorage cache fallback
+        try {
+            const acknowledgedIds = JSON.parse(localStorage.getItem('acknowledged_notification_ids') || '[]');
+            if (!acknowledgedIds.includes(id)) {
+                acknowledgedIds.push(id);
+                localStorage.setItem('acknowledged_notification_ids', JSON.stringify(acknowledgedIds));
+            }
+        } catch (e) {
+            console.warn("Failed to save acknowledged notification to localStorage:", e);
+        }
+
         // Optimistic Update
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
         try {

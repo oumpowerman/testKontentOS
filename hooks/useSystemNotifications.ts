@@ -75,17 +75,28 @@ export const useSystemNotifications = (tasks: Task[], currentUser: User | null, 
         });
 
         // 5. Map DB Notifications
-        const mappedDbNotifs: AppNotification[] = dbNotifs.map((n: any) => ({
-            id: n.id,
-            type: n.type,
-            title: n.title,
-            message: n.message,
-            taskId: n.related_id,
-            date: new Date(n.created_at),
-            isRead: n.is_read || new Date(n.created_at) < lastReadTime,
-            is_read: n.is_read, // Add raw DB field for compatibility
-            actionLink: n.link_path,
-        }));
+        const acknowledgedIds = (() => {
+            try {
+                return JSON.parse(localStorage.getItem('acknowledged_notification_ids') || '[]');
+            } catch {
+                return [];
+            }
+        })();
+
+        const mappedDbNotifs: AppNotification[] = dbNotifs.map((n: any) => {
+            const isAcknowledgedLocal = acknowledgedIds.includes(n.id);
+            return {
+                id: n.id,
+                type: n.type,
+                title: n.title,
+                message: n.message,
+                taskId: n.related_id,
+                date: new Date(n.created_at),
+                isRead: n.is_read || isAcknowledgedLocal || new Date(n.created_at) < lastReadTime,
+                is_read: n.is_read || isAcknowledgedLocal, // Add raw DB field for compatibility
+                actionLink: n.link_path,
+            };
+        });
 
         const combined = [...mappedDbNotifs, ...dynamicNotifs];
         combined.sort((a, b) => b.date.getTime() - a.date.getTime());
