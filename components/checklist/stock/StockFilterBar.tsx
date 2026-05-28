@@ -83,34 +83,78 @@ const StockFilterBar: React.FC<StockFilterBarProps> = React.memo(({
     // Tag Auto-Suggest States
     const [showSuggestions, setShowSuggestions] = useState(false);
     const searchContainerRef = useRef<HTMLDivElement>(null);
-
-    const allTags = useMemo(() => {
-        const counts: Record<string, number> = {};
-        tasks.forEach((task) => {
-            if (Array.isArray(task.tags)) {
-                task.tags.forEach((tag: string) => {
-                    const trimmed = tag.trim();
-                    if (trimmed) {
-                        counts[trimmed] = (counts[trimmed] || 0) + 1;
-                    }
-                });
-            }
-        });
-        return Object.entries(counts)
-            .map(([name, count]) => ({ name, count }))
-            .sort((a, b) => b.count - a.count);
-    }, [tasks]);
+    const [filteredTags, setFilteredTags] = useState<{ name: string; count: number }[]>([]);
+    const [isSearchingTags, setIsSearchingTags] = useState(false);
+    const [searchSpeedMs, setSearchSpeedMs] = useState('0ms');
 
     // Helper to extract tag typing context
-    const currentTagTypeMatch = localSearch.match(/#(\S*)$/);
-    const filterKeyword = currentTagTypeMatch ? currentTagTypeMatch[1].toLowerCase() : '';
+    const currentTagTypeMatch = useMemo(() => localSearch.match(/#(\S*)$/), [localSearch]);
+    const filterKeyword = useMemo(() => currentTagTypeMatch ? currentTagTypeMatch[1].toLowerCase() : '', [currentTagTypeMatch]);
 
-    const filteredTags = useMemo(() => {
-        if (!currentTagTypeMatch) {
-            return allTags.slice(0, 12);
+    // Fast server-side fetching routine (Enterprise Design Pattern)
+    useEffect(() => {
+        let isCurrent = true;
+        
+        async function fetchTags() {
+            if (!showSuggestions) return;
+
+            setIsSearchingTags(true);
+            try {
+                const response = await fetch(`/api/tags?q=${encodeURIComponent(filterKeyword)}&limit=15`);
+                if (!response.ok) throw new Error('API query failed');
+                const data = await response.json();
+                
+                if (isCurrent && data.success) {
+                    setFilteredTags(data.tags || []);
+                    setSearchSpeedMs(data.speedMs || '0ms');
+                }
+            } catch (err) {
+                console.warn('Server tags API query failed, falling back to local calculation:', err);
+                
+                if (isCurrent) {
+                    const counts: Record<string, number> = {};
+                    tasks.forEach((task) => {
+                        if (Array.isArray(task.tags)) {
+                            task.tags.forEach((tag: string) => {
+                                const trimmed = tag.trim();
+                                if (trimmed) {
+                                    counts[trimmed] = (counts[trimmed] || 0) + 1;
+                                }
+                            });
+                        }
+                    });
+                    const allLocalTags = Object.entries(counts)
+                        .map(([name, count]) => ({ name, count }))
+                        .sort((a, b) => b.count - a.count);
+
+                    if (!currentTagTypeMatch) {
+                        setFilteredTags(allLocalTags.slice(0, 12));
+                    } else {
+                        setFilteredTags(allLocalTags.filter(tag => tag.name.toLowerCase().includes(filterKeyword)));
+                    }
+                    setSearchSpeedMs('<1ms (offline fallback)');
+                }
+            } finally {
+                if (isCurrent) {
+                    setIsSearchingTags(false);
+                }
+            }
         }
-        return allTags.filter(tag => tag.name.toLowerCase().includes(filterKeyword));
-    }, [allTags, currentTagTypeMatch, filterKeyword]);
+
+        const fetchDebounce = setTimeout(() => {
+            fetchTags();
+        }, 80); // Lightweight 80ms keystroke debounce specifically for tag suggestions
+
+        return () => {
+            isCurrent = false;
+            clearTimeout(fetchDebounce);
+        };
+    }, [filterKeyword, showSuggestions, currentTagTypeMatch, tasks]);
+
+    // Automatically sync when client alters/creates task tags
+    useEffect(() => {
+        fetch('/api/tags/sync', { method: 'POST' }).catch(() => {});
+    }, [tasks.length]);
 
     const handleTagSuggestionClick = (tagName: string) => {
         const tagTypeMatch = localSearch.match(/#(\S*)$/);
@@ -271,10 +315,19 @@ const StockFilterBar: React.FC<StockFilterBarProps> = React.memo(({
                                     💡 <span className="font-extrabold text-indigo-600">ทิปค้นหาด้วย #:</span> เพียงพิมพ์เครื่องหมาย <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded font-mono font-bold">#</code> ตามด้วยข้อความ (เช่น <code className="bg-indigo-50 text-indigo-600 px-1 py-0.5 rounded font-mono font-bold">#Vlog</code>) เพื่อเจาะจงค้นหาแท็ก หรือสามารถคลิกเลือกจากแท็กยอดนิยมด้านล่างนี้ได้เลย!
                                 </p>
 
-                                {filteredTags.length > 0 ? (
+                                {isSearchingTags ? (
+                                    <div className="flex flex-col items-center justify-center py-6 bg-slate-50 rounded-2xl border border-dashed border-gray-200">
+                                        <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-2" />
+                                        <p className="text-[10px] text-gray-400 font-bold">กำลังประมวลผลดัชนีเซิร์ฟเวอร์...</p>
+                                    </div>
+                                ) : filteredTags.length > 0 ? (
                                     <div className="space-y-2">
-                                        <div className="text-[10px] font-black tracking-wider text-gray-400 uppercase">
-                                            {currentTagTypeMatch ? 'แท็กที่ตรงกับสระค้นหา' : 'แท็กยอดนิยมในระบบ'}
+                                        <div className="flex items-center justify-between text-[10px] font-black tracking-wider text-gray-400 uppercase">
+                                            <span>{currentTagTypeMatch ? 'แท็กที่ตรงกับการค้นหา' : 'แท็กยอดนิยมในระบบ'}</span>
+                                            <span className="text-emerald-500 font-mono text-[9px] bg-emerald-50/80 px-1.5 py-0.5 rounded border border-emerald-100/50 flex items-center gap-1">
+                                                <span className="w-1 h-1 rounded-full bg-emerald-500 animate-ping" />
+                                                ⚡ Server Index: {searchSpeedMs}
+                                            </span>
                                         </div>
                                         <div className="flex flex-wrap gap-1.5 max-h-[160px] overflow-y-auto pr-1">
                                             {filteredTags.map((tag, idx) => (

@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { LandingView } from './LandingPage';
 import { Sparkles } from 'lucide-react';
+import { BRAND_CONFIG } from '../../config/brand.ts';
 
 interface NavbarProps {
   currentView: LandingView;
@@ -22,7 +23,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onLogin }) => 
             <Sparkles className="w-6 h-6 text-white" />
           </div>
           <span className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600 tracking-tight">
-            ContentOS
+            {BRAND_CONFIG.name}
           </span>
         </div>
 

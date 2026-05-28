@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { AnimatePresence, motion, Reorder } from 'framer-motion';
 import { Loader2, Layout, Plus, X } from 'lucide-react';
+import { BRAND_CONFIG } from '../../config/brand.ts';
 import { 
   RoadmapTask, 
   timelineUtils,
@@ -241,7 +242,7 @@ const RoadmapView: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-col items-center gap-1">
-          <p className="text-sm font-bold tracking-[0.3em] uppercase text-indigo-600/60 ml-1">CONTENT OS</p>
+          <p className="text-sm font-bold tracking-[0.3em] uppercase text-indigo-600/60 ml-1">{BRAND_CONFIG.name.toUpperCase()}</p>
           <p className="text-xs font-medium text-slate-400">กำลังซิงค์ข้อมูลโครงการ...</p>
         </div>
       </div>
@@ -352,7 +353,7 @@ const RoadmapView: React.FC = () => {
                 </div>
                 <h3 className="text-3xl font-bold text-slate-700 tracking-tight">ยังไม่มีแผนโครงการในขณะนี้</h3>
                 <p className="text-base font-semibold text-slate-400 mt-3 max-w-sm text-center leading-relaxed">
-                   เริ่มต้นวางแผนกลยุทธ์ของคุณด้วยเครื่องมือ ContentOS โดยกดปุ่มสร้างโครงการใหม่ด้านบน
+                   {BRAND_CONFIG.projectPlaceholder}
                 </p>
                 <button 
                   onClick={handleAddNew}

@@ -1,5 +1,6 @@
 
 import { supabase } from '../lib/supabase';
+import { BRAND_CONFIG } from '../config/brand.ts';
 
 export interface SocialLinks {
   facebook?: string;
@@ -90,15 +91,15 @@ export const MOCKUP_SETTINGS: LandingSettings = {
     }
   ],
   faqs: [
-    { question: "ContentOS คืออะไร?", answer: "ระบบจัดการงานคอนเทนต์แบบ All-in-one สำหรับครีเอเตอร์" },
+    { question: `${BRAND_CONFIG.name} คืออะไร?`, answer: "ระบบจัดการงานคอนเทนต์แบบ All-in-one สำหรับครีเอเตอร์" },
     { question: "ราคาเบื้องต้นเท่าไหร่?", answer: "เรามีแพ็กเกจเริ่มต้นฟรีสำหรับทีมขนาดเล็ก" }
   ],
   updates: [
     { version: "v1.0.5", date: "2024-05-01", type: "minor", changes: ["เพิ่มระบบ Video Preview", "ปรับปรุง UI Footer"] },
-    { version: "v1.0.0", date: "2024-04-15", type: "major", changes: ["เปิดตัวระบบ ContentOS อย่างเป็นทางการ"] }
+    { version: "v1.0.0", date: "2024-04-15", type: "major", changes: [`เปิดตัวระบบ ${BRAND_CONFIG.name} อย่างเป็นทางการ`] }
   ],
   contact: {
-    email: "support@contentos.ai",
+    email: BRAND_CONFIG.supportEmail,
     phone: "02-xxx-xxxx",
     address: "Bangkok, Thailand",
     office_hours: "จันทร์ - ศุกร์ | 09:00 - 18:00"

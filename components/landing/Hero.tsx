@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Play, CheckCircle2, Star, Sparkles } from 'lucide-react';
 import { HeroVideo } from '../../services/landingService';
+import { BRAND_CONFIG } from '../../config/brand.ts';
 
 interface HeroProps {
   onStart: () => void;
@@ -67,10 +68,10 @@ const Hero: React.FC<HeroProps> = ({ onStart, onSeeFeatures, videoConfig }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
-        >
-          เปลี่ยนความวุ่นวายหลังบ้านให้เป็นระบบระเบียบ ด้วย ContentOS <br />
-          แพลตฟอร์มบริหารจัดการงานสร้างสรรค์ที่เน้น Workflow ของครีเอเตอร์โดยเฉพาะ
-        </motion.p>
+         >
+          {BRAND_CONFIG.tagline} ด้วย {BRAND_CONFIG.name} <br />
+          {BRAND_CONFIG.description}
+         </motion.p>
 
         <motion.div 
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
@@ -106,12 +107,12 @@ const Hero: React.FC<HeroProps> = ({ onStart, onSeeFeatures, videoConfig }) => {
                 className="absolute inset-0 w-full h-full border-0"
                 allow="autoplay; encrypted-media; picture-in-picture"
                 allowFullScreen
-                title="ContentOS Preview"
+                title={`${BRAND_CONFIG.name} Preview`}
               />
             ) : (
               <div className="p-8 text-center">
                 <Sparkles className="w-16 h-16 text-purple-200 mb-4 mx-auto animate-bounce" />
-                <p className="text-slate-400 font-bold">ContentOS Dashboard Preview</p>
+                <p className="text-slate-400 font-bold">{BRAND_CONFIG.name} Dashboard Preview</p>
                 <div className="mt-8 flex gap-4 justify-center flex-wrap">
                   <div className="w-32 h-4 bg-slate-200 rounded-full animate-pulse" />
                   <div className="w-48 h-4 bg-slate-200 rounded-full animate-pulse delay-75" />

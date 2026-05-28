@@ -5,10 +5,11 @@ import RichTextEditor from '../../ui/RichTextEditor';
 import CharacterBar from './CharacterBar';
 import SheetBar from './SheetBar';
 import FindReplaceBar from '../tools/FindReplaceBar';
-import { MessageSquarePlus, Eye, Radio } from 'lucide-react';
+import { MessageSquarePlus, Eye, Radio, FileText } from 'lucide-react';
 import { CommentMark } from './CommentExtension';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
+import { motion } from 'framer-motion';
 
 const ScriptTextArea: React.FC = () => {
     const { 
@@ -19,6 +20,12 @@ const ScriptTextArea: React.FC = () => {
         pendingHighlight, setPendingHighlight,
         ydoc, isYjsSynced, activeSheetId, lockerUser, currentUser
     } = useScriptContext();
+
+    const [isActivated, setIsActivated] = useState(activeSheetId === 'main');
+
+    useEffect(() => {
+        setIsActivated(activeSheetId === 'main');
+    }, [activeSheetId]);
 
     const [matchCount, setMatchCount] = useState({ current: 0, total: 0 });
     const [lastSearch, setLastSearch] = useState('');
@@ -310,10 +317,51 @@ const ScriptTextArea: React.FC = () => {
                         <div className="h-1.5 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 rounded-t-[2rem]"></div>
                         
                         {/* Content Area */}
-                        <div className="p-6 md:p-10 lg:p-12 flex-1 cursor-text caret-black">
+                        <div className="p-6 md:p-10 lg:p-12 flex-1 cursor-text caret-black relative">
                             {!isYjsSynced ? (
                                 <div className="flex justify-center items-center h-full min-h-[500px]">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                                </div>
+                            ) : !isActivated ? (
+                                <div className="relative min-h-[500px]">
+                                    {/* HTML Static Preview */}
+                                    <div 
+                                        onClick={() => setIsActivated(true)}
+                                        className="prose max-w-none text-slate-700 select-none pb-32 cursor-pointer focus:outline-none"
+                                        dangerouslySetInnerHTML={{ 
+                                            __html: content && content !== '<p></p>' 
+                                                ? content 
+                                                : `<p class="text-slate-400 italic font-normal tracking-wide">ไม่มีข้อความในแผ่นงานนี้... คลิกที่นี่เพื่อเริ่มเขียนบท</p>` 
+                                        }}
+                                    />
+                                    
+                                    {/* Glass Overlay Card with perfect visual and shadow */}
+                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-white via-white/95 to-transparent pt-32 pb-6 flex justify-center items-center z-10 pointer-events-none">
+                                        <motion.div 
+                                            initial={{ opacity: 0, y: 15 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="bg-white/70 backdrop-blur-md border border-slate-200/60 p-5 rounded-2xl shadow-xl flex flex-col sm:flex-row items-center gap-4 pointer-events-auto max-w-xl text-center sm:text-left mx-6 relative"
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-50/10 to-purple-50/10 rounded-2xl -z-10" />
+                                            
+                                            <div className="flex-1">
+                                                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2 justify-center sm:justify-start">
+                                                    <FileText className="w-4 h-4 text-indigo-500 animate-pulse" />
+                                                    <span>📄 โหมดพรีวิวด่วน (Partial View)</span>
+                                                </h4>
+                                                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                                                    แผ่นงานนี้ถูกย่อพรีวิวไว้เพื่อความรวดเร็วในการเปิด คลิกเพื่อโหลดตัวแก้ไขเต็มรูปแบบและเริ่มแก้ไขร่วมกับทีม
+                                                </p>
+                                            </div>
+                                            
+                                            <button 
+                                                onClick={() => setIsActivated(true)}
+                                                className="px-4.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/20 transition-all shrink-0 cursor-pointer"
+                                            >
+                                                ✍️ โหลดแผ่นงานนี้
+                                            </button>
+                                        </motion.div>
+                                    </div>
                                 </div>
                             ) : (
                                 <RichTextEditor 

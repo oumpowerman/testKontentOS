@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Search, Plus, Filter, Layout, Maximize2, Clock, ListOrdered } from 'lucide-react';
+import { BRAND_CONFIG } from '../../config/brand.ts';
 
 interface RoadmapHeaderProps {
   searchTerm: string;
@@ -33,7 +34,7 @@ const RoadmapHeader: React.FC<RoadmapHeaderProps> = ({
         </div>
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-            ContentOS <span className="text-indigo-600">Roadmap</span>
+            {BRAND_CONFIG.name} <span className="text-indigo-600">Roadmap</span>
           </h1>
           <p className="text-sm text-slate-400 font-semibold tracking-widest uppercase mt-0.5">การติดตามโครงการเชิงกลยุทธ์</p>
         </div>

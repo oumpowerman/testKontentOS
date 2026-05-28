@@ -2,6 +2,7 @@
 import React from 'react';
 import { Sparkles, Facebook, Instagram, Youtube, MessageCircle } from 'lucide-react';
 import { SocialLinks, FooterCategory } from '../../services/landingService';
+import { BRAND_CONFIG } from '../../config/brand.ts';
 
 interface FooterProps {
   socialLinks?: SocialLinks;
@@ -47,11 +48,11 @@ const Footer: React.FC<FooterProps> = ({ socialLinks, onNavigate }) => {
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600 tracking-tight">
-                ContentOS
+                {BRAND_CONFIG.name}
               </span>
             </div>
             <p className="text-slate-500 text-sm leading-relaxed mb-6 font-medium">
-              แพลตฟอร์มบริหารจัดการงานสร้างสรรค์ <br />
+              {BRAND_CONFIG.tagline} <br />
               ที่ช่วยให้ครีเอเตอร์ทำงานง่ายขึ้น 10 เท่า
             </p>
             <div className="flex items-center gap-4">
@@ -114,9 +115,9 @@ const Footer: React.FC<FooterProps> = ({ socialLinks, onNavigate }) => {
         </div>
 
         <div className="pt-8 border-t border-slate-50 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-bold text-slate-400">
-          <p>© 2024 ContentOS. All rights reserved.</p>
+          <p>{BRAND_CONFIG.copyright}</p>
           <p className="flex items-center gap-1">
-             Made with <span className="text-red-400">♥</span> by Content Creator for Creator
+             {BRAND_CONFIG.madeBy}
           </p>
         </div>
       </div>

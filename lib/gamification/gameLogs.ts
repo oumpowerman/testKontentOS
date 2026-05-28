@@ -21,9 +21,24 @@ export const logGameAction = async (
 ) => {
     try {
         // 1. 📝 Log: บันทึกประวัติการทำรายการ (สำคัญมาก! ตัวนี้จะไปกระตุ้น Toast ให้เด้ง)
-        const description = context.reason 
-            ? `${result.message} [${context.reason}]` 
-            : result.message;
+        // แสดงคำอธิบายที่สวยงามเป็นธรรมชาติ ไม่โชว์รหัสเทคนิคหรือวงเล็บเหลี่ยมดิบๆ ที่รบกวนสายตา
+        let baseMsg = context.description || result.message;
+
+        const cleanReason = (reason: string): string => {
+            if (!reason) return '';
+            const r = reason.trim();
+            // ถ้าเป็นรหัสระบบคีย์ภาษาอังกฤษพิมพ์ใหญ่ หรือข้อมูลที่ระบุวันที่ดิบ ให้ซ่อนไว้เพื่อความสวยงาม
+            if (r.startsWith('ABSENT_DATE:') || r.startsWith('FORGOT_OUT_DATE:') || r === 'NEGLIGENCE_PROTOCOL' || r === 'ABANDONED_DUTY') {
+                return '';
+            }
+            if (/^[A-Z0-9_/:-]+$/.test(r)) {
+                return '';
+            }
+            return r;
+        };
+
+        const reasonSuffix = context.reason ? cleanReason(context.reason) : '';
+        const description = reasonSuffix ? `${baseMsg} (${reasonSuffix})` : baseMsg;
 
         const { error: logError } = await supabase.from('game_logs').insert({
             user_id: userId,

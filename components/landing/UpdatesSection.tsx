@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { History, Zap, CheckCircle2 } from 'lucide-react';
 import { UpdateLog } from '../../services/landingService';
+import { BRAND_CONFIG } from '../../config/brand.ts';
 
 interface UpdatesSectionProps {
   updates?: UpdateLog[];
@@ -17,7 +18,7 @@ const UpdatesSection: React.FC<UpdatesSectionProps> = ({ updates }) => {
           อัปเดตระบบ
         </div>
         <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">สิ่งที่เปลี่ยนไปในรุ่นล่าสุด</h2>
-        <p className="text-slate-500 font-medium">เราพัฒนา ContentOS อย่างต่อเนื่องเพื่อประสบการณ์ที่ดีที่สุด</p>
+        <p className="text-slate-500 font-medium">เราพัฒนา {BRAND_CONFIG.name} อย่างต่อเนื่องเพื่อประสบการณ์ที่ดีที่สุด</p>
       </div>
 
       <div className="relative border-l-2 border-slate-100 ml-4 md:ml-8 space-y-12 pb-12">

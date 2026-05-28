@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { BRAND_CONFIG } from '../../config/brand.ts';
 import { 
   BarChart3, 
   Calendar, 
@@ -72,7 +73,7 @@ const Features: React.FC = () => {
             transition={{ delay: 0.1 }}
           >
             เราเข้าใจว่าการทำ Content ไม่ใช่แค่การตัดต่อ แต่รวมถึงการบริหารจัดการที่ยุ่งเหยิง <br className="hidden md:block" />
-            ContentOS จึงรวมทุกอย่างที่คุณต้องใช้มาไว้ในจุดเดียว
+            {BRAND_CONFIG.name} จึงรวมทุกอย่างที่คุณต้องใช้มาไว้ในจุดเดียว
           </motion.p>
         </div>
 
@@ -137,11 +138,11 @@ const Features: React.FC = () => {
                   </div>
                   <pre className="text-indigo-300 font-mono text-sm">
                     {`{
-  "project": "ContentOS",
-  "status": "Running",
-  "uptime": "99.99%",
-  "security": "Hardened"
-}`}
+                      "project": "${BRAND_CONFIG.name}",
+                      "status": "Running",
+                      "uptime": "99.99%",
+                      "security": "Hardened"
+                    }`}
                   </pre>
                </motion.div>
             </div>

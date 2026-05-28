@@ -20,6 +20,8 @@ interface RichTextToolbarProps {
     setIsFormattingOpen: (isOpen: boolean) => void;
     variant?: 'light' | 'dark';
     isPortaled?: boolean;
+    isImageModalOpen?: boolean;
+    setIsImageModalOpen?: (isOpen: boolean) => void;
 }
 
 const MenuButton = ({ onClick, isActive, icon: Icon, title, label, disabled, variant }: any) => (
@@ -56,10 +58,16 @@ const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
     isFormattingOpen,
     setIsFormattingOpen,
     variant = 'light',
-    isPortaled = false
+    isPortaled = false,
+    isImageModalOpen: propImageModalOpen,
+    setIsImageModalOpen: propSetImageModalOpen
 }) => {
     const [isColorOpen, setIsColorOpen] = useState(false);
-    const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+    const [localImageModalOpen, setLocalImageModalOpen] = useState(false);
+    
+    const isImageModalOpen = propImageModalOpen ?? localImageModalOpen;
+    const setIsImageModalOpen = propSetImageModalOpen ?? setLocalImageModalOpen;
+
     const [isScrolled, setIsScrolled] = useState(false);
     const colorMenuRef = useRef<HTMLDivElement>(null);
     const colorBtnRef = useRef<HTMLButtonElement>(null);

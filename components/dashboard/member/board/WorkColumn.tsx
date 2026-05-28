@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Task, User, MasterOption } from '../../../../types';
 import { Backpack, Play, Coffee, CheckCircle2, Zap } from 'lucide-react';
 import WorkCard from './WorkCard';
@@ -77,37 +78,56 @@ const WorkColumn: React.FC<WorkColumnProps> = ({
     const renderEmptyState = () => {
         const style = "text-center py-12 text-[14px] font-kanit font-medium border-2 border-dashed rounded-[2rem] flex flex-col items-center justify-center gap-3 h-full min-h-[180px] transition-all duration-300";
         
-        if (type === 'TODO') return (
-            <div className={`${style} border-slate-200 text-slate-400 bg-slate-50/30`}>
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100">
-                    <Backpack className="w-5 h-5 opacity-40" />
-                </div>
-                <span className="uppercase tracking-widest">ไม่มีงานค้าง</span>
-            </div>
-        );
-        if (type === 'DOING') return (
-            <div className={`${style} border-indigo-200 text-indigo-400 bg-indigo-50/30`}>
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-indigo-100">
-                    <Zap className="w-5 h-5 opacity-40 animate-pulse" />
-                </div>
-                <span className="uppercase tracking-widest">ลากงานมาวางเพื่อเริ่ม!</span>
-            </div>
-        );
-        if (type === 'WAITING') return (
-            <div className={`${style} border-amber-200 text-amber-400 bg-amber-50/30`}>
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-amber-100">
-                    <Coffee className="w-5 h-5 opacity-40" />
-                </div>
-                <span className="uppercase tracking-widest">ไม่มีงานรอตรวจ</span>
-            </div>
-        );
+        const content = (() => {
+            if (type === 'TODO') return (
+                <>
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100">
+                        <Backpack className="w-5 h-5 opacity-40" />
+                    </div>
+                    <span className="uppercase tracking-widest">ไม่มีงานค้าง</span>
+                </>
+            );
+            if (type === 'DOING') return (
+                <>
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-indigo-100">
+                        <Zap className="w-5 h-5 opacity-40 animate-pulse" />
+                    </div>
+                    <span className="uppercase tracking-widest">ลากงานมาวางเพื่อเริ่ม!</span>
+                </>
+            );
+            if (type === 'WAITING') return (
+                <>
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-amber-100">
+                        <Coffee className="w-5 h-5 opacity-40" />
+                    </div>
+                    <span className="uppercase tracking-widest">ไม่มีงานรอตรวจ</span>
+                </>
+            );
+            return (
+                <>
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-emerald-100">
+                        <CheckCircle2 className="w-5 h-5 opacity-40" />
+                    </div>
+                    <span className="uppercase tracking-widest">ยังไม่มีงานที่เสร็จ</span>
+                </>
+            );
+        })();
+
+        const borderClass = 
+            type === 'TODO' ? 'border-slate-200 text-slate-400 bg-slate-50/30' :
+            type === 'DOING' ? 'border-indigo-200 text-indigo-400 bg-indigo-50/30' :
+            type === 'WAITING' ? 'border-amber-200 text-amber-400 bg-amber-50/30' :
+            'border-emerald-200 text-emerald-400 bg-emerald-50/30';
+
         return (
-            <div className={`${style} border-emerald-200 text-emerald-400 bg-emerald-50/30`}>
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-emerald-100">
-                    <CheckCircle2 className="w-5 h-5 opacity-40" />
-                </div>
-                <span className="uppercase tracking-widest">ยังไม่มีงานที่เสร็จ</span>
-            </div>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className={`${style} ${borderClass}`}
+            >
+                {content}
+            </motion.div>
         );
     };
 
@@ -144,27 +164,29 @@ const WorkColumn: React.FC<WorkColumnProps> = ({
             </div>
 
             {/* Content */}
-            <div className={`flex-1 overflow-y-auto pr-1 scrollbar-hide flex flex-col gap-3 relative ${isDroppable ? 'min-h-[200px]' : ''}`}>
-                {tasks.length > 0 ? (
-                    tasks.slice(0, DISPLAY_LIMIT).map(task => (
-                        <WorkCard 
-                            key={task.id}
-                            task={task}
-                            users={users}
-                            masterOptions={masterOptions}
-                            columnType={type}
-                            isDraggable={type === 'TODO' || type === 'DOING'}
-                            onDragStart={(e, id) => {
-                                e.dataTransfer.setData("text/plain", id);
-                                e.dataTransfer.effectAllowed = "move";
-                            }}
-                            onClick={onOpenTask}
-                            onDelete={onDeleteTask}
-                        />
-                    ))
-                ) : (
-                    renderEmptyState()
-                )}
+            <div className={`flex-1 overflow-y-auto p-1.5 pt-3 pb-6 scrollbar-hide flex flex-col gap-3 relative ${isDroppable ? 'min-h-[200px]' : ''}`}>
+                <AnimatePresence mode="popLayout" initial={false}>
+                    {tasks.length > 0 ? (
+                        tasks.slice(0, DISPLAY_LIMIT).map(task => (
+                            <WorkCard 
+                                key={task.id}
+                                task={task}
+                                users={users}
+                                masterOptions={masterOptions}
+                                columnType={type}
+                                isDraggable={type === 'TODO' || type === 'DOING'}
+                                onDragStart={(e, id) => {
+                                    e.dataTransfer.setData("text/plain", id);
+                                    e.dataTransfer.effectAllowed = "move";
+                                }}
+                                onClick={onOpenTask}
+                                onDelete={onDeleteTask}
+                            />
+                        ))
+                    ) : (
+                        renderEmptyState()
+                    )}
+                </AnimatePresence>
 
                 {(tasks.length > DISPLAY_LIMIT || type === 'DONE') && onViewAll && (
                     <button 

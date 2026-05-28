@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { ShieldAlert, ScrollText } from 'lucide-react';
+import { BRAND_CONFIG } from '../../config/brand.ts';
 
 interface LegalSectionProps {
   type: 'PRIVACY' | 'TERMS';
@@ -23,7 +24,7 @@ const LegalSection: React.FC<LegalSectionProps> = ({ type }) => {
       <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-sm prose prose-slate max-w-none prose-headings:font-black prose-headings:tracking-tight prose-strong:text-slate-800">
         <h3>1. บทนำ</h3>
         <p>
-          ยินดีต้อนรับสู่ <strong>ContentOS</strong> เราให้ความสำคัญกับการปกป้องข้อมูลส่วนบุคคลของคุณ...
+          ยินดีต้อนรับสู่ <strong>{BRAND_CONFIG.name}</strong> เราให้ความสำคัญกับการปกป้องข้อมูลส่วนบุคคลของคุณ...
           (Mockup content: เอกสารนี้เป็นเพียงตัวอย่างสั้นๆ สำหรับการแสดงผลหน้าเพจที่เลือกจาก Footer)
         </p>
 

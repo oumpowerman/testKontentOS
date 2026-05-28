@@ -26,6 +26,7 @@ import TeamToolbar from './team/TeamToolbar'; // NEW
 import TeamPagination from './team/TeamPagination'; // NEW
 import InternManagementView from './team/intern/index';
 import RandomizerModal from './team/RandomizerModal';
+import { OverdueTasksSection } from './team/OverdueTasksSection';
 
 // Lazy Load Tribunal Components
 const TribunalReportModal = React.lazy(() => import('./team/TribunalReportModal'));
@@ -154,6 +155,33 @@ const TeamView: React.FC<TeamViewProps> = ({
           unassignedTasks: tasksInWeek.filter(t => t.assigneeType !== 'TEAM' && (!t.assigneeIds || t.assigneeIds.length === 0))
       };
   }, [tasks, start, end]);
+
+  // --- Overdue Tasks Logic (Unfinished tasks from prior weeks) ---
+  const overdueTasks = useMemo(() => {
+      return tasks.filter(t => {
+          // Task must not be completed
+          if (t.status === 'DONE') return false;
+
+          // Task must be a general task type (not a content type)
+          if (t.type !== 'TASK') return false;
+
+          // If the current user is not an Admin, they should only see their own assigned tasks
+          const isAdmin = currentUser?.role === 'ADMIN';
+          if (!isAdmin) {
+              const currentUserId = currentUser?.id;
+              if (!currentUserId || !t.assigneeIds?.includes(currentUserId)) {
+                  return false;
+              }
+          }
+
+          // Task must have an end date prior to the current selected week's start date
+          if (!t.endDate) return false;
+          const taskEnd = new Date(t.endDate);
+          taskEnd.setHours(23, 59, 59, 999);
+
+          return taskEnd < start;
+      });
+  }, [tasks, start, currentUser]);
 
   // --- Optimized Helper ---
   const isTaskOnDay = useCallback((task: Task, day: Date) => {
@@ -309,6 +337,14 @@ const TeamView: React.FC<TeamViewProps> = ({
           >
             {viewMode === 'TEAM' ? (
               <>
+                {/* Overdue/Backlog Tasks */}
+                <OverdueTasksSection 
+                    overdueTasks={overdueTasks}
+                    users={users}
+                    channels={channels}
+                    onEditTask={onEditTask}
+                />
+
                 {/* Shop & History Sections */}
                 {isShopOpen && (
                     <div className="animate-in slide-in-from-top-4 fade-in">

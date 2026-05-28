@@ -1,5 +1,5 @@
 {
   "description": "A professional script planning and asset management tool with Google Drive integration.",
   "requestFramePermissions": ["camera", "geolocation"],
-  "name": "ContentOS"
+  "name": "KontentOS"
 }

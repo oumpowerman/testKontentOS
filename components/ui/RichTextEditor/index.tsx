@@ -20,6 +20,9 @@ import { SearchHighlightExtension } from './SearchHighlightExtension';
 import { ParagraphFormatting } from './ParagraphFormattingExtension';
 import RichTextToolbar from './RichTextToolbar';
 import { FormattingSettings } from './FormattingPanel';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AlertTriangle, Image as ImageIcon, HardDrive, Sparkles, X, ChevronRight } from 'lucide-react';
+import ImageWarningModal from './ImageWarningModal';
 
 export interface RichTextEditorProps {
     content: string;
@@ -52,6 +55,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [currentLinkUrl, setCurrentLinkUrl] = useState('');
     const [isFormattingOpen, setIsFormattingOpen] = useState(false);
+    const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+
+    const [pendingImageInsert, setPendingImageInsert] = useState<{
+        type: 'paste-file' | 'drop-file' | 'paste-text';
+        file?: File;
+        base64?: string;
+        coordinates?: { left: number; top: number; pos: number };
+        view?: any;
+    } | null>(null);
 
     const bubbleMenuRef = useRef<HTMLDivElement | null>(null);
     const hasCollaboration = extensions?.some(ext => ext.name === 'collaboration');
@@ -186,23 +198,33 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 const items = event.clipboardData?.items;
                 if (!items) return false;
 
+                // Check for pasted text with massive image Base64 or raw data URL
+                const plainTextItem = Array.from(items).find(item => item.type === 'text/plain');
+                if (plainTextItem) {
+                    const text = event.clipboardData?.getData('text/plain') || '';
+                    const isDataURL = text.trim().startsWith('data:image/');
+                    const isMassiveBase64 = text.length > 5000 && /^[A-Za-z0-9+/=\s\n]+$/.test(text.substring(0, 500));
+                    if (isDataURL || isMassiveBase64) {
+                        setPendingImageInsert({
+                            type: 'paste-text',
+                            base64: text.trim(),
+                            view: view
+                        });
+                        return true;
+                    }
+                }
+
                 let handled = false;
                 for (const item of Array.from(items)) {
                     if (item.type.startsWith('image/')) {
                         const file = item.getAsFile();
                         if (file) {
                             handled = true;
-                            (async () => {
-                                try {
-                                    const resizedBlob = await resizeImage(file, 1200, 1200);
-                                    const base64 = await fileToBase64(resizedBlob);
-                                    view.dispatch(view.state.tr.replaceSelectionWith(
-                                        view.state.schema.nodes.resizableImage.create({ src: base64 })
-                                    ));
-                                } catch (e) {
-                                    console.error('Failed to process pasted image:', e);
-                                }
-                            })();
+                            setPendingImageInsert({
+                                type: 'paste-file',
+                                file: file,
+                                view: view
+                            });
                         }
                     }
                 }
@@ -212,21 +234,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
                     const file = event.dataTransfer.files[0];
                     if (file.type.startsWith('image/')) {
-                        (async () => {
-                            try {
-                                const resizedBlob = await resizeImage(file, 1200, 1200);
-                                const base64 = await fileToBase64(resizedBlob);
-                                const { schema } = view.state;
-                                const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
-                                if (coordinates) {
-                                    const node = schema.nodes.resizableImage.create({ src: base64 });
-                                    const transaction = view.state.tr.insert(coordinates.pos, node);
-                                    view.dispatch(transaction);
-                                }
-                            } catch (e) {
-                                console.error('Failed to process dropped image:', e);
-                            }
-                        })();
+                        const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+                        setPendingImageInsert({
+                            type: 'drop-file',
+                            file: file,
+                            coordinates: coordinates ? { left: event.clientX, top: event.clientY, pos: coordinates.pos } : undefined,
+                            view: view
+                        });
                         return true;
                     }
                 }
@@ -300,6 +314,37 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         setIsLinkModalOpen(false);
     }
 
+    const handleProceedImageInsert = async () => {
+        if (!pendingImageInsert || !editor) return;
+
+        try {
+            let base64 = pendingImageInsert.base64;
+            if (pendingImageInsert.file) {
+                const resizedBlob = await resizeImage(pendingImageInsert.file, 1200, 1200);
+                base64 = await fileToBase64(resizedBlob);
+            }
+
+            if (base64) {
+                if (pendingImageInsert.type === 'drop-file' && pendingImageInsert.coordinates) {
+                    const transaction = editor.state.tr.insert(
+                        pendingImageInsert.coordinates.pos, 
+                        editor.state.schema.nodes.resizableImage.create({ src: base64 })
+                    );
+                    editor.view.dispatch(transaction);
+                } else {
+                    editor.commands.insertContent({
+                        type: 'resizableImage',
+                        attrs: { src: base64 }
+                    });
+                }
+            }
+        } catch (e) {
+            console.error('Failed to insert pending image:', e);
+        } finally {
+            setPendingImageInsert(null);
+        }
+    };
+
     if (!editor) {
         return null;
     }
@@ -332,6 +377,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                             setIsFormattingOpen={setIsFormattingOpen}
                             variant={variant}
                             isPortaled={true}
+                            isImageModalOpen={isImageModalOpen}
+                            setIsImageModalOpen={setIsImageModalOpen}
                         />,
                         portalTarget
                     )
@@ -342,6 +389,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                         isFormattingOpen={isFormattingOpen}
                         setIsFormattingOpen={setIsFormattingOpen}
                         variant={variant}
+                        isImageModalOpen={isImageModalOpen}
+                        setIsImageModalOpen={setIsImageModalOpen}
                     />
                 )
             )}
@@ -362,6 +411,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 initialUrl={currentLinkUrl}
                 onSave={handleSaveLink}
                 onUnlink={handleUnlink}
+            />
+
+            {/* Base64 / Large Image Drop/Paste Warning Overlay Dialog */}
+            <ImageWarningModal
+                isOpen={!!pendingImageInsert}
+                onClose={() => setPendingImageInsert(null)}
+                onConfirm={handleProceedImageInsert}
+                onUseDrive={() => {
+                    setPendingImageInsert(null);
+                    setIsImageModalOpen(true);
+                }}
             />
         </div>
     );

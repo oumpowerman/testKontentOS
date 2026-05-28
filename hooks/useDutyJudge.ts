@@ -205,7 +205,7 @@ export const useDutyJudge = (
                                 ...duty, 
                                 id: `ABANDONED:${duty.id}`, // Use as idempotency key
                                 reason: 'ABANDONED_DUTY',
-                                description: `เพิกเฉยต่อหน้าที่ (ปล่อยเวรทิ้งไว้จนเลยกำหนด - รหัสเวร: ${duty.id})`
+                                description: `เพิกเฉยต่อหน้าที่ (ปล่อยเวรทิ้งไว้จนเลยกำหนด วันที่ ${duty.date})`
                             });
 
                             if (result) {

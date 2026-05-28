@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, ArrowRight, Lock, Mail, User, AlertCircle, Rocket, Camera, Briefcase, Quote, LogIn, UserPlus, Phone, Loader2, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { BRAND_CONFIG } from '../config/brand.ts';
 import SuccessModal from './SuccessModal';
 import ImageCropper from './ImageCropper';
 import FilterDropdown from './common/FilterDropdown';
@@ -322,7 +323,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
                     </motion.div>
                     
                     <h2 className="text-4xl font-black mb-4 leading-tight drop-shadow-sm tracking-tight">
-                        ContentOS
+                        {BRAND_CONFIG.name}
                     </h2>
                     <p className="text-white/90 text-lg leading-relaxed mb-10 font-medium max-w-xs">
                         {authMode === 'LOGIN' 
