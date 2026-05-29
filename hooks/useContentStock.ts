@@ -17,6 +17,7 @@ interface UseContentStockProps {
         statuses: string[];
         showStockOnly: boolean;
         onlyOverdue?: boolean;
+        onlyMissingStorage?: boolean;
         hasShootDate?: boolean;
         shootDateStart?: string; // Changed to Start
         shootDateEnd?: string;   // Changed to End
@@ -25,10 +26,33 @@ interface UseContentStockProps {
     sortConfig: { key: string; direction: 'asc' | 'desc' } | null;
 }
 
+// Global cache map to persist query results across unmount/remount (SWR-like behavior)
+const cacheMap = new Map<string, {
+    contents: Task[];
+    totalCount: number;
+    overdueCount: number;
+    missingStorageCount: number;
+    timestamp: number;
+}>();
+
+const isStorageRequiredStatus = (status: string): boolean => {
+    if (!status) return false;
+    const s = status.toUpperCase();
+    return s.includes('EDIT') || 
+           s.includes('FEEDBACK') || 
+           s.includes('APPROVE') || 
+           s.includes('DONE') || 
+           s.includes('PUBLISH') || 
+           s.includes('POSTED') || 
+           s.includes('COMPLETE') || 
+           s.includes('SUCCESS');
+};
+
 export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConfig }: UseContentStockProps) => {
     const [contents, setContents] = useState<Task[]>([]);
     const [totalCount, setTotalCount] = useState(0);
     const [overdueCount, setOverdueCount] = useState(0);
+    const [missingStorageCount, setMissingStorageCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -111,7 +135,8 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
              id: r.id, taskId: r.content_id, round: r.round, scheduledAt: new Date(r.scheduled_at), 
              reviewerId: r.reviewer_id, status: r.status, feedback: r.feedback, isCompleted: r.is_completed
         })) : [],
-        logs: []
+        logs: [],
+        _isPartial: true
     }), []);
 
     // --- SMART HYDRATION LOGIC ---
@@ -191,6 +216,14 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
 
         if (activeFilters.showStockOnly && !task.isUnscheduled) return false;
 
+        // Missing Storage Filter
+        if (activeFilters.onlyMissingStorage) {
+            if (!isStorageRequiredStatus(task.status)) return false;
+            const hasLocalPath = !!task.localPath && task.localPath.trim() !== '';
+            const hasDriveLabel = !!task.driveLabel && task.driveLabel.trim() !== '';
+            if (hasLocalPath && hasDriveLabel) return false;
+        }
+
         // Shoot Date Filter
         if (activeFilters.hasShootDate && !task.shootDate) return false;
 
@@ -209,13 +242,29 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
     }, []);
 
     const fetchContents = useCallback(async (isBackground = false) => {
-        if (!isBackground) setIsLoading(true);
-        else setIsRefreshing(true);
+        const cacheKey = JSON.stringify({ page, pageSize, searchQuery, filters, sortConfig });
+        
+        if (!isBackground) {
+            const cached = cacheMap.get(cacheKey);
+            const now = Date.now();
+            if (cached && (now - cached.timestamp < 15000)) {
+                setContents(cached.contents);
+                setTotalCount(cached.totalCount);
+                setOverdueCount(cached.overdueCount);
+                setMissingStorageCount(cached.missingStorageCount);
+                setIsLoading(false);
+                setIsRefreshing(false);
+                return;
+            }
+            setIsLoading(true);
+        } else {
+            setIsRefreshing(true);
+        }
 
         try {
             let query = supabase
                 .from('contents')
-                .select(`*, task_reviews(id, round, scheduled_at, reviewer_id, status, feedback, is_completed, content_id), content_analytics(id, platform)`, { count: 'exact' });
+                .select(`id, title, status, start_date, end_date, created_at, channel_id, tags, target_platform, pillar, content_formats, category, is_unscheduled, description, remark, shoot_date, shoot_location, is_in_shoot_queue, assignee_ids, idea_owner_ids, editor_ids, local_path, drive_label, content_analytics(id, platform)`, { count: 'exact' });
 
             // 1. Search
             if (searchQuery) {
@@ -251,6 +300,13 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
             // Filter by stock only if showStockOnly is active
             if (filters.showStockOnly) {
                 query = query.eq('is_unscheduled', true);
+            }
+
+            // Filter by missing storage only if onlyMissingStorage is active
+            if (filters.onlyMissingStorage) {
+                query = query
+                    .or('local_path.is.null,drive_label.is.null')
+                    .or('status.ilike.%edit%,status.ilike.%feedback%,status.ilike.%approve%,status.ilike.%done%,status.ilike.%publish%,status.ilike.%posted%,status.ilike.%complete%,status.ilike.%success%');
             }
 
             // 2.1 Content Tab: Active vs Archive
@@ -348,16 +404,27 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
 
             if (filters.channelId && filters.channelId.length > 0) overdueQuery = overdueQuery.in('channel_id', filters.channelId);
 
-            const [response, overdueResponse] = await Promise.all([
+            let missingStorageQuery = supabase
+                .from('contents')
+                .select('*', { count: 'exact', head: true })
+                .or('local_path.is.null,drive_label.is.null')
+                .or('status.ilike.%edit%,status.ilike.%feedback%,status.ilike.%approve%,status.ilike.%done%,status.ilike.%publish%,status.ilike.%posted%,status.ilike.%complete%,status.ilike.%success%');
+
+            if (filters.channelId && filters.channelId.length > 0) missingStorageQuery = missingStorageQuery.in('channel_id', filters.channelId);
+
+            const [response, overdueResponse, missingStorageResponse] = await Promise.all([
                 query,
-                overdueQuery
+                overdueQuery,
+                missingStorageQuery
             ]);
 
             const { data, error, count } = response;
             const { count: overdueDbCount, error: overdueError } = overdueResponse;
+            const { count: missingStorageDbCount, error: missingStorageError } = missingStorageResponse;
 
             if (error) throw error;
             if (overdueError) throw overdueError;
+            if (missingStorageError) throw missingStorageError;
 
             if (data) {
                 const mapped = data.map(mapSupabaseToTask);
@@ -367,6 +434,19 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
                 if (overdueDbCount !== null) {
                     setOverdueCount(overdueDbCount);
                 }
+                if (missingStorageDbCount !== null) {
+                    setMissingStorageCount(missingStorageDbCount);
+                }
+                
+                // Save to SWR Cache
+                cacheMap.set(cacheKey, {
+                    contents: mapped,
+                    totalCount: count || 0,
+                    overdueCount: overdueDbCount !== null ? overdueDbCount : 0,
+                    missingStorageCount: missingStorageDbCount !== null ? missingStorageDbCount : 0,
+                    timestamp: Date.now()
+                });
+                
                 // Reset tracked IDs since we have a fresh baseline from server
                 trackedAddedIds.current.clear();
             }
@@ -390,6 +470,8 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
     }, [fetchContents]);
 
     const handleRealtimeUpdate = useCallback(async (eventType: 'INSERT' | 'UPDATE' | 'DELETE', newRec: any, oldRec: any) => {
+        // Any database real-time push means we clear memory cache to ensure safety.
+        cacheMap.clear();
         try {
             if (eventType === 'DELETE') {
                 const oldId = oldRec?.id;
@@ -446,7 +528,7 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
 
             const { data, error } = await supabase
                 .from('contents')
-                .select(`*, task_reviews(id, round, scheduled_at, reviewer_id, status, feedback, is_completed, content_id), content_analytics(id, platform)`)
+                .select(`id, title, status, start_date, end_date, created_at, channel_id, tags, target_platform, pillar, content_formats, category, is_unscheduled, description, remark, shoot_date, shoot_location, is_in_shoot_queue, assignee_ids, idea_owner_ids, editor_ids, local_path, drive_label, content_analytics(id, platform)`)
                 .eq('id', targetId)
                 .maybeSingle();
 
@@ -497,6 +579,8 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
 
     // Manual Update Function (Bridge for Global State Sync)
     const updateLocalItem = useCallback((task: Task, isDelete: boolean = false) => {
+        // Clear memory cache so future page requests reflect the updated data
+        cacheMap.clear();
         // Immediate update without DB fetch (Optimistic from Global State)
         setContents(prevList => {
             const exists = prevList.some(item => item.id === task.id);
@@ -583,6 +667,8 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
     }, [handleRealtimeUpdate, triggerCountRefresh]);
 
     const toggleShootQueue = async (id: string, currentStatus: boolean): Promise<boolean> => {
+        // Clear stock view cache
+        cacheMap.clear();
         try {
             const { error } = await supabase
                 .from('contents')
@@ -600,5 +686,5 @@ export const useContentStock = ({ page, pageSize, searchQuery, filters, sortConf
         }
     };
 
-    return { contents, totalCount, overdueCount, isLoading, isRefreshing, fetchContents, updateLocalItem, toggleShootQueue };
+    return { contents, totalCount, overdueCount, missingStorageCount, isLoading, isRefreshing, fetchContents, updateLocalItem, toggleShootQueue };
 };

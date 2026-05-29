@@ -44,6 +44,7 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
       filterCategory, setFilterCategory,
       filterStatuses, setFilterStatuses,
       filterOnlyOverdue, setFilterOnlyOverdue,
+      filterOnlyMissingStorage, setFilterOnlyMissingStorage,
       filterHasShootDate, setFilterHasShootDate,
       filterShootDateStart, setFilterShootDateStart,
       filterShootDateEnd, setFilterShootDateEnd,
@@ -65,6 +66,7 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
       paginatedTasks,
       totalCount,
       overdueCount,
+      missingStorageCount,
       isLoading,
       setSearchParams,
       updateLocalItem,
@@ -148,6 +150,9 @@ const ContentStock: React.FC<ContentStockProps> = ({ tasks: globalTasks, channel
                                 showOnlyOverdue={filterOnlyOverdue}
                                 setShowOnlyOverdue={setFilterOnlyOverdue}
                                 overdueCount={overdueCount}
+                                showOnlyMissingStorage={filterOnlyMissingStorage}
+                                setShowOnlyMissingStorage={setFilterOnlyMissingStorage}
+                                missingStorageCount={missingStorageCount}
                             />
                         </motion.div>
 

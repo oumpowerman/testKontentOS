@@ -292,7 +292,10 @@ export const useTasks = (setIsModalOpen?: (isOpen: boolean) => void) => {
                      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...task } : t));
                 }
             } else {
-                if (task.contentId && task.showOnBoard === true) {
+                if (task.type === 'CONTENT') {
+                    // Always append content task to tasks list so useStockSync can catch it!
+                    setTasks(prev => [...prev, task]);
+                } else if (task.contentId && task.showOnBoard === true) {
                     setTasks(prev => [...prev, task]);
                 }
             }
