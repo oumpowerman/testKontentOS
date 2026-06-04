@@ -11,6 +11,7 @@ import ItemVerifyModal from './checklist/ItemVerifyModal';
 import { useGlobalDialog } from '../context/GlobalDialogContext';
 import InfoModal from './ui/InfoModal'; 
 import ChecklistGuide from './checklist/ChecklistGuide'; 
+import AppBackground from './common/AppBackground';
 
 interface ShootChecklistProps {
     items: ChecklistItem[]; 
@@ -172,8 +173,9 @@ const ShootChecklist: React.FC<ShootChecklistProps> = ({
         : undefined;
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-in fade-in duration-500">
-            <MentorTip variant="pink" messages={["กดที่การ์ดเพื่อดูรูปก่อนเช็ค (Verify Mode)", "กดปุ่มดินสอที่ Preset เพื่อแก้ไขรายการข้างในได้แล้วนะ!"]} />
+        <AppBackground theme="pastel-orange" pattern="dots" className="px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-in fade-in duration-500 relative z-10 min-h-[calc(100vh-64px)] overflow-y-auto w-full">
+            <div className="w-full space-y-6">
+                <MentorTip variant="pink" messages={["กดที่การ์ดเพื่อดูรูปก่อนเช็ค (Verify Mode)", "กดปุ่มดินสอที่ Preset เพื่อแก้ไขรายการข้างในได้แล้วนะ!"]} />
 
             {/* Header & Controls */}
             <div className="flex flex-col gap-4">
@@ -448,7 +450,8 @@ const ShootChecklist: React.FC<ShootChecklistProps> = ({
             >
                 <ChecklistGuide />
             </InfoModal>
-        </div>
+            </div>
+        </AppBackground>
     );
 };
 

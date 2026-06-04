@@ -37,7 +37,7 @@ export const MobileWeeklyView: React.FC<MobileWeeklyViewProps> = ({
     return (
         <div className={`${isLandscape ? 'hidden' : 'lg:hidden'} flex flex-col gap-4`}>
             {/* Date Strip */}
-            <div className="bg-white/80 backdrop-blur-md rounded-3xl p-3 border border-white/60 shadow-sm flex justify-around items-center">
+            <div className="bg-white/80 backdrop-blur-md rounded-3xl p-2 sm:p-3 border border-white/60 shadow-sm flex justify-around items-center">
                 {days.map((day) => {
                     const isSelected = isSameDay(day, selectedDay);
                     const isToday = isDateToday(day);
@@ -47,13 +47,13 @@ export const MobileWeeklyView: React.FC<MobileWeeklyViewProps> = ({
                         <button
                             key={day.toString()}
                             onClick={() => setSelectedDay(day)}
-                            className={`flex flex-col items-center gap-1 transition-all relative ${isSelected ? 'scale-110' : 'hover:scale-105'}`}
+                            className={`flex flex-col items-center gap-0.5 sm:gap-1 transition-all relative ${isSelected ? 'scale-105 sm:scale-110' : 'hover:scale-105'}`}
                         >
-                            <span className={`text-[14px] font-bold tracking-tighter ${isSelected ? 'text-indigo-600' : 'text-slate-400'}`}>
+                            <span className={`text-[11px] sm:text-[14px] font-bold tracking-tighter ${isSelected ? 'text-indigo-600' : 'text-slate-400'}`}>
                                 {format(day, 'EEE')}
                             </span>
                             <div className={`
-                                w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-bold transition-all
+                                w-8 h-8 rounded-xl sm:w-10 sm:h-10 sm:rounded-2xl flex items-center justify-center text-xs sm:text-sm font-bold transition-all
                                 ${isSelected 
                                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' 
                                     : isToday 
@@ -63,7 +63,7 @@ export const MobileWeeklyView: React.FC<MobileWeeklyViewProps> = ({
                                 {format(day, 'd')}
                             </div>
                             {tasksCount > 0 && !isSelected && (
-                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 border-2 border-white rounded-full flex items-center justify-center text-[8px] font-black text-white">
+                                <div className="absolute -top-1 -right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-rose-500 border border-white rounded-full flex items-center justify-center text-[7px] sm:text-[8px] font-black text-white">
                                     {tasksCount}
                                 </div>
                             )}

@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { CalendarHighlight } from '../types';
 import { useToast } from '../context/ToastContext';
@@ -10,8 +10,10 @@ export const useCalendarHighlights = (currentDate: Date) => {
     const [highlights, setHighlights] = useState<CalendarHighlight[]>([]);
     const { showToast } = useToast();
     const { annualHolidays } = useMasterData();
+    const latestFetchId = useRef(0);
 
     const fetchHighlights = useCallback(async () => {
+        const fetchId = ++latestFetchId.current;
         // Fetch a bit wider range to ensure smooth transition (prev/next month days)
         const startOfCurrentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
         const start = format(addDays(startOfCurrentMonth, -7), 'yyyy-MM-dd');
@@ -37,9 +39,11 @@ export const useCalendarHighlights = (currentDate: Date) => {
             // Add Specific first
             if (specificData) {
                 specificData.forEach((h: any) => {
+                    const [yStr, mStr, dStr] = h.date.split('-');
+                    const dLocal = new Date(Number(yStr), Number(mStr) - 1, Number(dStr));
                     combined.push({
                         id: h.id,
-                        date: new Date(h.date),
+                        date: dLocal,
                         typeKey: h.type_key,
                         note: h.note
                     });
@@ -78,7 +82,9 @@ export const useCalendarHighlights = (currentDate: Date) => {
                 });
             }
 
-            setHighlights(combined);
+            if (fetchId === latestFetchId.current) {
+                setHighlights(combined);
+            }
 
         } catch (err) {
             console.error('Fetch highlights error:', err);

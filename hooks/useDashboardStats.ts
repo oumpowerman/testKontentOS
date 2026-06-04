@@ -82,6 +82,20 @@ export const useDashboardStats = (tasks: Task[], currentUser: User) => {
     const [customDays, setCustomDays] = useState<number>(7);
     const [viewScope, setViewScope] = useState<ViewScope>(currentUser.role === 'ADMIN' ? 'ALL' : 'ME');
 
+    // Server-aggregated Stats State
+    const [stats, setStats] = useState<{
+        cardStats: any[];
+        chartData: any[];
+        totalFilteredTasks: number;
+        progressPercentage: number;
+    }>({
+        cardStats: [],
+        chartData: [],
+        totalFilteredTasks: 0,
+        progressPercentage: 0
+    });
+    const [statsLoading, setStatsLoading] = useState<boolean>(true);
+
     // Attendance Stats
     const [attendanceToday, setAttendanceToday] = useState<AttendanceStat>({ present: 0, late: 0, leave: 0, absent: 0, totalUsers: 0 });
     const [attendanceYesterday, setAttendanceYesterday] = useState<AttendanceStat>({ present: 0, late: 0, leave: 0, absent: 0, totalUsers: 0 });
@@ -135,7 +149,6 @@ export const useDashboardStats = (tasks: Task[], currentUser: User) => {
                         });
 
                         // Absent = Total Active - (Present + Leave)
-                        // Note: This is an approximation. Ideally check against user list.
                         const absent = Math.max(0, (totalUsers || 0) - (present + leave));
 
                         return { present, late, leave, absent, totalUsers: totalUsers || 0 };
@@ -151,131 +164,56 @@ export const useDashboardStats = (tasks: Task[], currentUser: User) => {
         };
 
         fetchAttendance();
-    }, []); // Run once on mount
+    }, [masterOptions]); // Run when master options load
 
-    // --- Filtering Logic ---
-    const checkDateInRange = (date: Date) => {
-        switch (timeRange) {
-            case 'THIS_MONTH': return isSameMonth(date, today);
-            case 'LAST_30': return isAfter(date, addDays(today, -30));
-            case 'LAST_90': return isAfter(date, addDays(today, -90));
-            case 'CUSTOM': return isAfter(date, addDays(today, -customDays));
-            case 'ALL': return true;
-            default: return true;
-        }
-    };
+    // --- Server-side Stats Aggregate Fetching Effect ---
+    useEffect(() => {
+        let active = true;
+        setStatsLoading(true);
 
-    const filteredTasks = useMemo(() => {
-        return tasks.filter(t => {
-            const isDone = isTaskCompleted(t.status as string);
-
-            // 0. Exclude Stock Items from general stats (unless Done)
-            if (t.isUnscheduled && !isDone) {
-                return false;
-            }
-
-            // 1. Scope Filter (Me vs All)
-            if (viewScope === 'ME') {
-                const isAssignee = t.assigneeIds?.includes(currentUser.id);
-                const isOwner = t.ideaOwnerIds?.includes(currentUser.id);
-                const isEditor = t.editorIds?.includes(currentUser.id);
-                if (!isAssignee && !isOwner && !isEditor) return false;
-            }
-
-            // 2. Time Range Filter
-            if (timeRange === 'ALL') return true;
-            const isInRange = checkDateInRange(t.endDate);
-            
-            if (isDone) {
-                // Done tasks: Strict range check
-                return isInRange;
-            } else {
-                // Pending tasks: Show if in range OR if overdue (Active work should stay visible)
-                return isInRange || isBefore(t.endDate, today); 
-            }
-        });
-    }, [tasks, viewScope, timeRange, customDays, currentUser.id]);
-
-    // --- Stats Generation ---
-    const cardStats = useMemo(() => {
-        return configs.map(config => {
-            const matchingTasks = filteredTasks.filter(t => {
-                if (config.filterType === 'STATUS') {
-                    return (config.statusKeys || []).includes(t.status || '');
-                } 
-                else if (config.filterType === 'FORMAT') {
-                    const formats = t.contentFormats || [];
-                    return (config.statusKeys || []).some(key => formats.includes(key));
+        const fetchStats = async () => {
+            try {
+                const params = new URLSearchParams({
+                    timeRange,
+                    customDays: String(customDays),
+                    viewScope,
+                    userId: currentUser?.id || ''
+                });
+                const res = await fetch(`/api/dashboard/stats?${params.toString()}`);
+                if (!res.ok) throw new Error('Failed to fetch stats');
+                const json = await res.json();
+                if (json.success && active) {
+                    setStats({
+                        cardStats: json.cardStats || [],
+                        chartData: json.chartData || [],
+                        totalFilteredTasks: json.totalFilteredTasks || 0,
+                        progressPercentage: json.progressPercentage || 0
+                    });
                 }
-                else if (config.filterType === 'PILLAR') {
-                    return (config.statusKeys || []).includes(t.pillar || '');
+            } catch (err) {
+                console.error('Error loading dashboard stats:', err);
+            } finally {
+                if (active) {
+                    setStatsLoading(false);
                 }
-                else if (config.filterType === 'CATEGORY') {
-                    return (config.statusKeys || []).includes(t.category || '');
-                }
-                return false;
-            });
+            }
+        };
 
-            // Urgent Count: Overdue or Due Soon AND NOT DONE
-            const urgentCount = matchingTasks.filter(t => {
-                const isDone = isTaskCompleted(t.status as string); // Explicit check using helper
-                if (isDone || t.isUnscheduled) return false;
-                
-                // Logic: Overdue OR Due Today/Tomorrow
-                const isOverdue = isPast(t.endDate) && !isToday(t.endDate);
-                const isDueSoon = isToday(t.endDate) || isBefore(t.endDate, addDays(new Date(), 1));
-                
-                return isOverdue || isDueSoon;
-            }).length;
+        fetchStats();
 
-            return {
-                ...config,
-                tasks: matchingTasks,
-                count: matchingTasks.length,
-                urgentCount: urgentCount
-            };
-        });
-    }, [configs, filteredTasks]);
+        return () => {
+            active = false;
+        };
+    }, [timeRange, customDays, viewScope, currentUser?.id, tasks]); // Live reactivity lock!
 
-    // --- Urgent & Due Soon Logic (Global) ---
-    const urgentTasks = useMemo(() => filteredTasks
-        .filter(t => {
-            // FIX: Use isTaskCompleted helper to handle all "Done" variations
-            const isDone = isTaskCompleted(t.status as string);
-            
-            if (isDone || t.isUnscheduled) return false;
-
-            const isExplicitUrgent = t.priority === 'URGENT' || t.priority === 'HIGH';
-            const isOverdue = isPast(t.endDate) && !isToday(t.endDate);
-            const isDueSoon = isToday(t.endDate) || isBefore(t.endDate, addDays(today, 2));
-
-            return isExplicitUrgent || isOverdue || isDueSoon;
-        })
-        .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime())
-        .slice(0, 5), [filteredTasks]);
-
-    const dueSoon = useMemo(() => filteredTasks
-        .filter(t => {
-            const isDone = isTaskCompleted(t.status as string);
-            return isAfter(t.endDate, today) && 
-                   isBefore(t.endDate, addDays(today, 3)) && 
-                   !isDone &&
-                   !t.isUnscheduled;
-        })
-        .slice(0, 3), [filteredTasks, today]);
-
-    // --- Chart Data ---
+    // --- Chart Data Color Mapper ---
     const chartData = useMemo(() => {
-        return cardStats.map(stat => ({
-            name: stat.label,
-            value: stat.count,
-            color: CHART_COLORS_MAP[stat.colorTheme || 'blue'] || '#3b82f6'
-        })).filter(d => d.value > 0);
-    }, [cardStats]);
-
-    const totalFilteredTasks = filteredTasks.length;
-    const doneTasksCount = filteredTasks.filter(t => isTaskCompleted(t.status as string)).length;
-    const progressPercentage = totalFilteredTasks > 0 ? Math.round((doneTasksCount / totalFilteredTasks) * 100) : 0;
+        return stats.chartData.map(d => ({
+            name: d.name,
+            value: d.value,
+            color: CHART_COLORS_MAP[d.colorTheme || 'blue'] || '#3b82f6'
+        }));
+    }, [stats.chartData]);
 
     const getTimeRangeLabel = () => {
         switch(timeRange) {
@@ -291,14 +229,14 @@ export const useDashboardStats = (tasks: Task[], currentUser: User) => {
         timeRange, setTimeRange,
         customDays, setCustomDays,
         viewScope, setViewScope,
-        configLoading,
+        configLoading: configLoading || statsLoading,
         currentTheme,
-        cardStats,
-        urgentTasks,
-        dueSoon,
+        cardStats: stats.cardStats,
+        urgentTasks: [], // Unused in AdminDashboard
+        dueSoon: [], // Unused in AdminDashboard
         chartData,
-        totalFilteredTasks,
-        progressPercentage,
+        totalFilteredTasks: stats.totalFilteredTasks,
+        progressPercentage: stats.progressPercentage,
         getTimeRangeLabel,
         // Attendance Data
         attendanceToday,

@@ -71,7 +71,9 @@ const mapProfileToUser = (data: any): User => ({
     equippedFrameId: data.equipped_frame_id || '',
     ownedFrameIds: data.owned_frame_ids || [],
     startDate: data.start_date ? new Date(data.start_date) : undefined,
-    createdAt: data.created_at ? new Date(data.created_at) : undefined
+    createdAt: data.created_at ? new Date(data.created_at) : undefined,
+    waveBgEnabled: data.wave_bg_enabled !== false,
+    ultimateWorkroomEnabled: data.ultimate_workroom_enabled !== false
 });
 
 const mapDBToUserUpdates = (u: any): Partial<User> => {
@@ -103,6 +105,8 @@ const mapDBToUserUpdates = (u: any): Partial<User> => {
     if ('line_user_id' in u) updates.lineUserId = u.line_user_id;
     if ('equipped_frame_id' in u) updates.equippedFrameId = u.equipped_frame_id;
     if ('owned_frame_ids' in u) updates.ownedFrameIds = u.owned_frame_ids;
+    if ('wave_bg_enabled' in u) updates.waveBgEnabled = u.wave_bg_enabled;
+    if ('ultimate_workroom_enabled' in u) updates.ultimateWorkroomEnabled = u.ultimate_workroom_enabled;
     if ('start_date' in u) updates.startDate = u.start_date ? new Date(u.start_date) : undefined;
     if ('last_read_chat_at' in u) updates.lastReadChatAt = u.last_read_chat_at ? new Date(u.last_read_chat_at) : new Date(0);
     if ('last_read_notification_at' in u) updates.lastReadNotificationAt = u.last_read_notification_at ? new Date(u.last_read_notification_at) : new Date(0);
@@ -319,6 +323,8 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
             if (updates.lineUserId !== undefined) payload.line_user_id = updates.lineUserId;
             if (updates.equippedFrameId !== undefined) payload.equipped_frame_id = updates.equippedFrameId;
             if (updates.ownedFrameIds !== undefined) payload.owned_frame_ids = updates.ownedFrameIds;
+            if (updates.waveBgEnabled !== undefined) payload.wave_bg_enabled = updates.waveBgEnabled;
+            if (updates.ultimateWorkroomEnabled !== undefined) payload.ultimate_workroom_enabled = updates.ultimateWorkroomEnabled;
 
             if (avatarFile) {
                 const fileExt = avatarFile.name.split('.').pop();

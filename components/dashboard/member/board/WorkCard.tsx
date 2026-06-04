@@ -57,12 +57,17 @@ interface WorkCardProps {
     onClick: (task: Task) => void;
     onDelete?: (taskId: string) => void;
     columnType: 'TODO' | 'DOING' | 'WAITING' | 'DONE';
+    isUltimate?: boolean;
 }
 
-const WorkCard: React.FC<WorkCardProps> = React.memo(({ task, users, masterOptions, isDraggable, onDragStart, onClick, onDelete, columnType }) => {
-    const { showConfirm } = useGlobalDialog();
-    const assigneeId = task.assigneeIds?.[0] || task.ideaOwnerIds?.[0];
-    const user = users.find(u => u.id === assigneeId);
+const WorkCard = React.memo(
+    React.forwardRef<HTMLDivElement, WorkCardProps>(
+        ({ 
+            task, users, masterOptions, isDraggable, onDragStart, onClick, onDelete, columnType, isUltimate = false 
+        }, ref) => {
+            const { showConfirm } = useGlobalDialog();
+            const assigneeId = task.assigneeIds?.[0] || task.ideaOwnerIds?.[0];
+            const user = users.find(u => u.id === assigneeId);
 
     const handleDelete = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -171,19 +176,29 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({ task, users, masterOptio
     }, [columnType, task.updatedAt, annualHolidays, config?.REVIEW_JUDGE_CONFIG]);
 
     // Visual styles based on column
-    let cardStyle = 'bg-gradient-to-br from-white to-slate-50/30 border-y border-r border-slate-200/70 shadow-sm'; 
+    let cardStyle = isUltimate 
+        ? 'bg-gradient-to-br from-slate-900 to-[#121424]/90 border border-slate-800 text-white shadow-md'
+        : 'bg-gradient-to-br from-white to-slate-50/30 border-y border-r border-slate-200/70 shadow-sm'; 
     
     if (columnType === 'DOING') {
-        cardStyle = 'bg-gradient-to-br from-white to-indigo-50/10 border-y-2 border-r-2 border-indigo-200/70 shadow-md ring-1 ring-indigo-100/40 shadow-indigo-100/60';
+        cardStyle = isUltimate
+            ? 'bg-gradient-to-br from-[#121424] to-[#1a1f38] border-2 border-indigo-500/35 shadow-lg shadow-indigo-950/40 text-white ring-1 ring-indigo-500/10'
+            : 'bg-gradient-to-br from-white to-indigo-50/10 border-y-2 border-r-2 border-indigo-200/70 shadow-md ring-1 ring-indigo-100/40 shadow-indigo-100/60';
     } else if (columnType === 'WAITING') {
         // Scary Mode for Level 3
         if (slaStatus.level === 3) {
-            cardStyle = 'bg-gradient-to-br from-rose-50 to-rose-100/50 border-2 border-rose-400 shadow-lg shadow-rose-200';
+            cardStyle = isUltimate
+                ? 'bg-gradient-to-br from-rose-950/40 to-rose-900/50 border-2 border-rose-500 shadow-lg shadow-rose-950/45 text-rose-250 font-bold'
+                : 'bg-gradient-to-br from-rose-50 to-rose-100/50 border-2 border-rose-400 shadow-lg shadow-rose-200';
         } else {
-            cardStyle = 'bg-gradient-to-br from-white to-amber-50/20 border border-amber-200/40 shadow-sm';
+            cardStyle = isUltimate
+                ? 'bg-gradient-to-br from-[#121424] to-[#1d1911] border border-amber-500/25 text-white shadow-md'
+                : 'bg-gradient-to-br from-white to-amber-50/20 border border-amber-200/40 shadow-sm';
         }
     } else if (columnType === 'DONE') {
-        cardStyle = 'bg-gradient-to-br from-white to-slate-100/50 border border-slate-200/30 opacity-75 grayscale-[0.3] shadow-none';
+        cardStyle = isUltimate
+            ? 'bg-gradient-to-br from-slate-950 to-[#0e101a]/70 border border-slate-800/60 opacity-60 grayscale-[0.1] shadow-none text-slate-400'
+            : 'bg-gradient-to-br from-white to-slate-100/50 border border-slate-200/30 opacity-75 grayscale-[0.3] shadow-none';
     }
 
     const hoverStyle = isDraggable 
@@ -192,6 +207,7 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({ task, users, masterOptio
 
     return (
         <motion.div 
+            ref={ref}
             layoutId={task.id}
             initial={{ opacity: 0, y: 12, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -283,33 +299,43 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({ task, users, masterOptio
             
             {/* Title with Type Icon */}
             <div className="flex items-start gap-2.5 my-1">
-                <div className="p-1 rounded-lg bg-slate-50 border border-slate-100 shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
+                <div className={`p-1 rounded-lg shadow-[0_1px_2px_rgba(0,0,0,0.01)] ${isUltimate ? 'bg-slate-900 border border-slate-800' : 'bg-slate-50 border border-slate-100'}`}>
                     {typeConfig.icon}
                 </div>
                 <h4 className={`
                     font-bold text-sm line-clamp-2 leading-snug transition-colors pt-0.5
-                    ${columnType === 'DOING' ? 'text-indigo-900 group-hover:text-indigo-600' : 'text-slate-700'}
-                    ${columnType === 'DONE' ? 'line-through decoration-slate-400 text-slate-400' : ''}
+                    ${columnType === 'DOING' 
+                        ? (isUltimate ? 'text-indigo-200 group-hover:text-indigo-100' : 'text-indigo-900 group-hover:text-indigo-600') 
+                        : (isUltimate ? 'text-slate-200 group-hover:text-white' : 'text-slate-700')}
+                    ${columnType === 'DONE' ? 'line-through decoration-slate-500 text-slate-500' : ''}
                 `}>
                     {task.title}
                 </h4>
             </div>
  
-            <div className="flex justify-between items-center pt-2.5 border-t border-slate-100/80 mt-1">
+            <div className={`flex justify-between items-center pt-2.5 border-t mt-1 ${isUltimate ? 'border-slate-800/80' : 'border-slate-100/80'}`}>
                 <div className="flex items-center gap-2">
                     {user ? (
-                        <img src={user.avatarUrl} className="w-5 h-5 rounded-full object-cover border border-slate-200 shadow-[0_1px_2px_rgba(0,0,0,0.04)]" title={user.name} />
+                        <img src={user.avatarUrl} className={`w-5 h-5 rounded-full object-cover border shadow-[0_1px_2px_rgba(0,0,0,0.04)] ${isUltimate ? 'border-indigo-500/30' : 'border-slate-200'}`} title={user.name} />
                     ) : (
-                        <div className="w-5 h-5 rounded-full bg-slate-100"></div>
+                        <div className={`w-5 h-5 rounded-full ${isUltimate ? 'bg-slate-900' : 'bg-slate-100'}`}></div>
                     )}
-                    <span className="text-[10px] text-zinc-400 font-bold bg-zinc-50 border border-zinc-100/50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border ${
+                        isUltimate 
+                            ? 'text-indigo-300 bg-indigo-950/40 border-indigo-500/20' 
+                            : 'text-zinc-400 bg-zinc-50 border-zinc-100/50'
+                    }`}>
                         📅 {task.endDate ? format(new Date(task.endDate), 'd MMM') : 'No Date'}
                     </span>
                 </div>
  
                 {/* Additional badge for Content Format if available */}
                 {task.contentFormats && task.contentFormats.length > 0 && (
-                    <span className={`text-[9px] px-2 py-0.5 rounded-full border font-bold ${typeConfig.badgeTheme} max-w-[85px] truncate shadow-[0_1px_2px_rgba(0,0,0,0.01)]`}>
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full border font-bold max-w-[85px] truncate shadow-[0_1px_2px_rgba(0,0,0,0.01)] ${
+                        isUltimate
+                            ? 'text-purple-300 bg-purple-950/40 border-purple-800/30'
+                            : typeConfig.badgeTheme
+                    }`}>
                         {task.contentFormats[0]}
                     </span>
                 )}
@@ -318,7 +344,11 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({ task, users, masterOptio
                     {onDelete && (
                         <button 
                             onClick={handleDelete}
-                            className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            className={`p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 ${
+                                isUltimate 
+                                    ? 'text-slate-500 hover:text-rose-400 hover:bg-rose-950/20' 
+                                    : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'
+                            }`}
                             title="ลบงาน"
                         >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -326,7 +356,11 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({ task, users, masterOptio
                     )}
  
                     {columnType !== 'DONE' && columnType !== 'WAITING' && (!task.contentFormats || task.contentFormats.length === 0) && (
-                        <div className={`p-1 rounded-full transition-colors ${columnType === 'DOING' ? 'bg-indigo-50 text-indigo-550' : 'bg-slate-50 text-slate-300'}`}>
+                        <div className={`p-1 rounded-full transition-colors ${
+                            columnType === 'DOING' 
+                                ? (isUltimate ? 'bg-indigo-900/40 text-indigo-300' : 'bg-indigo-50 text-indigo-550') 
+                                : (isUltimate ? 'bg-slate-800 text-slate-400' : 'bg-slate-50 text-slate-300')
+                        }`}>
                             <ArrowRight className="w-3 h-3" />
                         </div>
                     )}
@@ -334,6 +368,6 @@ const WorkCard: React.FC<WorkCardProps> = React.memo(({ task, users, masterOptio
             </div>
         </motion.div>
     );
-});
+}));
 
 export default WorkCard;

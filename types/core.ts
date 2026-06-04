@@ -1,7 +1,7 @@
 
 export type Role = 'ADMIN' | 'MEMBER';
 export type WorkStatus = 'ONLINE' | 'BUSY' | 'SICK' | 'VACATION' | 'MEETING';
-export type ViewMode = 'DASHBOARD' | 'CALENDAR' | 'TEAM' | 'CHAT' | 'ContentStock' | 'CHECKLIST' | 'CHANNELS' | 'SCRIPT_HUB' | 'MEETINGS' | 'DUTY' | 'QUALITY_GATE' | 'KPI' | 'FEEDBACK' | 'MASTER_DATA' | 'WEEKLY' | 'GOALS' | 'WIKI' | 'SYSTEM_GUIDE' | 'ATTENDANCE' | 'FINANCE' | 'LEADERBOARD' | 'ASSETS' | 'NEXUS' | 'ROADMAP' | 'ANALYTICS';
+export type ViewMode = 'DASHBOARD' | 'CALENDAR' | 'TEAM' | 'CHAT' | 'ContentStock' | 'CHECKLIST' | 'CHANNELS' | 'SCRIPT_HUB' | 'MEETINGS' | 'DUTY' | 'QUALITY_GATE' | 'KPI' | 'FEEDBACK' | 'MASTER_DATA' | 'WEEKLY' | 'GOALS' | 'WIKI' | 'SYSTEM_GUIDE' | 'ATTENDANCE' | 'FINANCE' | 'LEADERBOARD' | 'ASSETS' | 'NEXUS' | 'ROADMAP' | 'ANALYTICS' | 'ULTIMATE_WORKROOM';
 
 export type EmploymentType = 'INTERN' | 'PROBATION' | 'FULL_TIME';
 
@@ -49,6 +49,10 @@ export interface User {
     // Gamification
     equippedFrameId?: string;
     ownedFrameIds?: string[];
+
+    // Background Wave option
+    waveBgEnabled?: boolean;
+    ultimateWorkroomEnabled?: boolean;
 
     // Notification
     lineUserId?: string;

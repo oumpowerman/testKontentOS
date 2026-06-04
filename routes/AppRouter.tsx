@@ -9,7 +9,6 @@ import PendingApprovalScreen from '../components/PendingApprovalScreen';
 import InactiveScreen from '../components/InactiveScreen';
 import DeathScreen from '../components/gamification/DeathScreen';
 import AppShell from '../components/layout/AppShell';
-import NotificationPopover from '../components/NotificationPopover';
 import { useTaskManager } from '../hooks/useTaskManager';
 import { useAuth } from '../hooks/useAuth';
 import { useSystemNotifications } from '../hooks/useSystemNotifications';
@@ -18,49 +17,21 @@ import { useAutoJudge } from '../hooks/useAutoJudge';
 import { useLeaveRequests } from '../hooks/useLeaveRequests';
 import { useGameEventListener } from '../hooks/useGameEventListener'; 
 import { useToast } from '../context/ToastContext';
-import NegligenceLockModal from '../components/duty/NegligenceLockModal'; // NEW IMPORT
-import DeathLockModal from '../components/gamification/DeathLockModal';
-import ResurrectionModal from '../components/gamification/ResurrectionModal';
 import ShortcutManager from '../components/common/ShortcutManager';
-import { Loader2, Search, Inbox } from 'lucide-react';
-import { WorkboxProvider, useWorkboxContext } from '../context/WorkboxContext';
-import { GoogleDriveProvider } from '../context/GoogleDriveContext';
-import VibrantChecklistBackground from '../components/common/VibrantChecklistBackground';
+import { Loader2 } from 'lucide-react';
+import { useWorkboxContext } from '../context/WorkboxContext';
 import WorkboxPanel from '../components/workbox/WorkboxPanel';
 import WorkboxTrigger from '../components/workbox/WorkboxTrigger';
 
-// --- LAZY LOAD PAGES ---
-const Dashboard = lazy(() => import('../components/Dashboard'));
-const CalendarView = lazy(() => import('../components/CalendarView'));
-const TeamView = lazy(() => import('../components/TeamView'));
-const TeamChat = lazy(() => import('../components/TeamChat'));
-const ScriptHubView = lazy(() => import('../components/script/ScriptHubView'));
-const MeetingView = lazy(() => import('../components/MeetingView'));
-const DutyView = lazy(() => import('../components/DutyView'));
-const QualityGateView = lazy(() => import('../components/QualityGateView'));
-const KPIView = lazy(() => import('../components/KPIView'));
-const FeedbackView = lazy(() => import('../components/feedback/FeedbackView'));
-const ContentStock = lazy(() => import('../components/checklist/ContentStock'));
-const ShootChecklist = lazy(() => import('../components/ShootChecklist'));
-const WeeklyQuestBoard = lazy(() => import('../components/WeeklyQuestBoard'));
-const GoalView = lazy(() => import('../components/GoalView'));
-const WikiView = lazy(() => import('../components/WikiView'));
-const LeaderboardView = lazy(() => import('../components/LeaderboardView')); 
-const NexusHub = lazy(() => import('../components/nexus/NexusHub'));
-const RoadmapView = lazy(() => import('../components/roadmap/RoadmapView'));
-const ContentAnalyticsView = lazy(() => import('../components/analytics/ContentAnalyticsView'));
+// --- REFRACTORED MODULE REGISTRIES ---
+import { ViewRouteRegistry } from './ViewRouteRegistry';
+import { GlobalModalRegistry } from './GlobalModalRegistry';
 
-// --- NEW MODULE BRIDGES (Lazy Loaded) ---
-const AttendanceRouter = lazy(() => import('./AttendanceRouter'));
-const FinanceRouter = lazy(() => import('./FinanceRouter'));
-const AdminRouter = lazy(() => import('./AdminRouter'));
+// --- LAZY LOAD ULTIMATE SCREEN & PALETTE ---
+const UltimateWorkroomView = lazy(() => import('../components/dashboard/member/UltimateWorkroomView'));
 const CommandPalette = lazy(() => import('../components/ui/CommandPalette')); 
 
-// --- LAZY LOAD MODALS ---
-const TaskModal = lazy(() => import('../components/TaskModal'));
-const ProfileEditModal = lazy(() => import('../components/ProfileEditModal'));
-const NotificationSettingsModal = lazy(() => import('../components/NotificationSettingsModal'));
-import TaskModalSkeleton from '../components/task/TaskModalSkeleton';
+import { WarpGateOverlay } from '../components/dashboard/member/ultimate/WarpGateOverlay';
 
 // Loading Fallback
 const PageLoader = () => (
@@ -119,20 +90,6 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
     return 'DASHBOARD';
   }, [searchParams, location.pathname]);
 
-  // Sync URL with default view - Enhanced stability
-  useEffect(() => {
-    const view = searchParams.get('view');
-    // If we are at root and no view is set, set to DASHBOARD
-    if (!view && location.pathname === '/') {
-      setSearchParams(next => {
-        // Double check inside the update to handle race conditions in StrictMode
-        if (next.has('view')) return next;
-        next.set('view', 'DASHBOARD');
-        return next;
-      }, { replace: true });
-    }
-  }, [location.pathname, searchParams, setSearchParams]);
-
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isNotifSettingsOpen, setIsNotifSettingsOpen] = useState(false);
@@ -143,36 +100,142 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
       await supabase.auth.signOut();
   };
 
-  // --- NAVIGATION HANDLER (Sync with URL - Preserving existing params) ---
+  // --- STATE: GLOBAL COSMIC PORTAL WARP ANIMATION ---
+  const [globalWarpStage, setGlobalWarpStage] = useState<'IDLE' | 'WARPING_IN' | 'WARPING_OUT'>('IDLE');
+  const [warpTargetView, setWarpTargetView] = useState<ViewMode | null>(null);
+
+  // Play a highly immersive deep interstellar sound when warp gates open inside browser using Web Audio context
+  const playWarpSound = useCallback(() => {
+      try {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          if (!AudioContextClass) return;
+          const ctx = new AudioContextClass();
+          const now = ctx.currentTime;
+
+          // Low rumble bass sound
+          const oscBass = ctx.createOscillator();
+          const oscTreble = ctx.createOscillator();
+          const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+          const filter = ctx.createBiquadFilter();
+          const gainNode = ctx.createGain();
+
+          oscBass.type = 'sawtooth';
+          oscBass.frequency.setValueAtTime(65, now);
+          oscBass.frequency.exponentialRampToValueAtTime(320, now + 1.2);
+
+          oscTreble.type = 'sine';
+          oscTreble.frequency.setValueAtTime(330, now);
+          oscTreble.frequency.exponentialRampToValueAtTime(1600, now + 0.95);
+
+          filter.type = 'lowpass';
+          filter.Q.setValueAtTime(12, now);
+          filter.frequency.setValueAtTime(150, now);
+          filter.frequency.exponentialRampToValueAtTime(2400, now + 0.8);
+
+          gainNode.gain.setValueAtTime(0.04, now);
+          gainNode.gain.linearRampToValueAtTime(0.12, now + 0.45);
+          gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
+
+          oscBass.connect(filter);
+          oscTreble.connect(filter);
+
+          if (panner) {
+              panner.pan.setValueAtTime(-1, now);
+              panner.pan.linearRampToValueAtTime(1, now + 1.2);
+              filter.connect(panner);
+              panner.connect(gainNode);
+          } else {
+              filter.connect(gainNode);
+          }
+
+          gainNode.connect(ctx.destination);
+
+          oscBass.start();
+          oscTreble.start();
+          oscBass.stop(now + 1.6);
+          oscTreble.stop(now + 1.6);
+      } catch (err) {
+          console.warn("Warp gate audio failed:", err);
+      }
+  }, []);
+
+  // --- NAVIGATION HANDLER (Sync with URL - Enhanced with fluid cosmic portals) ---
   const handleNavigate = useCallback((view: ViewMode) => {
-      setSearchParams(prev => {
-          const next = new URLSearchParams(prev);
-          
-          // 1. Set the new view
-          next.set('view', view);
+      const isDimensionJump = (currentView === 'ULTIMATE_WORKROOM') || (view === 'ULTIMATE_WORKROOM');
 
-          // 2. Cleanup Logic: Remove view-specific params when leaving that view
-          
-          // Special case: If navigating TO ContentStock, ensure its params are NOT cleared
-          // and if moving AWAY, then clear them.
-          if (view !== 'ContentStock') {
-              next.delete('stockMode');
-              next.delete('stockTab');
-          }
+      if (isDimensionJump && globalWarpStage === 'IDLE') {
+          // Play the sound of opening wormholes
+          playWarpSound();
+          setWarpTargetView(view);
+          setGlobalWarpStage('WARPING_IN');
 
-          // If we move away from SCRIPT_HUB, clear its sub-params
-          if (view !== 'SCRIPT_HUB') {
-              next.delete('scriptId');
-              next.delete('q');
-              next.delete('deep');
-          }
-
-          return next;
-      }, { replace: true });
-  }, [setSearchParams]);
+          // Change page in background at peak opacity (850ms)
+          setTimeout(() => {
+              setSearchParams((prev: any) => {
+                  const next = new URLSearchParams(prev);
+                  next.set('view', view);
+                  
+                  if (view !== 'ContentStock') {
+                      next.delete('stockMode');
+                      next.delete('stockTab');
+                  }
+                  if (view !== 'SCRIPT_HUB') {
+                      next.delete('scriptId');
+                      next.delete('q');
+                      next.delete('deep');
+                  }
+                  return next;
+              }, { replace: true });
+              
+              setGlobalWarpStage('WARPING_OUT');
+              setTimeout(() => {
+                  setGlobalWarpStage('IDLE');
+                  setWarpTargetView(null);
+              }, 1100);
+          }, 950);
+      } else {
+          // Normal instant page switches for efficiency
+          setSearchParams((prev: any) => {
+              const next = new URLSearchParams(prev);
+              next.set('view', view);
+              
+              if (view !== 'ContentStock') {
+                  next.delete('stockMode');
+                  next.delete('stockTab');
+              }
+              if (view !== 'SCRIPT_HUB') {
+                  next.delete('scriptId');
+                  next.delete('q');
+                  next.delete('deep');
+              }
+              return next;
+          }, { replace: true });
+      }
+  }, [currentView, globalWarpStage, playWarpSound, setSearchParams]);
 
   // --- AUTH HOOK ---
   const { currentUserProfile, fetchProfile, updateProfile } = useAuth(user);
+
+  // Sync URL with default view - Enhanced stability with custom member redirect
+  useEffect(() => {
+    const view = searchParams.get('view');
+    // If we are at root and no view is set, determine default view for members
+    if (!view && location.pathname === '/') {
+      setSearchParams((next: any) => {
+        // Double check inside the update to handle race conditions in StrictMode
+        if (next.has('view')) return next;
+        
+        let targetView: ViewMode = 'DASHBOARD';
+        if (currentUserProfile && currentUserProfile.role === 'MEMBER' && currentUserProfile.status === 'ACTIVE') {
+          if (currentUserProfile.ultimateWorkroomEnabled !== false) {
+            targetView = 'ULTIMATE_WORKROOM';
+          }
+        }
+        next.set('view', targetView);
+        return next;
+      }, { replace: true });
+    }
+  }, [location.pathname, searchParams, setSearchParams, currentUserProfile]);
 
   // --- MAIN LOGIC HOOK (Orchestrator) ---
   const {
@@ -325,370 +388,196 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
     return <InactiveScreen user={currentUserProfile} onLogout={handleForceLogout} />;
   }
 
-  const renderContent = () => {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        {(() => {
-          switch (currentView) {
-            case 'DASHBOARD':
-              return (
-                <Dashboard
-                  tasks={tasks}
-                  channels={channels}
-                  users={activeUsers}
+  const isUltimateRoom = currentView === 'ULTIMATE_WORKROOM';
+
+  return (
+    <>
+      <AnimatePresence mode="wait" initial={false}>
+        {isUltimateRoom ? (
+          <motion.div
+            key="ultimate-workroom-screen"
+            initial={{ opacity: 0, scale: 0.94, filter: 'blur(10px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, scale: 1.06, filter: 'blur(15px)' }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="min-h-screen w-full bg-[#0e101a] overflow-hidden"
+          >
+            <Suspense fallback={<PageLoader />}>
+              <UltimateWorkroomView
+                tasks={tasks}
+                masterOptions={masterOptions}
+                users={activeUsers}
+                currentUser={currentUserProfile}
+                onEditTask={handleEditTask}
+                onUpdateTask={handleSaveTask}
+                onDeleteTask={handleDeleteTask}
+                onNavigateBack={() => handleNavigate('DASHBOARD')}
+                onRefreshProfile={fetchProfile}
+                isFetching={isTaskFetching}
+              />
+            </Suspense>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="standard-appshell-screen"
+            initial={{ opacity: 0, scale: 1.06, filter: 'blur(12px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, scale: 0.94, filter: 'blur(12px)' }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="min-h-screen w-full"
+          >
+            <AppShell
                   currentUser={currentUserProfile}
-                  onEditTask={handleEditTask}
-                  onNavigateToCalendar={() => handleNavigate('CALENDAR')}
-                  onNavigate={(view) => handleNavigate(view)} 
-                  onOpenSettings={() => setIsNotifSettingsOpen(true)}
-                  onOpenNotifications={handleToggleNotification}
-                  unreadCount={sysUnread}
+                  currentView={currentView}
+                  onNavigate={handleNavigate}
+                  onLogout={handleForceLogout}
                   onEditProfile={() => setIsProfileModalOpen(true)}
-                  masterOptions={masterOptions}
-                  onFetchAllData={fetchAllTasks}
-                  onRefreshProfile={fetchProfile}
-                  isFetching={isTaskFetching}
-                />
-              );
-            case 'CALENDAR':
-              return (
-                <CalendarView
+                  onAddTask={handleAddTask}
+                  onOpenTask={handleOpenTaskById}
+                  chatUnreadCount={chatUnread}
+                  systemUnreadCount={sysUnread}
+                  isNotificationOpen={isNotificationOpen}
+                  onToggleNotification={handleToggleNotification}
                   tasks={tasks}
-                  channels={channels}
-                  users={activeUsers}
-                  currentUser={currentUserProfile}
-                  masterOptions={masterOptions}
-                  onSelectTask={handleEditTask}
-                  onSelectDate={handleSelectDate}
-                  onMoveTask={handleSaveTask}
-                  onDelayTask={(tid, date, reason) => handleDelayTask(tid, date, reason, currentUserProfile.id)}
-                  onOpenSettings={() => setIsNotifSettingsOpen(true)}
-                  onOpenNotifications={handleToggleNotification}
-                  unreadCount={sysUnread}
-                  onAddTask={(status, type) => { 
-                      const t = { status, type: type || 'TASK' }; 
-                      // @ts-ignore
-                      handleSaveTask(t); 
-                  }}
-                  onUpdateStatus={(t, s) => handleSaveTask({ ...t, status: s })}
-                  onRangeChange={checkAndExpandRange}
-                  isFetching={isTaskFetching}
-                  onToggleWorkbox={() => setIsWorkboxOpen(!isWorkboxOpen)}
-                  isWorkboxOpen={isWorkboxOpen}
-                />
-              );
-            case 'TEAM':
-              return (
-                <TeamView 
-                  tasks={tasks}
-                  users={allUsers}
-                  channels={channels}
-                  currentUser={currentUserProfile}
-                  onEditTask={handleEditTask}
-                  onApproveMember={approveMember}
-                  onRemoveMember={removeMember}
-                  onToggleStatus={toggleUserStatus}
-                  onAdjustStats={adjustStatsLocally}
-                  onOpenSettings={() => setIsNotifSettingsOpen(true)}
-                  onAddTask={(type) => handleAddTask(type)}
-                  onMoveTask={(t) => handleSaveTask(t)}
-                />
-              );
-            case 'CHAT':
-              return (
-                  <TeamChat 
-                      currentUser={currentUserProfile}
-                      allUsers={activeUsers}
-                      onAddTask={handleSaveTask}
+                  allUsers={activeUsers}
+              >
+                  <ShortcutManager 
+                      onNavigate={handleNavigate}
+                      onAddTask={() => handleAddTask('TASK')}
+                      onOpenProfile={() => setIsProfileModalOpen(true)}
+                      onOpenCommandPalette={() => setIsCommandPaletteOpen(prev => !prev)}
                   />
-              );
-            case 'ContentStock':
-              return (
-                <ContentStock
-                  tasks={tasks}
-                  channels={channels}
-                  users={activeUsers}
-                  masterOptions={masterOptions}
-                  onSchedule={handleEditTask}
-                  onEdit={handleEditTask}
-                  onAdd={() => handleAddTask('CONTENT')}
-                  onOpenSettings={() => setIsNotifSettingsOpen(true)}
-                  onAddToWorkbox={(task) => addToWorkbox({ title: task.title, content_id: task.id, type: 'CONTENT' })}
-                  onEditScript={(id) => {
-                      // Consolidate into a single URL update to prevent flickering/race conditions
-                      setSearchParams(prev => {
-                          const next = new URLSearchParams(prev);
-                          next.set('view', 'SCRIPT_HUB');
-                          next.set('scriptId', id);
-                          next.set('origin', 'SHOOT_QUEUE');
-                          return next;
-                      }, { replace: true });
-                  }}
-                />
-              );
-            case 'CHECKLIST':
-              return (
-                <VibrantChecklistBackground className="pb-20">
-                  <ShootChecklist 
-                      items={activeChecklistItems}
-                      onToggle={handleToggleChecklist}
-                      onAdd={handleAddChecklistItem}
-                      onDelete={handleDeleteChecklistItem}
-                      onReset={handleResetChecklist}
-                      presets={checklistPresets}
-                      activePresetId={activePresetId}
-                      activePresetName={activePresetName}
-                      onLoadPreset={handleLoadPreset}
-                      onAddPreset={handleAddPreset}
-                      onDeletePreset={handleDeletePreset}
-                      onOpenSettings={() => setIsNotifSettingsOpen(true)}
-                      masterOptions={masterOptions}
-                  />
-                </VibrantChecklistBackground>
-              );
-            case 'CHANNELS':
-            case 'MASTER_DATA':
-            case 'SYSTEM_GUIDE':
-            case 'ASSETS':
-                return (
-                    <AdminRouter 
+          
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                      key={currentView}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{ 
+                        duration: 0.3, 
+                        ease: "easeOut"
+                      }}
+                      className="flex flex-col min-h-full w-full"
+                    >
+                      <ViewRouteRegistry
                         currentView={currentView}
-                        tasks={tasks}
-                        channels={channels}
-                        users={activeUsers}
-                        masterOptions={masterOptions}
-                        onAddChannel={handleAddChannel}
-                        onUpdateChannel={handleUpdateChannel}
-                        onDeleteChannel={handleDeleteChannel}
-                        onOpenSettings={() => setIsNotifSettingsOpen(true)}
-                    />
-                );
-            case 'SCRIPT_HUB':
-                return (
-                    <ScriptHubView 
-                        currentUser={currentUserProfile}
+                        currentUserProfile={currentUserProfile}
                         users={allUsers}
-                    />
-                );
-            case 'MEETINGS':
-                return (
-                    <MeetingView 
-                        users={activeUsers} 
-                        currentUser={currentUserProfile}
-                        tasks={tasks} 
-                        masterOptions={masterOptions}
-                    />
-                );
-            case 'DUTY': 
-                return (
-                    <DutyView 
-                        users={activeUsers}
-                        currentUser={currentUserProfile}
-                    />
-                );
-            case 'QUALITY_GATE':
-                return (
-                    <QualityGateView 
-                        channels={channels}
-                        users={activeUsers}
-                        masterOptions={masterOptions}
-                        onOpenTask={handleOpenTaskById}
-                        currentUser={currentUserProfile}
-                        tasks={tasks} // Pass tasks here!
-                    />
-                );
-            case 'KPI':
-                return (
-                    <KPIView 
-                        users={allUsers}
-                        currentUser={currentUserProfile}
-                    />
-                );
-            case 'FEEDBACK':
-                return <FeedbackView currentUser={currentUserProfile} users={allUsers} />;
-            case 'WEEKLY':
-                return (
-                    <WeeklyQuestBoard 
+                        activeUsers={activeUsers}
+                        allUsers={allUsers}
                         tasks={tasks}
                         channels={channels}
                         quests={quests}
                         masterOptions={masterOptions}
-                        onAddQuest={handleAddQuest}
-                        onDeleteQuest={handleDeleteQuest}
-                        onOpenSettings={() => setIsNotifSettingsOpen(true)}
-                        onUpdateProgress={updateManualProgress}
-                        onUpdateQuest={updateQuest}
-                    />
-                );
-            case 'GOALS':
-                return (
-                    <GoalView 
-                        channels={channels}
-                        users={activeUsers}
-                        currentUser={currentUserProfile}
-                    />
-                );
-            case 'WIKI':
-                return <WikiView currentUser={currentUserProfile} />;
-                
-            case 'LEADERBOARD':
-                return <LeaderboardView users={activeUsers} currentUser={currentUserProfile} />;
-
-            case 'ATTENDANCE':
-                return <AttendanceRouter currentUser={currentUserProfile} users={activeUsers} />;
-            case 'FINANCE':
-                return <FinanceRouter currentUser={currentUserProfile} users={activeUsers} />;
-
-            case 'NEXUS':
-                return <NexusHub currentUser={currentUserProfile} />;
-
-            case 'ROADMAP':
-                return <RoadmapView />;
-
-            case 'ANALYTICS':
-                return <ContentAnalyticsView />;
-
-            default:
-              return <div className="p-10 text-center text-gray-500">เร็วๆ นี้... (Coming Soon)</div>;
-          }
-        })()}
-      </Suspense>
-    );
-  };
-
-  return (
-    <AppShell
-          currentUser={currentUserProfile}
-          currentView={currentView}
-          onNavigate={handleNavigate}
-          onLogout={handleForceLogout}
-          onEditProfile={() => setIsProfileModalOpen(true)}
-          onAddTask={handleAddTask}
-          onOpenTask={handleOpenTaskById}
-          chatUnreadCount={chatUnread}
-          systemUnreadCount={sysUnread}
-          isNotificationOpen={isNotificationOpen}
-          onToggleNotification={handleToggleNotification}
-          tasks={tasks}
-          allUsers={activeUsers}
-      >
-          <ShortcutManager 
-              onNavigate={handleNavigate}
-              onAddTask={() => handleAddTask('TASK')}
-              onOpenProfile={() => setIsProfileModalOpen(true)}
-              onOpenCommandPalette={() => setIsCommandPaletteOpen(prev => !prev)}
-          />
-  
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={currentView}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ 
-                duration: 0.3, 
-                ease: "easeOut"
-              }}
-              className="flex flex-col min-h-full w-full"
-            >
-              {renderContent()}
-            </motion.div>
-          </AnimatePresence>
-  
-          {/* --- WORKBOX TRIGGER & PANEL --- */}
-          <WorkboxTrigger 
-              onClick={() => setIsWorkboxOpen(true)} 
-              itemCount={workboxItems.length} 
-              onDrop={(data) => addToWorkbox(data)}
-          />
-          <WorkboxPanel 
-              isOpen={isWorkboxOpen} 
-              onClose={() => setIsWorkboxOpen(false)} 
-              currentUser={currentUserProfile} 
-          />
+                        isTaskFetching={isTaskFetching}
+                        sysUnread={sysUnread}
+                        activeChecklistItems={activeChecklistItems}
+                        checklistPresets={checklistPresets}
+                        activePresetId={activePresetId}
+                        activePresetName={activePresetName}
+                        isWorkboxOpen={isWorkboxOpen}
+                        setIsWorkboxOpen={setIsWorkboxOpen}
+                        addToWorkbox={addToWorkbox}
+                        setIsNotifSettingsOpen={setIsNotifSettingsOpen}
+                        setIsProfileModalOpen={setIsProfileModalOpen}
+                        handleToggleNotification={handleToggleNotification}
+                        setSearchParams={setSearchParams}
+                        handleNavigate={handleNavigate}
+                        handleEditTask={handleEditTask}
+                        handleSaveTask={handleSaveTask}
+                        handleDeleteTask={handleDeleteTask}
+                        handleDelayTask={handleDelayTask}
+                        handleSelectDate={handleSelectDate}
+                        handleAddTask={handleAddTask}
+                        approveMember={approveMember}
+                        removeMember={removeMember}
+                        toggleUserStatus={toggleUserStatus}
+                        adjustStatsLocally={adjustStatsLocally}
+                        handleToggleChecklist={handleToggleChecklist}
+                        handleAddChecklistItem={handleAddChecklistItem}
+                        handleDeleteChecklistItem={handleDeleteChecklistItem}
+                        handleResetChecklist={handleResetChecklist}
+                        handleLoadPreset={handleLoadPreset}
+                        handleAddPreset={handleAddPreset}
+                        handleDeletePreset={handleDeletePreset}
+                        handleAddChannel={handleAddChannel}
+                        handleUpdateChannel={handleUpdateChannel}
+                        handleDeleteChannel={handleDeleteChannel}
+                        handleOpenTaskById={handleOpenTaskById}
+                        handleAddQuest={handleAddQuest}
+                        handleDeleteQuest={handleDeleteQuest}
+                        updateManualProgress={updateManualProgress}
+                        updateQuest={updateQuest}
+                        fetchAllTasks={fetchAllTasks}
+                        fetchProfile={fetchProfile}
+                        PageLoader={PageLoader}
+                        checkAndExpandRange={checkAndExpandRange}
+                      />
+                    </motion.div>
+                  </AnimatePresence>
           
-          {/* --- SPECIAL LOCK MODAL --- */}
-          <NegligenceLockModal 
-              notification={negligenceNotification} 
-              onAcknowledge={handleAcknowledgeLock} 
-          />
+                  {/* --- WORKBOX TRIGGER & PANEL --- */}
+                  <WorkboxTrigger 
+                      onClick={() => setIsWorkboxOpen(true)} 
+                      itemCount={workboxItems.length} 
+                      onDrop={(data) => addToWorkbox(data)}
+                  />
+                  <WorkboxPanel 
+                      isOpen={isWorkboxOpen} 
+                      onClose={() => setIsWorkboxOpen(false)} 
+                      currentUser={currentUserProfile} 
+                  />
+                  
+              </AppShell>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          <DeathLockModal 
-              notification={deathWarningNotification}
-              onAcknowledge={handleAcknowledgeLock}
-              onLogout={handleForceLogout}
-          />
+      {/* --- GLOBAL MODAL REGISTRY --- */}
+      <GlobalModalRegistry
+        negligenceNotification={negligenceNotification}
+        deathWarningNotification={deathWarningNotification}
+        resurrectionNotification={resurrectionNotification}
+        handleAcknowledgeLock={handleAcknowledgeLock}
+        handleForceLogout={handleForceLogout}
+        isModalOpen={isModalOpen}
+        closeModal={closeModal}
+        handleSaveTask={handleSaveTask}
+        handleDeleteTask={handleDeleteTask}
+        editingTask={editingTask}
+        selectedDate={selectedDate}
+        channels={channels}
+        activeUsers={activeUsers}
+        lockedTaskType={lockedTaskType}
+        masterOptions={masterOptions}
+        currentUserProfile={currentUserProfile}
+        tasks={tasks}
+        handleOpenTaskById={handleOpenTaskById}
+        taskStack={taskStack}
+        initialViewMode={initialViewMode}
+        isProfileModalOpen={isProfileModalOpen}
+        setIsProfileModalOpen={setIsProfileModalOpen}
+        updateProfile={updateProfile}
+        isNotifSettingsOpen={isNotifSettingsOpen}
+        setIsNotifSettingsOpen={setIsNotifSettingsOpen}
+        notificationSettings={notificationSettings}
+        updateNotificationSettings={updateNotificationSettings}
+        isNotificationOpen={isNotificationOpen}
+        handleCloseNotification={handleCloseNotification}
+        notifications={notifications}
+        dismissNotification={dismissNotification}
+        markNotificationAsRead={markNotificationAsRead}
+        markAllAsRead={markAllAsRead}
+        handleNavigate={handleNavigate}
+        approveRequest={approveRequest}
+        rejectRequest={rejectRequest}
+        leaveRequests={leaveRequests}
+      />
 
-          <ResurrectionModal 
-              notification={resurrectionNotification}
-              onAcknowledge={handleAcknowledgeLock}
-          />
-  
-          {/* --- GLOBAL MODALS --- */}
-          <Suspense fallback={<TaskModalSkeleton />}>
-              <AnimatePresence mode="wait">
-                  {isModalOpen && (
-                      <TaskModal
-                          isOpen={isModalOpen}
-                          onClose={closeModal}
-                          onSave={(t) => handleSaveTask(t)}
-                          onUpdate={(t) => handleSaveTask(t)} 
-                          onDelete={handleDeleteTask}
-                          initialData={editingTask}
-                          selectedDate={selectedDate}
-                          channels={channels}
-                          users={activeUsers}
-                          lockedType={lockedTaskType}
-                          masterOptions={masterOptions}
-                          currentUser={currentUserProfile}
-                          projects={tasks.filter(t => t.type === 'CONTENT')} 
-                          onOpenTask={handleOpenTaskById}
-                          hasHistory={taskStack.length > 0}
-                          initialViewMode={initialViewMode}
-                      />
-                  )}
-              </AnimatePresence>
-
-              <AnimatePresence mode="wait">
-                  {isProfileModalOpen && (
-                      <ProfileEditModal 
-                          isOpen={isProfileModalOpen}
-                          onClose={() => setIsProfileModalOpen(false)}
-                          user={currentUserProfile}
-                          onSave={updateProfile}
-                      />
-                  )}
-              </AnimatePresence>
-
-              <AnimatePresence mode="wait">
-                  {isNotifSettingsOpen && (
-                      <NotificationSettingsModal 
-                          isOpen={isNotifSettingsOpen}
-                          onClose={() => setIsNotifSettingsOpen(false)}
-                          preferences={notificationSettings}
-                          onUpdate={updateNotificationSettings}
-                      />
-                  )}
-              </AnimatePresence>
-          </Suspense>
-          
-          <NotificationPopover 
-              isOpen={isNotificationOpen}
-              onClose={handleCloseNotification} // Changed to new handler
-              notifications={notifications}
-              tasks={tasks}
-              onOpenTask={handleOpenTaskById}
-              onOpenSettings={() => setIsNotifSettingsOpen(true)}
-              onDismiss={dismissNotification}
-              onMarkRead={markNotificationAsRead}
-              onMarkAllRead={markAllAsRead}
-              onNavigate={handleNavigate} 
-              onApproveLeave={approveRequest}
-              onRejectLeave={rejectRequest}
-              leaveRequests={leaveRequests}
-          />
-  
-      </AppShell>
+      {/* --- GLOBAL HIGH-FIDELITY DIMENSIONAL WARP GATE OVERLAY --- */}
+      <WarpGateOverlay globalWarpStage={globalWarpStage} warpTargetView={warpTargetView} />
+    </>
   );
 };
 

@@ -226,8 +226,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 .select(taskFields);
 
             if (!isAllLoaded) {
-                // Optimized query: (Unscheduled AND created within 2 months) OR (Scheduled within date range)
-                contentsQuery = contentsQuery.or(`and(is_unscheduled.eq.true,created_at.gte.${stockLimitStr}),and(end_date.gte.${startStr},start_date.lte.${endStr})`);
+                // Optimized query: (Unscheduled AND completed/approved status) OR (Scheduled within date range)
+                contentsQuery = contentsQuery.or(`and(is_unscheduled.eq.true,status.ilike.*done*),and(is_unscheduled.eq.true,status.ilike.*approve*),and(is_unscheduled.eq.false,end_date.gte.${startStr},start_date.lte.${endStr})`);
                 tasksQuery = tasksQuery.or(`and(content_id.is.null,created_at.gte.${stockLimitStr}),and(end_date.gte.${startStr},start_date.lte.${endStr})`).or('content_id.is.null,show_on_board.eq.true');
             } else {
                 tasksQuery = tasksQuery.or('content_id.is.null,show_on_board.eq.true');
@@ -400,14 +400,20 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 : mappedPartial.analyticsStatus,
                         };
 
+                        // Keep if it is scheduled within the active date range
                         const isScheduledInRange = mergedTask.startDate && mergedTask.endDate && 
                             mergedTask.endDate >= dateRange.start && mergedTask.startDate <= dateRange.end;
                         
-                        // Keep if it is unscheduled (ideas/stocks) or if it is scheduled within the active date range
-                        if (mergedTask.isUnscheduled || isScheduledInRange) {
+                        // Strict check for Unscheduled items: only allow if isAllLoaded is true or it's DONE/APPROVED (matching initial fetch)
+                        const isDoneOrApprove = mergedTask.status && (mergedTask.status.toLowerCase().includes('done') || mergedTask.status.toLowerCase().includes('approve'));
+                        const allowUnscheduled = isAllLoaded || (type === 'CONTENT' ? isDoneOrApprove : (mergedTask.showOnBoard /* Task logic */));
+
+                        // Keep if (Unscheduled AND allowed) or if it is scheduled within the active date range
+                        if ((mergedTask.isUnscheduled && allowUnscheduled) || (!mergedTask.isUnscheduled && isScheduledInRange)) {
                             return prev.map(t => t.id === payload.new.id ? mergedTask : t);
                         } else {
                             // Only filter out if it is a scheduled task that has been moved out of the active date range
+                            // OR if an unscheduled task changed status (e.g. from DONE to TODO)
                             return prev.filter(t => t.id !== payload.new.id);
                         }
                     } else {
@@ -429,8 +435,12 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                     
                                     const isScheduledInRange = newTask.startDate && newTask.endDate && 
                                         newTask.endDate >= dateRange.start && newTask.startDate <= dateRange.end;
-                                    // Accept if unscheduled or if scheduled within range
-                                    if (newTask.isUnscheduled || isScheduledInRange) {
+                                    
+                                    const isDoneOrApprove = newTask.status && (newTask.status.toLowerCase().includes('done') || newTask.status.toLowerCase().includes('approve'));
+                                    const allowUnscheduled = isAllLoaded || (type === 'CONTENT' ? isDoneOrApprove : (newTask.showOnBoard));
+
+                                    // Accept if (Unscheduled AND allowed) or if scheduled within range
+                                    if ((newTask.isUnscheduled && allowUnscheduled) || (!newTask.isUnscheduled && isScheduledInRange)) {
                                         return [...current, newTask];
                                     }
                                     return current;

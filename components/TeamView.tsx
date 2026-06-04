@@ -32,6 +32,7 @@ import { OverdueTasksSection } from './team/OverdueTasksSection';
 const TribunalReportModal = React.lazy(() => import('./team/TribunalReportModal'));
 
 import { useInterns } from '../hooks/useInterns';
+import AppBackground, { BackgroundTheme } from './common/AppBackground';
 
 // Import DnD Hook
 import { useTeamDragDrop } from '../hooks/useTeamDragDrop';
@@ -252,15 +253,15 @@ const TeamView: React.FC<TeamViewProps> = ({
 
   const pendingMembers = useMemo(() => users.filter(u => !u.isApproved && u.isActive), [users]);
 
-  const [bgTheme, setBgTheme] = useState('');
-  const themes = [
-    'bg-[#fff5f5]', // Soft Pink
-    'bg-[#f0f7ff]', // Soft Blue
-    'bg-[#f2fcf5]', // Soft Green
-    'bg-[#f8f5ff]', // Soft Purple
-    'bg-[#fff9f0]', // Soft Orange
-    'bg-[#fefff0]', // Soft Yellow
-    'bg-[#f0fffa]'  // Soft Teal
+  const [bgTheme, setBgTheme] = useState<BackgroundTheme>('pastel-blue');
+  const themes: BackgroundTheme[] = [
+    'pastel-pink', // Soft Pink
+    'pastel-blue', // Soft Blue
+    'pastel-green', // Soft Green
+    'pastel-purple', // Soft Purple
+    'pastel-orange', // Soft Orange
+    'pastel-yellow', // Soft Yellow
+    'pastel-teal'  // Soft Teal
   ];
 
   useEffect(() => {
@@ -291,14 +292,7 @@ const TeamView: React.FC<TeamViewProps> = ({
   };
 
   return (
-    <div className={`min-h-screen p-8 space-y-6 animate-in fade-in duration-500 pb-20 transition-colors duration-1000 relative ${bgTheme}`}>
-      {/* Grid/Notebook Pattern Gimmick */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.03]" 
-           style={{ 
-               backgroundImage: `linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)`,
-               backgroundSize: '40px 40px' 
-           }} 
-      />
+    <AppBackground theme={bgTheme} pattern="grid" className="min-h-screen p-8 space-y-6 animate-in fade-in duration-500 pb-20 transition-colors duration-1000 relative z-10">
       
       <div className="relative z-10 space-y-6">
         <MentorTip variant="blue" messages={[
@@ -600,7 +594,7 @@ const TeamView: React.FC<TeamViewProps> = ({
           )}
         </React.Suspense>
       </div>
-    </div>
+    </AppBackground>
   );
 };
 

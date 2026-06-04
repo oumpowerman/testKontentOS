@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { MasterOption } from '../../../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Play, PenTool, ChevronDown, ChevronUp, BarChart3, HardDrive } from 'lucide-react';
+import { Zap, Play, PenTool, ChevronDown, ChevronUp, BarChart3, HardDrive, Archive } from 'lucide-react';
 
 interface StockQuickFiltersProps {
   masterOptions: MasterOption[];
@@ -32,6 +32,7 @@ const StockQuickFilters: React.FC<StockQuickFiltersProps> = ({
   missingStorageCount = 0
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [animating, setAnimating] = useState(false);
 
   // Helper to find status keys by keyword
   const getKeysByKeywords = (keywords: string[]) => {
@@ -45,7 +46,7 @@ const StockQuickFilters: React.FC<StockQuickFiltersProps> = ({
       .map(opt => opt.key);
   };
 
-  const PRE_PROD_KEYWORDS = ['IDEA', 'DRAFT', 'SCRIPT'];
+  const PRE_PROD_KEYWORDS = ['IDEA', 'SCRIPT'];
   const PRODUCTION_KEYWORDS = ['SHOOT', 'EDIT', 'APPROVE', 'FEEDBACK'];
 
   const preProdKeys = getKeysByKeywords(PRE_PROD_KEYWORDS);
@@ -65,7 +66,7 @@ const StockQuickFilters: React.FC<StockQuickFiltersProps> = ({
   };
 
   return (
-    <div className={`bg-white/40 backdrop-blur-md rounded-3xl border overflow-hidden shadow-sm transition-all duration-300 ${!isExpanded && (overdueCount > 0 || missingStorageCount > 0) ? 'border-amber-200 shadow-amber-100/30 shadow-md ring-1 ring-amber-300/20' : 'border-white/60'}`}>
+    <div className={`bg-white/40 backdrop-blur-md rounded-3xl border shadow-sm transition-all duration-300 ${isExpanded && !animating ? 'overflow-visible' : 'overflow-hidden'} ${!isExpanded && (overdueCount > 0 || missingStorageCount > 0) ? 'border-amber-200 shadow-amber-100/30 shadow-md ring-1 ring-amber-300/20' : 'border-white/60'}`}>
       <button 
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full px-5 py-3 flex items-center justify-between hover:bg-white/40 transition-colors group"
@@ -125,22 +126,37 @@ const StockQuickFilters: React.FC<StockQuickFiltersProps> = ({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
+            onAnimationStart={() => setAnimating(true)}
+            onAnimationComplete={() => setAnimating(false)}
+            className={isExpanded && !animating ? "overflow-visible" : "overflow-hidden"}
           >
             <div className="px-5 pb-5 pt-1 flex flex-wrap items-center gap-3">
               {/* Main View Toggle */}
-              <button
-                onClick={() => setTab(currentTab === 'ACTIVE' ? 'ARCHIVE' : 'ACTIVE')}
-                className={`
-                  flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-black transition-all border
-                  ${currentTab === 'ARCHIVE' 
-                    ? 'bg-slate-800 text-white border-slate-800 shadow-lg shadow-slate-200' 
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}
-                `}
-              >
-                <div className={`w-2 h-2 rounded-full ${currentTab === 'ARCHIVE' ? 'bg-amber-400 animate-pulse' : 'bg-slate-300'}`} />
-                {currentTab === 'ARCHIVE' ? 'VIEWING ARCHIVE' : 'OPEN ARCHIVE'}
-              </button>
+              <div className="relative group/archive z-20">
+                <button
+                  id="archive-view-toggle"
+                  onClick={() => setTab(currentTab === 'ACTIVE' ? 'ARCHIVE' : 'ACTIVE')}
+                  className={`
+                    flex items-center justify-center w-[38px] h-[38px] rounded-2xl text-xs font-black transition-all border
+                    ${currentTab === 'ARCHIVE' 
+                      ? 'bg-amber-950/90 text-amber-300 border-amber-500/50 shadow-md shadow-amber-950/20' 
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-400 hover:bg-slate-50'}
+                  `}
+                >
+                  <Archive className={`w-5 h-5 ${currentTab === 'ARCHIVE' ? 'text-amber-400 animate-pulse' : 'text-slate-400 group-hover/archive:text-indigo-500 transition-colors'}`} />
+                </button>
+                
+                {/* Custom Tooltip */}
+                <div className="absolute bottom-full left-0 mb-2.5 px-3 py-2 bg-slate-900 border border-slate-800 w-max max-w-[280px] text-left rounded-xl shadow-xl opacity-0 pointer-events-none group-hover/archive:opacity-100 scale-95 group-hover/archive:scale-100 transition-all duration-200 ease-out">
+                  <div className="font-bold text-[10.5px] text-white">
+                    {currentTab === 'ARCHIVE' ? '🗄️ ดูงานปัจจุบัน (Active View)' : '📦 ดูคลังที่เสร็จสิ้น (Archive View)'}
+                  </div>
+                  <div className="text-slate-400 text-[9.5px] font-kanit mt-0.5 leading-relaxed">
+                    {currentTab === 'ARCHIVE' ? 'คลิกสลับเพื่อกลับสู่ตารางงานปกติ' : 'คลิกสลับเพื่อเปิดคลังคลิปวิดีโอรูปภาพเก่าเก็บบันทึก'}
+                  </div>
+                  <div className="absolute top-full left-[19px] -translate-x-1/2 -mt-1 w-2 h-2 rotate-45 bg-slate-900 border-r border-b border-slate-800" />
+                </div>
+              </div>
 
               <div className="h-4 w-px bg-slate-200 mx-1" />
 

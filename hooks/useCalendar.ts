@@ -239,6 +239,17 @@ export const useCalendar = ({ tasks, userId, onMoveTask }: UseCalendarProps) => 
         }
     };
 
+    // --- Global dragend listener to completely clear stuck drag highlights ---
+    useEffect(() => {
+        const handleGlobalDragEnd = () => {
+            setDragOverDate(null);
+        };
+        window.addEventListener('dragend', handleGlobalDragEnd);
+        return () => {
+            window.removeEventListener('dragend', handleGlobalDragEnd);
+        };
+    }, []);
+
     // Memoize Drag Handlers
     const handleDragStart = useCallback((e: React.DragEvent, taskId: string) => {
         e.dataTransfer.setData("taskId", taskId);

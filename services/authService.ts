@@ -26,6 +26,8 @@ export const authService = {
     workStatus: (data.work_status as WorkStatus) || 'ONLINE',
     leaveStartDate: data.leave_start_date ? new Date(data.leave_start_date) : null,
     leaveEndDate: data.leave_end_date ? new Date(data.leave_end_date) : null,
+    waveBgEnabled: data.wave_bg_enabled !== false,
+    ultimateWorkroomEnabled: data.ultimate_workroom_enabled !== false,
   }),
 
   async getProfile(userId: string) {

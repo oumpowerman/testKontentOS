@@ -39,10 +39,13 @@ export const GoogleDriveProvider: React.FC<{ children: React.ReactNode }> = ({ c
         try {
             const response = await fetch('/api/auth/google/token');
             if (response.ok) {
-                const data = await response.json();
-                if (data.accessToken) {
-                    setAccessToken(data.accessToken);
-                    return data.accessToken;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    if (data && data.accessToken) {
+                        setAccessToken(data.accessToken);
+                        return data.accessToken;
+                    }
                 }
             }
         } catch (error) {

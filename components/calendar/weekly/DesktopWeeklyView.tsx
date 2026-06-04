@@ -70,7 +70,7 @@ const WeeklyColumn: React.FC<WeeklyColumnProps> = ({
     return (
         <div 
             ref={setNodeRef}
-            className={`w-[280px] p-4 flex flex-col gap-4 group transition-all relative duration-300 ${isToday ? 'bg-indigo-50/40' : 'hover:bg-white/60'} ${isOver ? 'bg-indigo-100/50 shadow-[inset_0_0_20px_rgba(99,102,241,0.1)] ring-2 ring-indigo-300 ring-inset' : ''}`}
+            className={`flex-1 min-w-[140px] md:min-w-[170px] lg:min-w-[185px] xl:min-w-[240px] p-3 md:p-4 flex flex-col gap-4 group transition-all relative duration-300 ${isToday ? 'bg-indigo-50/40' : 'hover:bg-white/60'} ${isOver ? 'bg-indigo-100/50 shadow-[inset_0_0_20px_rgba(99,102,241,0.1)] ring-2 ring-indigo-300 ring-inset' : ''}`}
         >
             {/* Column Header Highlight when dragging over */}
             {isOver && (
@@ -140,13 +140,13 @@ export const DesktopWeeklyView: React.FC<DesktopWeeklyViewProps> = ({
         <div className={`${isLandscape ? 'flex' : 'hidden lg:flex'} flex-col h-full overflow-hidden`}>
             {/* Horizontal & Vertical Scroll Container */}
             <div className="flex-1 overflow-auto scrollbar-hide">
-                <div className="min-w-max flex flex-col min-h-full">
+                <div className="w-full min-w-max flex flex-col min-h-full">
                     {/* Week Header - Sticky horizontally within the parent and vertically at the top */}
-                    <div className="flex bg-white/95 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-30">
+                    <div className="flex bg-white border-b border-gray-100 sticky top-0 z-30 w-full">
                         {days.map((day) => {
                             const isToday = isDateToday(day);
                             return (
-                                <div key={day.toString()} className="w-[280px] p-4 text-center border-r border-gray-50 last:border-r-0">
+                                <div key={day.toString()} className="flex-1 min-w-[140px] md:min-w-[170px] lg:min-w-[185px] xl:min-w-[240px] p-3 md:p-4 text-center border-r border-gray-50 last:border-r-0">
                                     <span className={`text-[10px] font-black uppercase tracking-widest ${isToday ? 'text-indigo-600' : 'text-slate-400'}`}>
                                         {format(day, 'EEE')}
                                     </span>
@@ -159,7 +159,7 @@ export const DesktopWeeklyView: React.FC<DesktopWeeklyViewProps> = ({
                     </div>
 
                     {/* Week Content */}
-                    <div className="flex flex-1 divide-x divide-gray-100 bg-white/20">
+                    <div className="flex flex-1 divide-x divide-gray-100 bg-white/20 w-full">
                         {days.map((day) => (
                             <WeeklyColumn
                                 key={day.toString()}

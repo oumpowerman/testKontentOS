@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Task } from '../types';
 import { MergedQueueItem } from '../components/checklist/stock/queue/types';
@@ -13,6 +13,7 @@ interface ShootQueueContextType {
     checkAndRefreshIfNeeded: (includeScripts: boolean) => Promise<void>;
     updateLocalItem: (id: string, updates: Partial<MergedQueueItem>) => void;
     removeItemLocally: (id: string) => void;
+    injectSingleItem: (id: string, type: 'CONTENT' | 'SCRIPT') => Promise<void>;
 }
 
 const ShootQueueContext = createContext<ShootQueueContextType | undefined>(undefined);
@@ -24,13 +25,13 @@ export const ShootQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     
     // Refs to keep track of current state in async functions
     const itemsRef = useRef<MergedQueueItem[]>([]);
+    const debounceTimeoutRef = useRef<any>(null);
 
     const setQueueItems = useCallback((items: MergedQueueItem[]) => {
         setQueueItemsState(items);
         itemsRef.current = items;
         
         // Generate a simple fingerprint based on IDs and their updated_at if possible
-        // For now, we'll use a combination of length and ID join
         const fingerprint = items.map(i => i.id).join('|') + items.length;
         setLastFingerprint(fingerprint);
     }, []);
@@ -129,49 +130,187 @@ export const ShootQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
     }, [fetchQueueData, setQueueItems]);
 
-    // Smart Refresh: Checks if the queue summary (count/max update) changed
-    const checkAndRefreshIfNeeded = useCallback(async (includeScripts: boolean) => {
-        if (itemsRef.current.length === 0) {
-            return refreshQueue(includeScripts);
+    // Smart Debounced Refresh: Checks if the queue summary count changed, scheduling execution with debounce
+    const checkAndRefreshIfNeeded = useCallback((includeScripts: boolean) => {
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
         }
 
-        try {
-            // Quick check: total count of items in queue
-            const { count: contentCount } = await supabase
-                .from('contents')
-                .select('id', { count: 'exact', head: true })
-                .eq('is_in_shoot_queue', true);
+        return new Promise<void>((resolve, reject) => {
+            debounceTimeoutRef.current = setTimeout(async () => {
+                if (itemsRef.current.length === 0) {
+                    try {
+                        await refreshQueue(includeScripts);
+                        resolve();
+                    } catch (err) {
+                        reject(err);
+                    }
+                    return;
+                }
 
-            const { count: scriptCount } = await supabase
-                .from('scripts')
-                .select('id', { count: 'exact', head: true })
-                .eq('is_in_shoot_queue', true);
+                try {
+                    // Quick check: total count of items in queue
+                    const { count: contentCount } = await supabase
+                        .from('contents')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('is_in_shoot_queue', true);
 
-            const totalCurrent = (contentCount || 0) + (scriptCount || 0);
-            
-            // If count changed or we don't have scripts but should, refresh
-            if (totalCurrent !== itemsRef.current.length) {
-                console.log(`[ShootQueueContext] Fingerprint mismatch (Count: ${itemsRef.current.length} -> ${totalCurrent}), refreshing...`);
-                return refreshQueue(includeScripts);
-            }
-            
-            // Optional: More deep check with timestamps could be added here
-            // For now, count is a great "Cheap" Egress check
-            console.log('[ShootQueueContext] Data is still fresh, avoiding full fetch.');
+                    const { count: scriptCount } = await supabase
+                        .from('scripts')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('is_in_shoot_queue', true);
 
-        } catch (err) {
-            console.error('Context smart refresh check failed:', err);
-            // Fallback to full refresh on error to be safe
-            refreshQueue(includeScripts);
-        }
+                    const totalCurrent = (contentCount || 0) + (scriptCount || 0);
+                    
+                    if (totalCurrent !== itemsRef.current.length) {
+                        console.log(`[ShootQueueContext] Fingerprint mismatch (Count: ${itemsRef.current.length} -> ${totalCurrent}), refreshing...`);
+                        await refreshQueue(includeScripts);
+                    } else {
+                        console.log('[ShootQueueContext] Data is still fresh, avoiding full fetch.');
+                    }
+                    resolve();
+                } catch (err) {
+                    console.error('Debounced check failed:', err);
+                    refreshQueue(includeScripts).then(resolve).catch(reject);
+                }
+            }, 1500); // 1.5s debounce window to combine concurrent updates
+        });
     }, [refreshQueue]);
 
     const updateLocalItem = useCallback((id: string, updates: Partial<MergedQueueItem>) => {
-        setQueueItemsState(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+        setQueueItemsState(prev => {
+            const updated = prev.map(item => item.id === id ? { ...item, ...updates } : item);
+            itemsRef.current = updated;
+            return updated;
+        });
     }, []);
 
     const removeItemLocally = useCallback((id: string) => {
-        setQueueItemsState(prev => prev.filter(item => item.id !== id));
+        setQueueItemsState(prev => {
+            const filtered = prev.filter(item => item.id !== id);
+            itemsRef.current = filtered;
+            return filtered;
+        });
+    }, []);
+
+    // Highly efficient single-item fetching & injection
+    const injectSingleItem = useCallback(async (id: string, type: 'CONTENT' | 'SCRIPT') => {
+        try {
+            if (type === 'CONTENT') {
+                const { data, error } = await supabase
+                    .from('contents')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+
+                if (error) throw error;
+                if (!data || !data.is_in_shoot_queue) {
+                    removeItemLocally(id);
+                    return;
+                }
+
+                const newItem: MergedQueueItem = {
+                    id: data.id,
+                    type: 'CONTENT',
+                    title: data.title,
+                    status: data.status,
+                    isSoftFinished: !!data.is_soft_finished,
+                    shootLocation: data.shoot_location,
+                    shootTimeStart: data.shoot_time_start,
+                    shootTimeEnd: data.shoot_time_end,
+                    shootNotes: data.shoot_notes,
+                    channelId: data.channel_id,
+                    sort_order: data.sort_order || 0,
+                    item: {
+                        id: data.id,
+                        type: 'CONTENT',
+                        title: data.title,
+                        description: data.description || '',
+                        status: data.status,
+                        startDate: new Date(data.start_date),
+                        endDate: new Date(data.end_date),
+                        channelId: data.channel_id,
+                        isInShootQueue: true,
+                        isSoftFinished: !!data.is_soft_finished,
+                    } as any
+                };
+
+                setQueueItemsState(prev => {
+                    const filtered = prev.filter(item => item.id !== id);
+                    const merged = [...filtered, newItem];
+                    merged.sort((a, b) => a.sort_order - b.sort_order);
+                    itemsRef.current = merged;
+                    return merged;
+                });
+            } else {
+                const { data, error } = await supabase
+                    .from('scripts')
+                    .select('id, title, status, is_soft_finished, shoot_location, shoot_time_start, shoot_time_end, shoot_notes, channel_id, content_id, sort_order, is_in_shoot_queue')
+                    .eq('id', id)
+                    .single();
+
+                if (error) throw error;
+                if (!data || !data.is_in_shoot_queue) {
+                    removeItemLocally(id);
+                    return;
+                }
+
+                const newItem: MergedQueueItem = {
+                    id: data.id,
+                    type: 'SCRIPT',
+                    title: data.title,
+                    status: data.status,
+                    isSoftFinished: !!data.is_soft_finished,
+                    shootLocation: data.shoot_location,
+                    shootTimeStart: data.shoot_time_start,
+                    shootTimeEnd: data.shoot_time_end,
+                    shootNotes: data.shoot_notes,
+                    channelId: data.channel_id,
+                    contentId: data.content_id,
+                    sort_order: data.sort_order || 0,
+                    item: {
+                        id: data.id,
+                        title: data.title,
+                        status: data.status,
+                        contentId: data.content_id,
+                        isInShootQueue: true,
+                        isSoftFinished: !!data.is_soft_finished,
+                    } as any
+                };
+
+                setQueueItemsState(prev => {
+                    // Check if we should find match or append
+                    const existingContentIndex = prev.findIndex(m => m.id === data.content_id);
+                    if (existingContentIndex !== -1) {
+                        const updated = [...prev];
+                        updated[existingContentIndex] = {
+                            ...updated[existingContentIndex],
+                            scriptId: data.id
+                        };
+                        itemsRef.current = updated;
+                        return updated;
+                    }
+
+                    const filtered = prev.filter(item => item.id !== id);
+                    const merged = [...filtered, newItem];
+                    merged.sort((a, b) => a.sort_order - b.sort_order);
+                    itemsRef.current = merged;
+                    return merged;
+                });
+            }
+        } catch (err) {
+            console.error(`Local single-item injection failed for ${type}:${id}`, err);
+            // Fallback
+            checkAndRefreshIfNeeded(true);
+        }
+    }, [removeItemLocally, checkAndRefreshIfNeeded]);
+
+    useEffect(() => {
+        return () => {
+            if (debounceTimeoutRef.current) {
+                clearTimeout(debounceTimeoutRef.current);
+            }
+        };
     }, []);
 
     const value = useMemo(() => ({
@@ -182,8 +321,9 @@ export const ShootQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         refreshQueue,
         checkAndRefreshIfNeeded,
         updateLocalItem,
-        removeItemLocally
-    }), [queueItems, lastFingerprint, isLoading, setQueueItems, refreshQueue, checkAndRefreshIfNeeded, updateLocalItem, removeItemLocally]);
+        removeItemLocally,
+        injectSingleItem
+    }), [queueItems, lastFingerprint, isLoading, setQueueItems, refreshQueue, checkAndRefreshIfNeeded, updateLocalItem, removeItemLocally, injectSingleItem]);
 
     return (
         <ShootQueueContext.Provider value={value}>
@@ -197,5 +337,11 @@ export const useShootQueueContext = () => {
     if (context === undefined) {
         throw new Error('useShootQueueContext must be used within a ShootQueueProvider');
     }
+
+    // Lazy initialization: triggers only when a component mount/consumes the hook.
+    useEffect(() => {
+        context.checkAndRefreshIfNeeded(true);
+    }, [context.checkAndRefreshIfNeeded]);
+
     return context;
 };

@@ -31,6 +31,8 @@ import MemberReportModal from './member/MemberReportModal';
 import NegligenceLockModal from '../duty/NegligenceLockModal'; 
 import SortableWidget from './widgets/SortableWidget';
 import AppBackground from '../common/AppBackground';
+import PastelWaveBackground from './member/PastelWaveBackground';
+import { Sparkles } from 'lucide-react';
 
 // New Refactored Widgets
 import SmartAttendance from './widgets/SmartAttendance';
@@ -138,10 +140,41 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({
         tribunal_bulletin: { span: 'xl:col-span-4' },
     };
 
-    // Sync local user
+    // Sync local user + fallback setting for wave background
     useEffect(() => {
-        setLocalUser(currentUser);
+        let isWaveEnabled = currentUser.waveBgEnabled;
+        if (currentUser && currentUser.waveBgEnabled === undefined) {
+            const saved = localStorage.getItem(`wave_bg_enabled_${currentUser.id}`);
+            isWaveEnabled = saved !== 'false'; // Default to true
+        }
+        setLocalUser(prev => ({ 
+            ...currentUser, 
+            waveBgEnabled: isWaveEnabled 
+        }));
     }, [currentUser]);
+
+    // Handle Wave Background Toggle (Persistent)
+    const handleToggleWaveBg = async () => {
+        const newValue = localUser.waveBgEnabled === false ? true : false;
+        
+        // Optimistic update
+        setLocalUser(prev => ({ ...prev, waveBgEnabled: newValue }));
+        
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ wave_bg_enabled: newValue })
+                .eq('id', currentUser.id);
+                
+            if (error) throw error;
+            showToast(newValue ? 'เปิดเอฟเฟกต์คลื่นน้ำพาสเทลแล้ว' : 'ปิดเอฟเฟกต์คลื่นน้ำพาสเทลแล้ว', 'success');
+        } catch (err: any) {
+            console.error('Failed to update wave background setting in DB:', err);
+            // Save to localStorage as a robust sandbox fallback
+            localStorage.setItem(`wave_bg_enabled_${currentUser.id}`, String(newValue));
+            showToast('บันทึกการตั้งค่าลงในเครื่องแล้ว', 'success');
+        }
+    };
 
     // Handle Status Update (Optimistic)
     const handleUpdateStatus = async (status: WorkStatus) => {
@@ -277,7 +310,10 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({
     };
 
     return (
-        <AppBackground theme="pastel-amber" pattern="dots" className="p-4 md:p-8 min-h-screen">
+        <AppBackground theme="pastel-amber" pattern="dots" className="p-4 md:p-8 min-h-screen relative overflow-hidden">
+            {/* Ambient Animated Pastel Wave Background */}
+            <PastelWaveBackground enabled={localUser.waveBgEnabled !== false} />
+
             <div className="relative z-10 space-y-6 pb-20">
                 
                 {/* --- HEADER (Fixed) --- */}
@@ -292,6 +328,82 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({
                         onOpenWorkload={() => setIsWorkloadOpen(true)}
                         onOpenReport={() => setIsReportOpen(true)} 
                     />
+                </div>
+
+                {/* --- APP FEATURES BAR (Pastel glass pill) --- */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-20">
+                    <div id="live-waves-toggle" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-6 py-4 bg-white/70 backdrop-blur-md rounded-3xl border border-white/60 shadow-xs transition-all duration-500">
+                        <div className="flex items-center gap-3">
+                            <span className="p-2.5 bg-gradient-to-tr from-pink-400 via-rose-350 to-indigo-500 text-white rounded-2xl flex items-center justify-center shadow-sm">
+                                <Sparkles className="w-4 h-4 animate-pulse" />
+                            </span>
+                            <div className="text-left">
+                                <h4 className="text-xs font-extrabold text-slate-800 tracking-tight">ธีมคลื่นน้ำพาสเทลเคลื่อนไหว (Live Ambient Waves)</h4>
+                                <p className="text-[10px] text-slate-500 mt-0.5 font-medium leading-relaxed">สัมผัสความน่ารัก สบายตา ด้วยอะนิเมชันจำลองยอดคลื่นสายน้ำพาสเทล ไหลลื่นและเปลี่ยนคู่สีได้อิสระ</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+                            <span className={`text-[9.5px] font-black px-2.5 py-1 rounded-full transition-all duration-300 ${
+                                localUser.waveBgEnabled !== false
+                                    ? 'bg-indigo-50 text-indigo-600 border border-indigo-150/50'
+                                    : 'bg-slate-50 text-slate-400 border border-slate-150/40'
+                            }`}>
+                                {localUser.waveBgEnabled !== false ? 'เปิดคลื่นน้ำอยู่ 🌊' : 'ปิดคลื่นน้ำแล้ว 💤'}
+                            </span>
+                            
+                            {/* Custom Elegant Toggle Switch */}
+                            <button
+                                type="button"
+                                onClick={handleToggleWaveBg}
+                                aria-label="Toggle wave background animation"
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-500 focus:outline-none cursor-pointer ${
+                                    localUser.waveBgEnabled !== false 
+                                        ? 'bg-gradient-to-r from-pink-400 to-indigo-500' 
+                                        : 'bg-slate-350/85 hover:bg-slate-350'
+                                }`}
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-500 ${
+                                        localUser.waveBgEnabled !== false 
+                                            ? 'translate-x-[24px]' 
+                                            : 'translate-x-[4px]'
+                                    }`}
+                                />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* COZY ULTIMATE WORKROOM ACCESS PILL */}
+                    <button
+                        type="button"
+                        onClick={() => onNavigate('ULTIMATE_WORKROOM')}
+                        className="group flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-6 py-4 bg-gradient-to-tr from-slate-900/90 via-indigo-950/85 to-indigo-900/90 border border-indigo-500/30 text-left rounded-3xl shadow-lg relative overflow-hidden transition-all duration-500 hover:scale-[1.01] hover:shadow-[0_8px_24px_rgba(99,102,241,0.25)] hover:border-indigo-400/50 cursor-pointer"
+                    >
+                        {/* Shimmer glowing backdrop light */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 via-violet-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                        
+                        <div className="flex items-center gap-3 relative z-10">
+                            <span className="p-2.5 bg-gradient-to-tr from-pink-500 via-purple-600 to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                                <span className="animate-pulse">🌌</span>
+                            </span>
+                            <div>
+                                <h4 className="text-xs font-black text-white tracking-tight flex items-center gap-1.5">
+                                    <span>Cozy Interactive Workroom</span>
+                                    <span className="text-[8px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.2 rounded font-bold">COCKPIT</span>
+                                </h4>
+                                <p className="text-[10px] text-slate-300 mt-0.5 font-medium leading-relaxed">
+                                    วาร์ปเข้าสู่ห้องจำลองจำเนียรเวทมนตร์ดวงดาวเงียบสงบ เพื่อปั้นพลังเวทมนตร์สะกดสมาธิ
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto relative z-10">
+                            <span className="text-[9.5px] font-black px-3 py-1 bg-gradient-to-r from-pink-500 to-indigo-500 group-hover:from-pink-400 group-hover:to-indigo-400 text-white rounded-full shadow-md transition-all duration-300">
+                                ประตูมิติมาร์ป ⚡
+                            </span>
+                        </div>
+                    </button>
                 </div>
 
                 {/* --- DRAGGABLE WIDGETS GRID --- */}

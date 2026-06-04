@@ -180,7 +180,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-      // Optional logic
+      setDragOverDate(null);
   };
 
 
@@ -417,12 +417,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               >
                    <div className="w-80 h-full rounded-3xl overflow-hidden">
                        <StockSidePanel 
-                          isOpen={true} // Always render internal logic, control visibility via wrapper
+                          isOpen={isStockOpen}
                           onClose={() => setIsStockOpen(false)}
                           tasks={tasks}
                           channels={channels}
                           masterOptions={masterOptions}
                           onEditTask={onSelectTask}
+                          onMoveTask={handleMoveAttempt}
                        />
                    </div>
               </div>
@@ -446,12 +447,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                     onClick={e => e.stopPropagation()}
                  >
                       <StockSidePanel 
-                          isOpen={true}
+                          isOpen={isStockOpen}
                           onClose={() => setIsStockOpen(false)}
                           tasks={tasks}
                           channels={channels}
                           masterOptions={masterOptions}
                           onEditTask={onSelectTask}
+                          onMoveTask={handleMoveAttempt}
                       />
                  </div>
             </div>

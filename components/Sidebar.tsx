@@ -95,17 +95,17 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isDarkTheme = currentView === 'QUALITY_GATE' || currentView === 'GOALS';
   
   const themeClasses = {
-      aside: isDarkTheme 
-        ? 'bg-slate-950 border-white/5 shadow-2xl shadow-black/50' 
-        : 'bg-white border-gray-200 shadow-xl',
+      aside: isDarkTheme
+        ? 'bg-slate-950/20 backdrop-blur-2xl border-r border-white/10 shadow-[4px_0_24px_rgba(0,0,0,0.2)]'
+        : 'bg-white/20 backdrop-blur-2xl border-r border-white/30 shadow-[4px_0_24px_rgba(0,0,0,0.02)]',
       text: isDarkTheme ? 'text-slate-100' : 'text-gray-900',
-      subtext: isDarkTheme ? 'text-slate-400' : 'text-slate-400',
-      groupHeader: isDarkTheme ? 'text-slate-500 hover:text-indigo-400' : 'text-slate-400 hover:text-indigo-600',
-      itemIdle: isDarkTheme ? 'text-slate-400 hover:text-indigo-300' : 'text-slate-500 hover:text-indigo-700',
-      itemActive: isDarkTheme ? 'text-indigo-300' : 'text-indigo-600',
-      footer: isDarkTheme ? 'border-white/5 bg-black/20' : 'border-gray-100 bg-slate-50/50',
-      userCard: isDarkTheme ? 'hover:bg-white/5 hover:border-white/10' : 'hover:bg-white hover:border-slate-200 hover:shadow-lg',
-      logoArea: isDarkTheme ? 'from-slate-950 to-slate-900' : 'from-white to-slate-50/50'
+      subtext: isDarkTheme ? 'text-slate-400' : 'text-slate-500',
+      groupHeader: isDarkTheme ? 'text-slate-400 hover:text-indigo-300' : 'text-slate-500 hover:text-indigo-600',
+      itemIdle: isDarkTheme ? 'text-slate-400 hover:text-indigo-300' : 'text-slate-600 hover:text-indigo-700',
+      itemActive: isDarkTheme ? 'text-indigo-300' : 'text-indigo-700',
+      footer: isDarkTheme ? 'border-white/10 bg-black/10' : 'border-white/40 bg-white/10',
+      userCard: isDarkTheme ? 'hover:bg-white/10 hover:border-white/10' : 'hover:bg-white/40 hover:border-white/40 hover:shadow-sm',
+      logoArea: isDarkTheme ? 'from-slate-950/40 to-transparent' : 'from-white/40 to-transparent'
   };
 
   // State for Accordion

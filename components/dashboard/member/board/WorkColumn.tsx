@@ -17,10 +17,11 @@ interface WorkColumnProps {
     onOpenTask: (task: Task) => void;
     onDeleteTask?: (taskId: string) => void;
     onViewAll?: () => void;
+    isUltimate?: boolean;
 }
 
 const WorkColumn: React.FC<WorkColumnProps> = ({ 
-    type, tasks, users, masterOptions, isDroppable, onDropTask, onOpenTask, onDeleteTask, onViewAll 
+    type, tasks, users, masterOptions, isDroppable, onDropTask, onOpenTask, onDeleteTask, onViewAll, isUltimate = false
 }) => {
     
     // Header Config
@@ -131,12 +132,22 @@ const WorkColumn: React.FC<WorkColumnProps> = ({
         );
     };
 
-    // Container Style
-    let containerStyle = "rounded-[2.5rem] p-4 flex flex-col h-full transition-all duration-500 border border-white/40 shadow-sm hover:shadow-md";
-    if (type === 'DOING') containerStyle += " bg-white/60 backdrop-blur-md border-indigo-100/50 shadow-indigo-100/20";
-    else if (type === 'WAITING') containerStyle += " bg-white/40 backdrop-blur-sm border-amber-100/50";
-    else if (type === 'DONE') containerStyle += " bg-white/40 backdrop-blur-sm border-emerald-100/50";
-    else containerStyle += " bg-white/40 backdrop-blur-sm border-slate-200/50";
+    // Container Style with horizontal scroll dimensions
+    let containerStyle = isUltimate
+        ? "rounded-[2.5rem] p-4 flex flex-col h-full transition-all duration-300 border border-slate-800 bg-[#0f111f]/30 shadow-lg hover:shadow-indigo-950/20 w-[280px] md:w-[320px] xl:w-auto flex-shrink-0"
+        : "rounded-[2.5rem] p-4 flex flex-col h-full transition-all duration-500 border border-white/40 shadow-sm hover:shadow-md w-[280px] md:w-[320px] xl:w-auto flex-shrink-0";
+
+    if (isUltimate) {
+        if (type === 'DOING') containerStyle += " bg-indigo-950/20 border-indigo-500/25 shadow-indigo-950/40";
+        else if (type === 'WAITING') containerStyle += " bg-amber-950/10 border-amber-500/20";
+        else if (type === 'DONE') containerStyle += " bg-emerald-950/10 border-emerald-500/20";
+        else containerStyle += " bg-slate-950/30 border-slate-800";
+    } else {
+        if (type === 'DOING') containerStyle += " bg-white/60 backdrop-blur-md border-indigo-100/50 shadow-indigo-100/20";
+        else if (type === 'WAITING') containerStyle += " bg-white/40 backdrop-blur-sm border-amber-100/50";
+        else if (type === 'DONE') containerStyle += " bg-white/40 backdrop-blur-sm border-emerald-100/50";
+        else containerStyle += " bg-white/40 backdrop-blur-sm border-slate-200/50";
+    }
 
     const DISPLAY_LIMIT = 3;
     const hasMoreItems = tasks.length > DISPLAY_LIMIT;
@@ -151,20 +162,30 @@ const WorkColumn: React.FC<WorkColumnProps> = ({
             onDrop={handleDrop}
         >
             {/* Header */}
-            <div className={`flex items-center justify-between mb-5 p-3.5 rounded-2xl border ${headerConfig.border} ${headerConfig.bg} backdrop-blur-md shadow-sm`}>
-                <div className={`flex items-center gap-2.5 text-[14px] font-kanit font-bold uppercase tracking-[0.15em] ${headerConfig.text}`}>
+            <div className={`flex items-center justify-between mb-5 p-3.5 rounded-2xl border ${
+                isUltimate 
+                    ? 'border-indigo-500/15 bg-[#121424]/75 shadow-lg shadow-indigo-950/10' 
+                    : `${headerConfig.border} ${headerConfig.bg}`
+            } backdrop-blur-md shadow-sm`}>
+                <div className={`flex items-center gap-2.5 text-[14px] font-kanit font-bold uppercase tracking-[0.15em] ${
+                    isUltimate ? 'text-indigo-200' : headerConfig.text
+                }`}>
                     <div className={`p-1.5 rounded-lg text-white ${headerConfig.accent} shadow-sm`}>
                         {headerConfig.icon}
                     </div>
                     {headerConfig.title}
                 </div>
-                <span className={`text-[14px] font-black px-2.5 py-1 rounded-xl shadow-sm border transition-all duration-300 ${badgeColor}`}>
+                <span className={`text-[14px] font-black px-2.5 py-1 rounded-xl shadow-sm border transition-all duration-300 ${
+                    isUltimate 
+                        ? (hasMoreItems ? 'bg-rose-950 text-rose-300 border-rose-800' : 'bg-slate-950 text-indigo-300 border-slate-800') 
+                        : badgeColor
+                }`}>
                     {tasks.length}
                 </span>
             </div>
 
             {/* Content */}
-            <div className={`flex-1 overflow-y-auto p-1.5 pt-3 pb-6 scrollbar-hide flex flex-col gap-3 relative ${isDroppable ? 'min-h-[200px]' : ''}`}>
+            <div className={`flex-1 overflow-y-auto p-1.5 pt-3 pb-6 flex flex-col gap-3 relative ${isDroppable ? 'min-h-[200px]' : ''}`}>
                 <AnimatePresence mode="popLayout" initial={false}>
                     {tasks.length > 0 ? (
                         tasks.slice(0, DISPLAY_LIMIT).map(task => (
@@ -181,6 +202,7 @@ const WorkColumn: React.FC<WorkColumnProps> = ({
                                 }}
                                 onClick={onOpenTask}
                                 onDelete={onDeleteTask}
+                                isUltimate={isUltimate}
                             />
                         ))
                     ) : (

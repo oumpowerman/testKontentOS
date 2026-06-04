@@ -59,7 +59,7 @@ export const WeeklyTaskCard = React.forwardRef<HTMLDivElement, WeeklyTaskCardPro
             layoutId={isDragging ? undefined : task.id}
             onClick={() => onTaskClick(task)}
             className={`
-                group/card relative bg-white rounded-3xl p-4 shadow-sm border transition-all active:scale-[0.98] 
+                group/card relative bg-white rounded-3xl p-3 md:p-4 shadow-sm border transition-all active:scale-[0.98] 
                 ${isDragging ? 'opacity-95 ring-4 ring-indigo-500/30 z-50 cursor-grabbing shadow-2xl scale-[1.02]' : 'border-slate-100 hover:shadow-xl hover:border-indigo-200 cursor-pointer'}
                 ${!isChannelHex && channelTailwindBorder ? `border-l-4 ${channelTailwindBorder}` : (isChannelHex ? 'border-l-4' : '')}
                 ${!isDragging && !isChannelHex && channelTailwindBg ? `${channelTailwindBg}/50` : 'bg-white'}
@@ -115,14 +115,14 @@ export const WeeklyTaskCard = React.forwardRef<HTMLDivElement, WeeklyTaskCardPro
             </div>
 
             {/* Meta Info */}
-            <div className="flex items-center gap-3 mt-4 pt-3 border-t border-slate-50">
+            <div className="flex items-center gap-2 mt-3 md:mt-4 pt-3 border-t border-slate-50">
                 {task.shootLocation && (
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
-                        <MapPin className="w-3 h-3 text-indigo-400" />
-                        <span className="truncate max-w-[120px]">{task.shootLocation}</span>
+                    <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 min-w-0">
+                        <MapPin className="w-3 h-3 text-indigo-400 shrink-0" />
+                        <span className="truncate max-w-[55px] xs:max-w-[70px] sm:max-w-[90px] md:max-w-[110px] lg:max-w-[120px]">{task.shootLocation}</span>
                     </div>
                 )}
-                <div className="ml-auto flex items-center gap-2">
+                <div className="ml-auto flex items-center gap-1.5 shrink-0">
                     {task.priority === 'HIGH' && (
                         <div className="text-rose-500 bg-rose-50 px-2 py-0.5 rounded-lg text-[9px] font-black tracking-widest border border-rose-100 flex items-center gap-1">
                             <AlertCircle className="w-2.5 h-2.5 fill-rose-50" /> HIGH

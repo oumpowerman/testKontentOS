@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Task, MasterOption, User } from '../../../types';
 import { isTaskCompleted, isTaskTodo } from '../../../constants';
 import { Layers } from 'lucide-react';
@@ -19,15 +19,38 @@ interface MyWorkBoardProps {
     onOpenTask: (task: Task) => void;
     onUpdateTask?: (task: Task) => void;
     onDeleteTask?: (taskId: string) => void;
+    isUltimate?: boolean;
 }
 
 type ColumnType = 'TODO' | 'DOING' | 'WAITING' | 'DONE';
 
-const MyWorkBoard: React.FC<MyWorkBoardProps> = ({ tasks, masterOptions, users, currentUser, onOpenTask, onUpdateTask, onDeleteTask }) => {
+const MyWorkBoard: React.FC<MyWorkBoardProps> = ({ 
+    tasks, masterOptions, users, currentUser, onOpenTask, onUpdateTask, onDeleteTask, isUltimate = false 
+}) => {
     const { showAlert } = useGlobalDialog();
     const [activeModalColumn, setActiveModalColumn] = useState<ColumnType | null>(null);
     const [isDoneHistoryOpen, setIsDoneHistoryOpen] = useState(false);
     const isAdmin = currentUser.role === 'ADMIN';
+
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        const handleWheelEvent = (e: WheelEvent) => {
+            const isHorizontalOverflow = container.scrollWidth > container.clientWidth;
+            if (isHorizontalOverflow && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                container.scrollLeft += e.deltaY;
+                e.preventDefault();
+            }
+        };
+
+        container.addEventListener('wheel', handleWheelEvent, { passive: false });
+        return () => {
+            container.removeEventListener('wheel', handleWheelEvent);
+        };
+    }, []);
 
     // --- Logic: Categorize Tasks ---
     const getPhase = (status: string): ColumnType => {
@@ -92,7 +115,11 @@ const MyWorkBoard: React.FC<MyWorkBoardProps> = ({ tasks, masterOptions, users, 
         <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="h-full flex flex-col bg-white/40 backdrop-blur-xl rounded-[3rem] border border-white/60 shadow-xl overflow-hidden relative group"
+            className={`min-h-0 flex flex-col rounded-[2.5rem] border shadow-2xl overflow-hidden relative group transition-all duration-300 ${
+                isUltimate 
+                    ? 'h-full bg-[#0a0c16]/30 backdrop-blur-xl border-indigo-500/20 text-white' 
+                    : 'h-full bg-white/40 backdrop-blur-xl border-white/60 text-slate-800'
+            }`}
         >
             {/* Animated Background Blobs */}
             <motion.div 
@@ -102,7 +129,9 @@ const MyWorkBoard: React.FC<MyWorkBoardProps> = ({ tasks, masterOptions, users, 
                     opacity: [0.1, 0.2, 0.1]
                 }}
                 transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                className="absolute -top-20 -right-20 w-80 h-80 bg-indigo-200 rounded-full blur-[100px] pointer-events-none"
+                className={`absolute -top-20 -right-20 w-80 h-80 rounded-full blur-[100px] pointer-events-none ${
+                    isUltimate ? 'bg-indigo-500/10' : 'bg-indigo-200'
+                }`}
             />
             <motion.div 
                 animate={{ 
@@ -111,34 +140,45 @@ const MyWorkBoard: React.FC<MyWorkBoardProps> = ({ tasks, masterOptions, users, 
                     opacity: [0.05, 0.15, 0.05]
                 }}
                 transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -bottom-20 -left-20 w-64 h-64 bg-purple-200 rounded-full blur-[80px] pointer-events-none"
+                className={`absolute -bottom-20 -left-20 w-64 h-64 rounded-full blur-[80px] pointer-events-none ${
+                    isUltimate ? 'bg-purple-500/10' : 'bg-purple-200'
+                }`}
             />
 
             {/* Header Section */}
-            <div className="p-8 pb-4 relative z-10">
+            <div className="p-8 pb-4 relative z-10 flex-shrink-0">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl text-white shadow-lg shadow-indigo-200/50">
+                        <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl text-white shadow-lg shadow-indigo-500/20">
                             <Layers className="w-6 h-6" />
                         </div>
                         <div>
-                            <h3 className="text-2xl font-bold text-slate-800 tracking-tight leading-none">กระดานงานของฉัน</h3>
+                            <h3 className={`text-2xl font-bold tracking-tight leading-none ${isUltimate ? 'text-indigo-200' : 'text-slate-800'}`}>กระดานงานของฉัน</h3>
                             <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">My Personal Work Board</p>
                         </div>
                     </div>
                     
                     <div className="flex items-center gap-2">
-                        <div className="px-4 py-2 bg-white/80 backdrop-blur-md border border-slate-100 rounded-2xl shadow-sm">
-                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Tasks: </span>
-                            <span className="text-sm font-black text-indigo-600">{todoTasks.length + doingTasks.length + waitingTasks.length + doneTasks.length}</span>
+                        <div className={`px-4 py-2 rounded-2xl shadow-sm border ${
+                            isUltimate 
+                                ? 'bg-slate-900/60 border-indigo-500/20' 
+                                : 'bg-white/80 border-slate-100'
+                        }`}>
+                            <span className={`text-xs font-bold uppercase tracking-wider ${isUltimate ? 'text-slate-400' : 'text-slate-500'}`}>Total Tasks: </span>
+                            <span className={`text-sm font-black ${isUltimate ? 'text-indigo-300' : 'text-indigo-600'}`}>
+                                {todoTasks.length + doingTasks.length + waitingTasks.length + doneTasks.length}
+                            </span>
                         </div>
                     </div>
                 </div>
             </div>
             
-            {/* 4-Column Grid */}
-            <div className="flex-1 p-6 pt-2 relative z-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 h-full min-h-[500px]">
+            {/* 4-Column Grid - Side-by-side horizontal scroll under xl, grid on xl+ */}
+            <div 
+                ref={scrollContainerRef}
+                className="flex-1 min-h-0 p-6 pt-2 relative z-10 overflow-x-auto overflow-y-auto"
+            >
+                <div className={`flex xl:grid xl:grid-cols-4 gap-5 h-full w-max xl:w-full ${isUltimate ? '' : 'min-h-[500px]'}`}>
                     <WorkColumn 
                         type="TODO" 
                         tasks={todoTasks} 
@@ -149,6 +189,7 @@ const MyWorkBoard: React.FC<MyWorkBoardProps> = ({ tasks, masterOptions, users, 
                         onOpenTask={onOpenTask}
                         onDeleteTask={onDeleteTask}
                         onViewAll={() => setActiveModalColumn('TODO')}
+                        isUltimate={isUltimate}
                     />
 
                     <WorkColumn 
@@ -161,6 +202,7 @@ const MyWorkBoard: React.FC<MyWorkBoardProps> = ({ tasks, masterOptions, users, 
                         onOpenTask={onOpenTask}
                         onDeleteTask={onDeleteTask}
                         onViewAll={() => setActiveModalColumn('DOING')}
+                        isUltimate={isUltimate}
                     />
 
                     <WorkColumn 
@@ -173,6 +215,7 @@ const MyWorkBoard: React.FC<MyWorkBoardProps> = ({ tasks, masterOptions, users, 
                         onOpenTask={onOpenTask}
                         onDeleteTask={onDeleteTask}
                         onViewAll={() => setActiveModalColumn('WAITING')}
+                        isUltimate={isUltimate}
                     />
 
                     <WorkColumn 
@@ -185,6 +228,7 @@ const MyWorkBoard: React.FC<MyWorkBoardProps> = ({ tasks, masterOptions, users, 
                         onOpenTask={onOpenTask}
                         onDeleteTask={onDeleteTask}
                         onViewAll={() => setIsDoneHistoryOpen(true)}
+                        isUltimate={isUltimate}
                     />
                 </div>
             </div>

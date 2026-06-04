@@ -33,7 +33,8 @@ const StockShootQueue: React.FC<StockShootQueueProps> = ({ channels, users, mast
         refreshQueue, 
         checkAndRefreshIfNeeded,
         updateLocalItem,
-        removeItemLocally
+        removeItemLocally,
+        injectSingleItem
     } = useShootQueueContext();
 
     const [includeScripts, setIncludeScripts] = useState(true);
@@ -43,61 +44,112 @@ const StockShootQueue: React.FC<StockShootQueueProps> = ({ channels, users, mast
     const [planningItem, setPlanningItem] = useState<MergedQueueItem | null>(null);
     const [isRedirecting, setIsRedirecting] = useState(false);
 
+    // Filter queue items on the UI level rather than refetching to save network egress
+    const filteredItems = useMemo(() => {
+        if (includeScripts) return queueItems;
+        return queueItems.filter(item => item.type !== 'SCRIPT');
+    }, [queueItems, includeScripts]);
+
     const finishedCount = useMemo(() => 
-        queueItems.filter(i => i.isSoftFinished).map(i => i.id).length
-    , [queueItems]);
+        filteredItems.filter(i => i.isSoftFinished).map(i => i.id).length
+    , [filteredItems]);
+
+    // Keep a stable ref of queue items to avoid real-time connection teardowns on state edits
+    const queueItemsRef = React.useRef(queueItems);
+    useEffect(() => {
+        queueItemsRef.current = queueItems;
+    }, [queueItems]);
 
     useEffect(() => {
-        // Use smart refresh: show cache immediately, then check fingerprint
-        checkAndRefreshIfNeeded(includeScripts);
+        // Smart fingerprinted background check on mount
+        checkAndRefreshIfNeeded(true);
 
-        // Realtime Subscription (Lazy: Connects only when visible, Unsubscribes on unmount)
-        const channel = supabase.channel('shoot-queue-realtime')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'contents' }, (payload) => {
-                const updated = payload.new as any;
-                if (!updated.is_in_shoot_queue) {
-                    removeItemLocally(updated.id);
+        console.log('[StockShootQueue] Establishing lazy Realtime subscription...');
+
+        const channel = supabase.channel('shoot-queue-lazy-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'contents' }, (payload) => {
+                const eventType = payload.eventType;
+                const oldRec = payload.old as any;
+                const newRec = payload.new as any;
+
+                if (eventType === 'DELETE') {
+                    removeItemLocally(oldRec.id);
+                    return;
+                }
+
+                // --- 1. LOCAL GUARD FILTER ---
+                const isNowInQueue = !!newRec.is_in_shoot_queue;
+                const wasInQueueLocal = queueItemsRef.current.some(item => item.id === newRec.id);
+
+                if (!isNowInQueue && !wasInQueueLocal) {
+                    // Item has nothing to do with the shoot queue, and we don't have it locally. Avoid doing anything!
+                    return;
+                }
+
+                if (!isNowInQueue) {
+                    // Item was taken out of the queue, remove locally
+                    removeItemLocally(newRec.id);
+                } else if (!wasInQueueLocal) {
+                    // --- 3. SINGLE-ITEM INJECTION ---
+                    // Item entered the queue, query ONLY this single row!
+                    injectSingleItem(newRec.id, 'CONTENT');
                 } else {
-                    updateLocalItem(updated.id, {
-                        title: updated.title,
-                        status: updated.status,
-                        isSoftFinished: !!updated.is_soft_finished,
-                        shootLocation: updated.shoot_location,
-                        shootTimeStart: updated.shoot_time_start,
-                        shootTimeEnd: updated.shoot_time_end,
-                        shootNotes: updated.shoot_notes,
-                        channelId: updated.channel_id
+                    // Item is already in queue and was updated, sync its attributes
+                    updateLocalItem(newRec.id, {
+                        title: newRec.title,
+                        status: newRec.status,
+                        isSoftFinished: !!newRec.is_soft_finished,
+                        shootLocation: newRec.shoot_location,
+                        shootTimeStart: newRec.shoot_time_start,
+                        shootTimeEnd: newRec.shoot_time_end,
+                        shootNotes: newRec.shoot_notes,
+                        channelId: newRec.channel_id
                     });
-                    // Smart fingerprinted refresh to add newly queued items in real-time
-                    checkAndRefreshIfNeeded(includeScripts);
                 }
             })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'scripts' }, (payload) => {
-                const updated = payload.new as any;
-                if (!updated.is_in_shoot_queue) {
-                    removeItemLocally(updated.id);
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'scripts' }, (payload) => {
+                const eventType = payload.eventType;
+                const oldRec = payload.old as any;
+                const newRec = payload.new as any;
+
+                if (eventType === 'DELETE') {
+                    removeItemLocally(oldRec.id);
+                    return;
+                }
+
+                // --- 1. LOCAL GUARD FILTER ---
+                const isNowInQueue = !!newRec.is_in_shoot_queue;
+                const wasInQueueLocal = queueItemsRef.current.some(item => item.id === newRec.id || item.scriptId === newRec.id);
+
+                if (!isNowInQueue && !wasInQueueLocal) {
+                    return;
+                }
+
+                if (!isNowInQueue) {
+                    removeItemLocally(newRec.id);
+                } else if (!wasInQueueLocal) {
+                    // --- 3. SINGLE-ITEM INJECTION ---
+                    injectSingleItem(newRec.id, 'SCRIPT');
                 } else {
-                    updateLocalItem(updated.id, {
-                        title: updated.title,
-                        status: updated.status,
-                        isSoftFinished: !!updated.is_soft_finished,
-                        shootLocation: updated.shoot_location,
-                        shootTimeStart: updated.shoot_time_start,
-                        shootTimeEnd: updated.shoot_time_end,
-                        shootNotes: updated.shoot_notes,
-                        channelId: updated.channel_id
+                    updateLocalItem(newRec.id, {
+                        title: newRec.title,
+                        status: newRec.status,
+                        isSoftFinished: !!newRec.is_soft_finished,
+                        shootLocation: newRec.shoot_location,
+                        shootTimeStart: newRec.shoot_time_start,
+                        shootTimeEnd: newRec.shoot_time_end,
+                        shootNotes: newRec.shoot_notes,
+                        channelId: newRec.channel_id
                     });
-                    // Smart fingerprinted refresh to add newly queued items in real-time
-                    checkAndRefreshIfNeeded(includeScripts);
                 }
             })
             .subscribe();
 
         return () => {
-            console.log('[StockShootQueue] Unsubscribing from Realtime to save Egress...');
+            console.log('[StockShootQueue] Unsubscribing from lazy Realtime channel to preserve network resources.');
             supabase.removeChannel(channel);
         };
-    }, [includeScripts, checkAndRefreshIfNeeded, updateLocalItem, removeItemLocally]);
+    }, [checkAndRefreshIfNeeded, injectSingleItem, updateLocalItem, removeItemLocally]);
 
     const handleReorder = async (newItems: MergedQueueItem[]) => {
         // Optimistic update in context
@@ -116,7 +168,7 @@ const StockShootQueue: React.FC<StockShootQueueProps> = ({ channels, users, mast
         } catch (err) {
             console.error('Reorder update failed:', err);
             showToast('จัดลำดับไม่สำเร็จ', 'error');
-            refreshQueue(includeScripts); // Revert from server
+            refreshQueue(true); // Revert from server
         }
     };
 
@@ -141,7 +193,7 @@ const StockShootQueue: React.FC<StockShootQueueProps> = ({ channels, users, mast
             } catch (err) {
                 console.error('Remove from queue failed:', err);
                 showToast('นำออกจากคิวไม่สำเร็จ', 'error');
-                refreshQueue(includeScripts); // Revert
+                refreshQueue(true); // Revert
             }
         }
     };
@@ -190,7 +242,7 @@ const StockShootQueue: React.FC<StockShootQueueProps> = ({ channels, users, mast
         showLoading('กำลังอัปเดตสถานะรายการทั้งหมด...');
 
         try {
-            const itemsToProcess = queueItems.filter(i => i.isSoftFinished);
+            const itemsToProcess = filteredItems.filter(i => i.isSoftFinished);
             const contentIds = itemsToProcess.filter(i => i.type === 'CONTENT').map(i => i.id);
             const scriptIds = itemsToProcess.filter(i => i.type === 'SCRIPT').map(i => i.id);
 
@@ -230,12 +282,12 @@ const StockShootQueue: React.FC<StockShootQueueProps> = ({ channels, users, mast
             }
 
             // Local update to remove processed items
-            setQueueItems(queueItems.filter(i => !i.isSoftFinished));
+            setQueueItems(queueItems.filter(i => !itemsToProcess.some(p => p.id === i.id)));
             showToast(`ประมวลผลสำเร็จ ${itemsToProcess.length} รายการ! 🎬`, 'success');
         } catch (err) {
             console.error('Batch process failed:', err);
             showToast('เกิดข้อผิดพลาดในการประมวลผลบางรายการ', 'error');
-            refreshQueue(includeScripts);
+            refreshQueue(true);
         } finally {
             setIsBatchProcessing(false);
             hideLoading();
@@ -319,7 +371,7 @@ const StockShootQueue: React.FC<StockShootQueueProps> = ({ channels, users, mast
                 onSortByTime={handleSortByTime}
             />
 
-            {queueItems.length === 0 ? (
+            {filteredItems.length === 0 ? (
                 <div className="bg-white/40 backdrop-blur-md rounded-3xl border border-white/60 p-16 text-center flex flex-col items-center justify-center">
                     <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
                         <Video className="w-10 h-10 text-gray-300" />
@@ -332,7 +384,7 @@ const StockShootQueue: React.FC<StockShootQueueProps> = ({ channels, users, mast
             ) : (
                 viewMode === 'GRID' ? (
                     <QueueGridView 
-                        items={queueItems}
+                        items={filteredItems}
                         channels={channels}
                         masterOptions={masterOptions}
                         isProcessing={isProcessing}
@@ -345,7 +397,7 @@ const StockShootQueue: React.FC<StockShootQueueProps> = ({ channels, users, mast
                     />
                 ) : (
                     <QueueTableView 
-                        items={queueItems}
+                        items={filteredItems}
                         channels={channels}
                         masterOptions={masterOptions}
                         isProcessing={isProcessing}

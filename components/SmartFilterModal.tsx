@@ -89,19 +89,16 @@ const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
                 </div>
 
                 <AnimatePresence>
-                    {isDropdownOpen && createPortal(
+                    {isDropdownOpen && (
                         <motion.div 
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                             animate={{ 
                                 opacity: 1, 
                                 y: 5, 
-                                scale: 1,
-                                top: (containerRef.current?.getBoundingClientRect().bottom || 0),
-                                left: (containerRef.current?.getBoundingClientRect().left || 0),
-                                width: (containerRef.current?.getBoundingClientRect().width || 0)
+                                scale: 1
                             }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            className="fixed z-[16000] bg-white border border-slate-200 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] overflow-hidden"
+                            className="absolute left-0 right-0 mt-1 z-[16000] bg-white border border-slate-200 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] overflow-hidden"
                         >
                             {options.length > 8 && (
                                 <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
@@ -146,8 +143,7 @@ const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
                                     <div className="p-8 text-center text-slate-400 text-xs font-bold">ไม่พบข้อมูล</div>
                                 )}
                             </div>
-                        </motion.div>,
-                        document.body
+                        </motion.div>
                     )}
                 </AnimatePresence>
             </div>
@@ -155,9 +151,9 @@ const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
     };
 
     // Derive Options from Master Data
-    const formatOptions = masterOptions.filter(o => o.type === 'FORMAT' && o.isActive);
-    const pillarOptions = masterOptions.filter(o => o.type === 'PILLAR' && o.isActive);
-    const statusOptions = masterOptions.filter(o => o.type === 'STATUS' && o.isActive);
+    const formatOptions = masterOptions.filter(o => o.type === 'FORMAT' && o.isActive !== false);
+    const pillarOptions = masterOptions.filter(o => o.type === 'PILLAR' && o.isActive !== false);
+    const statusOptions = masterOptions.filter(o => o.type === 'STATUS' && o.isActive !== false);
 
     const initNewChip = () => {
         setEditingChip({
