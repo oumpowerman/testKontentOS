@@ -59,9 +59,9 @@ export const getIsometricPos = (
     zoom: number = 1.0
 ) => {
     const centerX = width / 2 + panX;
-    const centerY = height * 0.55 + panY; // Slightly lower midpoint to offset floating HUD
-    const scaleX = Math.min(width * 0.44, 480) * zoom;
-    const scaleY = scaleX * 0.52; // Classic 2:1 isometric ratio
+    const centerY = height * 0.55 + panY;
+    const scaleX = Math.max(340, Math.min(width * 0.44, 480)) * zoom;
+    const scaleY = scaleX * 0.52;
 
     return {
         x: centerX + (fx - fy) * scaleX,
@@ -83,7 +83,7 @@ export const getFlatPosFromScreen = (
 ) => {
     const centerX = width / 2 + panX;
     const centerY = height * 0.55 + panY;
-    const scaleX = Math.min(width * 0.44, 480) * zoom;
+    const scaleX = Math.max(340, Math.min(width * 0.44, 480)) * zoom;
     const scaleY = scaleX * 0.52;
 
     const screenXOffset = clientX - centerX;

@@ -8,7 +8,7 @@ interface FurnitureOverlaysProps {
     onFurnitureClick: (key: string) => void;
 }
 
-export const FurnitureOverlays: React.FC<FurnitureOverlaysProps> = ({
+export const FurnitureOverlays: React.FC<FurnitureOverlaysProps> = React.memo(({
     windowSize,
     viewport,
     onFurnitureClick,
@@ -175,7 +175,7 @@ export const FurnitureOverlays: React.FC<FurnitureOverlaysProps> = ({
                         delay={80}
                     >
                         <div
-                            className="absolute pointer-events-auto transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer flex flex-col items-center justify-center p-3 bg-transparent"
+                            className="absolute pointer-events-auto transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer flex flex-col items-center justify-center p-5 md:p-3 bg-transparent"
                             style={{
                                 left: `${pos.x}px`,
                                 top: `${pos.y - getOffset(key) * viewport.zoom}px`,
@@ -187,16 +187,16 @@ export const FurnitureOverlays: React.FC<FurnitureOverlaysProps> = ({
                             onClick={() => onFurnitureClick(key)}
                         >
                             {/* Pulsating magic ring of light */}
-                            <div className="w-5 h-5 rounded-full border border-pink-500/50 bg-pink-500/10 flex items-center justify-center animate-bounce shadow-[0_0_12px_rgba(236,72,153,0.3)] mb-1.5 group-hover:scale-125 transition-all duration-300">
-                                <span className="w-2 h-2 rounded-full bg-pink-400 animate-ping" />
+                            <div className="w-8 h-8 md:w-5 md:h-5 rounded-full border border-pink-500/50 bg-pink-500/10 flex items-center justify-center animate-bounce shadow-[0_0_12px_rgba(236,72,153,0.3)] mb-1.5 md:group-hover:scale-125 transition-all duration-300">
+                                <span className="w-3 h-3 md:w-2 md:h-2 rounded-full bg-pink-400 animate-ping" />
                             </div>
 
                             {/* Sparkling cursor help ring */}
-                            <div className="absolute inset-x-[-12px] inset-y-[-6px] rounded-2xl border border-dashed border-pink-500/0 group-hover:border-pink-500/35 group-hover:bg-pink-500/5 transition-all duration-300 scale-95 group-hover:scale-105" />
+                            <div className="absolute inset-x-[0px] inset-y-[0px] md:inset-x-[-12px] md:inset-y-[-6px] rounded-2xl border border-dashed border-pink-500/0 md:group-hover:border-pink-500/35 md:group-hover:bg-pink-500/5 transition-all duration-300 scale-95 group-hover:scale-105" />
 
                             {/* Floating pill badge always visible and glowing on hover */}
-                            <span className="px-2 py-0.5 bg-[#111221]/92 border border-slate-700 group-hover:border-pink-500/60 text-white rounded-lg text-[9px] font-extrabold shadow-md transition-all duration-300 whitespace-nowrap flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="px-3 py-1.5 md:px-2 md:py-0.5 bg-[#111221]/92 border border-slate-700 group-hover:border-pink-500/60 text-white rounded-xl md:rounded-lg text-[11px] md:text-[9px] font-extrabold shadow-md transition-all duration-300 whitespace-nowrap flex items-center gap-1.5 md:gap-1">
+                                <span className="w-2 h-2 md:w-1.5 md:h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                                 {labelShort}
                             </span>
                         </div>
@@ -205,6 +205,6 @@ export const FurnitureOverlays: React.FC<FurnitureOverlaysProps> = ({
             })}
         </div>
     );
-};
+});
 
 export default FurnitureOverlays;

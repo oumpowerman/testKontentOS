@@ -45,6 +45,25 @@ function App() {
       }
   }
 
+  // --- ROUTING CHECK: PWA Share Target Payload Capture ---
+  if (path.startsWith('/share_target')) {
+      const searchParams = new URLSearchParams(window.location.search);
+      const title = searchParams.get('title') || '';
+      const text = searchParams.get('text') || '';
+      const url = searchParams.get('url') || '';
+      
+      localStorage.setItem('juijui_pwa_shared_ref', JSON.stringify({
+          title,
+          text,
+          url,
+          timestamp: Date.now()
+      }));
+      
+      // Smooth replace-location to root
+      window.location.replace('/');
+      return null;
+  }
+
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(false);

@@ -23,6 +23,16 @@ export default defineConfig(({ mode }) => {
           background_color: '#f8fafc',
           display: 'standalone',
           orientation: 'portrait',
+          share_target: {
+            action: '/share_target',
+            method: 'GET',
+            enctype: 'application/x-www-form-urlencoded',
+            params: {
+              title: 'title',
+              text: 'text',
+              url: 'url'
+            }
+          },
           icons: [
             {
               src: 'icon-192.png',

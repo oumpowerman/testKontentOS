@@ -26,6 +26,7 @@ import WorkboxTrigger from '../components/workbox/WorkboxTrigger';
 // --- REFRACTORED MODULE REGISTRIES ---
 import { ViewRouteRegistry } from './ViewRouteRegistry';
 import { GlobalModalRegistry } from './GlobalModalRegistry';
+import { PWAShareTargetModal } from '../components/nexus/PWAShareTargetModal';
 
 // --- LAZY LOAD ULTIMATE SCREEN & PALETTE ---
 const UltimateWorkroomView = lazy(() => import('../components/dashboard/member/UltimateWorkroomView'));
@@ -95,6 +96,30 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
   const [isNotifSettingsOpen, setIsNotifSettingsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false); 
   const [isWorkboxOpen, setIsWorkboxOpen] = useState(false);
+
+  // --- PWA SHARE INTENT RECEIVER ---
+  const [pwaSharedData, setPwaSharedData] = useState<any>(null);
+
+  useEffect(() => {
+     const checkPwaShared = () => {
+         const raw = localStorage.getItem('juijui_pwa_shared_ref');
+         if (raw) {
+             try {
+                 const parsed = JSON.parse(raw);
+                 setPwaSharedData(parsed);
+             } catch (e) {
+                 console.warn("Error parsing PWA shared data", e);
+             }
+         }
+     };
+
+     // Check immediately on mount/render
+     checkPwaShared();
+
+     // Also listen to window storage event in case they share while the app is active in background!
+     window.addEventListener('storage', checkPwaShared);
+     return () => window.removeEventListener('storage', checkPwaShared);
+  }, [location.pathname]);
 
   const handleLogout = async () => {
       await supabase.auth.signOut();
@@ -574,6 +599,14 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
 
       {/* --- GLOBAL HIGH-FIDELITY DIMENSIONAL WARP GATE OVERLAY --- */}
       <WarpGateOverlay globalWarpStage={globalWarpStage} warpTargetView={warpTargetView} />
+
+      {/* --- PWA SHARE INTENT RECEIVER MODAL --- */}
+      <PWAShareTargetModal 
+         isOpen={!!pwaSharedData} 
+         onClose={() => setPwaSharedData(null)} 
+         data={pwaSharedData}
+         currentUser={currentUserProfile}
+      />
     </>
   );
 };

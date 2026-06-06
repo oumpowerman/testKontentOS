@@ -237,7 +237,7 @@ export const UltimateWorkroomView: React.FC<UltimateWorkroomViewProps> = ({
     }, [ringSuccessChime, showToast, onNavigate, setSearchParams]);
 
     return (
-        <div id="ultimate-workroom-root" className="min-h-screen bg-[#0e101a] text-slate-100 font-sans p-4 md:p-8 relative overflow-hidden flex flex-col justify-between">
+        <div id="ultimate-workroom-root" className="min-h-[100dvh] bg-[#0e101a] text-slate-100 font-sans p-4 md:p-8 relative overflow-hidden flex flex-col justify-between">
             {/* 8-bit cursor follower and live network friends component in background with full panning and zooming support */}
             <PixelHeroFollower 
                 currentUser={currentUser}
@@ -321,7 +321,7 @@ export const UltimateWorkroomView: React.FC<UltimateWorkroomViewProps> = ({
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: '-100%', opacity: 0 }}
                         transition={{ type: 'spring', damping: 24, stiffness: 120 }}
-                        className="fixed top-0 left-0 h-full w-full max-w-md bg-[#0b0c15]/98 border-r border-white/10 shadow-2xl backdrop-blur-xl z-40 p-6 flex flex-col justify-between overflow-y-auto pointer-events-auto"
+                        className="fixed top-0 left-0 h-[100dvh] w-full max-w-md bg-[#0b0c15]/98 border-r border-white/10 shadow-2xl backdrop-blur-xl z-40 p-6 flex flex-col justify-between overflow-y-auto pointer-events-auto"
                     >
                         <div className="flex-1">
                             <div className="flex items-center justify-between pb-6 mb-6 border-b border-white/5">
@@ -356,7 +356,7 @@ export const UltimateWorkroomView: React.FC<UltimateWorkroomViewProps> = ({
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: '100%', opacity: 0 }}
                         transition={{ type: 'spring', damping: 24, stiffness: 120 }}
-                        className="fixed top-0 right-0 h-full w-full max-w-2xl bg-[#0b0c15]/98 border-l border-white/10 shadow-2xl backdrop-blur-xl z-40 p-6 flex flex-col justify-between overflow-y-auto pointer-events-auto"
+                        className="fixed top-0 right-0 h-[100dvh] w-full max-w-2xl bg-[#0b0c15]/98 border-l border-white/10 shadow-2xl backdrop-blur-xl z-40 p-6 flex flex-col justify-between overflow-y-auto pointer-events-auto"
                     >
                         <div className="flex-1">
                             <div className="flex items-center justify-between pb-6 mb-6 border-b border-white/5">
@@ -406,8 +406,8 @@ export const UltimateWorkroomView: React.FC<UltimateWorkroomViewProps> = ({
                         transition={{ type: 'spring', damping: 26, stiffness: 140 }}
                         className={`fixed bottom-0 left-0 right-0 ${
                             isDeskMaximized 
-                                ? 'h-screen rounded-t-none border-t-0' 
-                                : 'h-[82vh] rounded-t-[2.5rem] border-t border-white/15'
+                                ? 'h-[100dvh] rounded-t-none border-t-0' 
+                                : 'h-[82dvh] rounded-t-[2.5rem] border-t border-white/15'
                         } bg-[#07080f]/99 shadow-2xl backdrop-blur-2xl z-40 p-4 md:p-6 flex flex-col justify-between overflow-hidden pointer-events-auto transition-[height,border-radius,border-color] duration-300 ease-out`}
                     >
                         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">

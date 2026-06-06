@@ -40,7 +40,7 @@ export const drawDetailedRoomBackground = (
     initEmbers();
     ctx.save();
 
-    const scaleX = Math.min(width * 0.44, 480) * zoom;
+    const scaleX = Math.max(340, Math.min(width * 0.44, 480)) * zoom;
     const scaleY = scaleX * 0.52;
     const centerX = width / 2 + panX;
     const centerY = height * 0.55 + panY;

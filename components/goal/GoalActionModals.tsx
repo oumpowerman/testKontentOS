@@ -5,6 +5,7 @@ import { X, Target, Save, RefreshCw, Coins, Star, Calendar, MonitorPlay, Hash, C
 import { Goal, Channel, Platform } from '../../types';
 import { PLATFORM_ICONS } from '../../constants';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '../../context/ToastContext';
 
 interface GoalFormModalProps {
     isOpen: boolean;
@@ -23,6 +24,7 @@ const ALL_PLATFORMS: { id: Platform | 'ALL'; label: string }[] = [
 ];
 
 export const GoalFormModal: React.FC<GoalFormModalProps> = ({ isOpen, onClose, initialData, channels, onSave }) => {
+    const { showToast } = useToast();
     const [title, setTitle] = useState('');
     const [platform, setPlatform] = useState<Platform | 'ALL'>('ALL');
     const [targetValue, setTargetValue] = useState<number>(1000);
@@ -56,8 +58,35 @@ export const GoalFormModal: React.FC<GoalFormModalProps> = ({ isOpen, onClose, i
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!title || !title.trim()) {
+            showToast('กรุณากรอกชื่อเป้าหมาย (Goal Title) ! 🎯', 'error');
+            return;
+        }
+
+        if (!deadline) {
+            showToast('กรุณาระบุเส้นตาย (Deadline) ! 📅', 'error');
+            return;
+        }
+
+        const dateObj = new Date(deadline);
+        if (isNaN(dateObj.getTime())) {
+            showToast('กรุณาระบุรูปแบบเส้นตายที่ถูกต้อง ! 📅', 'error');
+            return;
+        }
+
+        if (!targetValue || isNaN(targetValue) || targetValue <= 0) {
+            showToast('เป้าหมาย (Target) ต้องมีค่ามากกว่า 0 ! 🎯', 'error');
+            return;
+        }
+
+        if (isNaN(currentValue) || currentValue < 0) {
+            showToast('ค่าเริ่มต้น (Start) ต้องระบุไม่น้อยกว่า 0 ! 🚩', 'error');
+            return;
+        }
+
         onSave({
-            title, platform, targetValue, currentValue, deadline: new Date(deadline), channelId, rewardXp, rewardCoin
+            title, platform, targetValue, currentValue, deadline: dateObj, channelId, rewardXp, rewardCoin
         });
         onClose();
     };

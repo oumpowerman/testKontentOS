@@ -6,4 +6,5 @@ export * from './features';
 export * from './attendance';
 export * from './finance';
 export * from './analytics';
+export * from './nexus';
 // export * from './script'; // Removed
