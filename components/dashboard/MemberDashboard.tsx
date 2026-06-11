@@ -291,17 +291,15 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({
                 );
             case 'work_board':
                 return (
-                    <div className="bg-white/60 backdrop-blur-md rounded-[2.5rem] border border-white/60 shadow-sm p-6 h-full">
-                        <MyWorkBoard 
-                            tasks={myTasks} 
-                            masterOptions={masterOptions}
-                            users={users}
-                            currentUser={currentUser} 
-                            onOpenTask={onEditTask}
-                            onUpdateTask={(t) => handleSaveTask(t, null)} 
-                            onDeleteTask={handleDeleteTask}
-                        />
-                    </div>
+                    <MyWorkBoard 
+                        tasks={myTasks} 
+                        masterOptions={masterOptions}
+                        users={users}
+                        currentUser={currentUser} 
+                        onOpenTask={onEditTask}
+                        onUpdateTask={(t) => handleSaveTask(t, null)} 
+                        onDeleteTask={handleDeleteTask}
+                    />
                 );
             case 'tribunal_bulletin':
                 return <TribunalPublicBulletin />;

@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Settings, Plus, Trash2, X, Filter, Palette, Check, Save, Edit3, MonitorPlay, CheckSquare, Ban, CheckCircle2, ChevronDown, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChipConfig, FilterType, Channel, MasterOption } from '../types';
+import { ChipConfig, FilterType, Channel, MasterOption, User } from '../types';
 import { COLOR_THEMES } from '../constants';
 import { useGlobalDialog } from '../context/GlobalDialogContext';
 
@@ -13,12 +13,13 @@ interface SmartFilterModalProps {
     chips: ChipConfig[];
     channels: Channel[];
     masterOptions?: MasterOption[];
+    users?: User[];
     onSave: (chip: ChipConfig) => void;
     onDelete: (id: string) => void;
 }
 
 const SmartFilterModal: React.FC<SmartFilterModalProps> = ({ 
-    isOpen, onClose, chips, channels, masterOptions = [], onSave, onDelete 
+    isOpen, onClose, chips, channels, masterOptions = [], users = [], onSave, onDelete 
 }) => {
     const [editingChip, setEditingChip] = useState<ChipConfig | null>(null);
     const { showAlert, showConfirm } = useGlobalDialog();
@@ -339,12 +340,21 @@ const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
                                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Filter Type</label>
                                                     <CustomSelect 
                                                         value={editingChip.type}
-                                                        options={[
-                                                            { value: 'STATUS', label: 'Status' },
-                                                            { value: 'FORMAT', label: 'Format' },
-                                                            { value: 'CHANNEL', label: 'Channel' },
-                                                            { value: 'PILLAR', label: 'Pillar' },
-                                                        ]}
+                                                        options={
+                                                            editingChip.scope === 'TASK'
+                                                                ? [
+                                                                    { value: 'STATUS', label: 'Status' },
+                                                                    { value: 'FORMAT', label: 'Format' },
+                                                                    { value: 'PILLAR', label: 'Pillar' },
+                                                                    { value: 'ASSIGNEE', label: 'Assignee' },
+                                                                  ]
+                                                                : [
+                                                                    { value: 'STATUS', label: 'Status' },
+                                                                    { value: 'FORMAT', label: 'Format' },
+                                                                    { value: 'CHANNEL', label: 'Channel' },
+                                                                    { value: 'PILLAR', label: 'Pillar' },
+                                                                  ]
+                                                        }
                                                         onChange={(val) => setEditingChip({...editingChip, type: val as FilterType, value: ''})}
                                                         placeholder="Pick type"
                                                     />
@@ -361,11 +371,13 @@ const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
                                                                     ? formatOptions.map(opt => ({ value: opt.key, label: opt.label }))
                                                                     : editingChip.type === 'STATUS' 
                                                                         ? statusOptions.map(opt => ({ value: opt.key, label: opt.label }))
-                                                                        : pillarOptions.map(opt => ({ value: opt.key, label: opt.label }))
+                                                                        : editingChip.type === 'ASSIGNEE'
+                                                                            ? users.map(u => ({ value: u.id, label: u.name, logo: u.avatarUrl }))
+                                                                            : pillarOptions.map(opt => ({ value: opt.key, label: opt.label }))
                                                         }
                                                         onChange={(val) => setEditingChip({...editingChip, value: val})}
                                                         placeholder="Pick value"
-                                                        showLogo={editingChip.type === 'CHANNEL'}
+                                                        showLogo={editingChip.type === 'CHANNEL' || editingChip.type === 'ASSIGNEE'}
                                                     />
                                                 </div>
                                             </div>
@@ -377,14 +389,20 @@ const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
                                                     <div className="flex flex-col gap-2">
                                                         <button
                                                             type="button"
-                                                            onClick={() => setEditingChip({...editingChip, scope: 'CONTENT'})}
+                                                            onClick={() => {
+                                                                const nextType = editingChip.type === 'ASSIGNEE' ? 'STATUS' : editingChip.type;
+                                                                setEditingChip({...editingChip, scope: 'CONTENT', type: nextType as FilterType, value: ''});
+                                                            }}
                                                             className={`py-3.5 px-5 rounded-2xl text-[11px] font-black border-2 flex items-center gap-3 transition-all duration-300 ${editingChip.scope === 'CONTENT' || !editingChip.scope ? 'bg-indigo-50 border-indigo-200 text-indigo-600 shadow-md ring-4 ring-indigo-500/5' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
                                                         >
                                                             <MonitorPlay className="w-4 h-4" /> CONTENT
                                                         </button>
                                                         <button
                                                             type="button"
-                                                            onClick={() => setEditingChip({...editingChip, scope: 'TASK'})}
+                                                            onClick={() => {
+                                                                const nextType = editingChip.type === 'CHANNEL' ? 'STATUS' : editingChip.type;
+                                                                setEditingChip({...editingChip, scope: 'TASK', type: nextType as FilterType, value: ''});
+                                                            }}
                                                             className={`py-3.5 px-5 rounded-2xl text-[11px] font-black border-2 flex items-center gap-3 transition-all duration-300 ${editingChip.scope === 'TASK' ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-md ring-4 ring-emerald-500/5' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
                                                         >
                                                             <CheckSquare className="w-4 h-4" /> TASK

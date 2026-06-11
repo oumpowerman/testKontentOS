@@ -134,8 +134,8 @@ const WorkColumn: React.FC<WorkColumnProps> = ({
 
     // Container Style with horizontal scroll dimensions
     let containerStyle = isUltimate
-        ? "rounded-[2.5rem] p-4 flex flex-col h-full transition-all duration-300 border border-slate-800 bg-[#0f111f]/30 shadow-lg hover:shadow-indigo-950/20 w-[280px] md:w-[320px] xl:w-auto flex-shrink-0"
-        : "rounded-[2.5rem] p-4 flex flex-col h-full transition-all duration-500 border border-white/40 shadow-sm hover:shadow-md w-[280px] md:w-[320px] xl:w-auto flex-shrink-0";
+        ? "rounded-[2.5rem] p-4 flex flex-col h-full transition-all duration-300 border border-slate-800 bg-[#0f111f]/30 shadow-lg hover:shadow-indigo-950/20 w-full"
+        : "rounded-[2.5rem] p-4 flex flex-col h-full transition-all duration-500 border border-white/40 shadow-sm hover:shadow-md w-full";
 
     if (isUltimate) {
         if (type === 'DOING') containerStyle += " bg-indigo-950/20 border-indigo-500/25 shadow-indigo-950/40";

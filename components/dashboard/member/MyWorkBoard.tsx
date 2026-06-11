@@ -30,6 +30,7 @@ const MyWorkBoard: React.FC<MyWorkBoardProps> = ({
     const { showAlert } = useGlobalDialog();
     const [activeModalColumn, setActiveModalColumn] = useState<ColumnType | null>(null);
     const [isDoneHistoryOpen, setIsDoneHistoryOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<ColumnType>('TODO');
     const isAdmin = currentUser.role === 'ADMIN';
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -146,90 +147,188 @@ const MyWorkBoard: React.FC<MyWorkBoardProps> = ({
             />
 
             {/* Header Section */}
-            <div className="p-8 pb-4 relative z-10 flex-shrink-0">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl text-white shadow-lg shadow-indigo-500/20">
-                            <Layers className="w-6 h-6" />
+            <div className="p-4 md:p-8 pb-3 md:pb-4 relative z-10 flex-shrink-0">
+                <div className="flex flex-row items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 md:gap-4">
+                        <div className="p-2 md:p-3 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl md:rounded-2xl text-white shadow-lg shadow-indigo-500/20">
+                            <Layers className="w-5 h-5 md:w-6 md:h-6" />
                         </div>
                         <div>
-                            <h3 className={`text-2xl font-bold tracking-tight leading-none ${isUltimate ? 'text-indigo-200' : 'text-slate-800'}`}>กระดานงานของฉัน</h3>
-                            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">My Personal Work Board</p>
+                            <h3 className={`text-lg md:text-2xl font-bold tracking-tight leading-none ${isUltimate ? 'text-indigo-200' : 'text-slate-800'}`}>กระดานงานของฉัน</h3>
+                            <p className="text-[9px] md:text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 md:mt-1">My Personal Work Board</p>
                         </div>
                     </div>
                     
                     <div className="flex items-center gap-2">
-                        <div className={`px-4 py-2 rounded-2xl shadow-sm border ${
+                        <div className={`px-2.5 py-1.5 md:px-4 md:py-2 rounded-xl md:rounded-2xl shadow-sm border ${
                             isUltimate 
                                 ? 'bg-slate-900/60 border-indigo-500/20' 
                                 : 'bg-white/80 border-slate-100'
                         }`}>
-                            <span className={`text-xs font-bold uppercase tracking-wider ${isUltimate ? 'text-slate-400' : 'text-slate-500'}`}>Total Tasks: </span>
-                            <span className={`text-sm font-black ${isUltimate ? 'text-indigo-300' : 'text-indigo-600'}`}>
+                            <span className={`text-[10px] md:text-xs font-bold uppercase tracking-wider ${isUltimate ? 'text-slate-400' : 'text-slate-500'}`}>Total: </span>
+                            <span className={`text-xs md:text-sm font-black ${isUltimate ? 'text-indigo-300' : 'text-indigo-600'}`}>
                                 {todoTasks.length + doingTasks.length + waitingTasks.length + doneTasks.length}
                             </span>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Mobile Segments / iOS style Switcher (Visible on mobile only) */}
+            <div className="md:hidden px-4 mb-3 relative z-10 select-none">
+                <div className={`grid grid-cols-4 gap-1 p-1 rounded-2xl border ${
+                    isUltimate 
+                        ? 'bg-[#121424]/60 border-indigo-500/10' 
+                        : 'bg-slate-100/90 border-slate-200/60'
+                }`}>
+                    <button
+                        onClick={() => setActiveTab('TODO')}
+                        className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer relative ${
+                            activeTab === 'TODO'
+                                ? isUltimate 
+                                    ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' 
+                                    : 'bg-white text-slate-800 shadow-sm border border-slate-200'
+                                : isUltimate ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-700'
+                        }`}
+                    >
+                        <span className="text-[10px] font-black uppercase tracking-wider">To Do</span>
+                        <span className={`text-[10px] font-black mt-1 rounded-md px-1.5 py-0.2 ${
+                            activeTab === 'TODO'
+                                ? isUltimate ? 'bg-indigo-400/20 text-indigo-300' : 'bg-slate-100 text-slate-700'
+                                : isUltimate ? 'bg-slate-950/40 text-slate-600' : 'bg-slate-200/60 text-slate-500'
+                        }`}>
+                            {todoTasks.length}
+                        </span>
+                    </button>
+                    
+                    <button
+                        onClick={() => setActiveTab('DOING')}
+                        className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer relative ${
+                            activeTab === 'DOING'
+                                ? isUltimate 
+                                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' 
+                                    : 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200/50'
+                                : isUltimate ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-700'
+                        }`}
+                    >
+                        <span className="text-[10px] font-black uppercase tracking-wider">Doing</span>
+                        <span className={`text-[10px] font-black mt-1 rounded-md px-1.5 py-0.2 ${
+                            activeTab === 'DOING'
+                                ? isUltimate ? 'bg-purple-400/20 text-purple-300' : 'bg-indigo-100 text-indigo-800'
+                                : isUltimate ? 'bg-slate-950/40 text-slate-600' : 'bg-slate-200/60 text-slate-500'
+                        }`}>
+                            {doingTasks.length}
+                        </span>
+                    </button>
+
+                    <button
+                        onClick={() => setActiveTab('WAITING')}
+                        className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer relative ${
+                            activeTab === 'WAITING'
+                                ? isUltimate 
+                                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/35' 
+                                    : 'bg-amber-50 text-amber-700 shadow-sm border border-[#f59e0b]/20'
+                                : isUltimate ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-700'
+                        }`}
+                    >
+                        <span className="text-[10px] font-black uppercase tracking-wider">Waiting</span>
+                        <span className={`text-[10px] font-black mt-1 rounded-md px-1.5 py-0.2 ${
+                            activeTab === 'WAITING'
+                                ? isUltimate ? 'bg-amber-400/20 text-amber-300' : 'bg-amber-100 text-amber-800'
+                                : isUltimate ? 'bg-slate-950/40 text-slate-600' : 'bg-slate-200/60 text-slate-500'
+                        }`}>
+                            {waitingTasks.length}
+                        </span>
+                    </button>
+
+                    <button
+                        onClick={() => setActiveTab('DONE')}
+                        className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer relative ${
+                            activeTab === 'DONE'
+                                ? isUltimate 
+                                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/35' 
+                                    : 'bg-emerald-50 text-emerald-700 shadow-sm border border-emerald-200/50'
+                                : isUltimate ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-700'
+                        }`}
+                    >
+                        <span className="text-[10px] font-black uppercase tracking-wider">Done</span>
+                        <span className={`text-[10px] font-black mt-1 rounded-md px-1.5 py-0.2 ${
+                            activeTab === 'DONE'
+                                ? isUltimate ? 'bg-emerald-400/20 text-emerald-300' : 'bg-emerald-100 text-emerald-800'
+                                : isUltimate ? 'bg-slate-950/40 text-slate-600' : 'bg-slate-200/60 text-slate-500'
+                        }`}>
+                            {doneTasks.length}
+                        </span>
+                    </button>
+                </div>
+            </div>
             
-            {/* 4-Column Grid - Side-by-side horizontal scroll under xl, grid on xl+ */}
+            {/* 4-Column Grid - Adaptive layout (single column on mobile, scrollable list on md, grid on xl+) */}
             <div 
                 ref={scrollContainerRef}
-                className="flex-1 min-h-0 p-6 pt-2 relative z-10 overflow-x-auto overflow-y-auto"
+                className="flex-1 min-h-0 p-4 md:p-6 pb-6 pt-2 relative z-10 overflow-x-auto overflow-y-auto scrollbar-thin"
             >
-                <div className={`flex xl:grid xl:grid-cols-4 gap-5 h-full w-max xl:w-full ${isUltimate ? '' : 'min-h-[500px]'}`}>
-                    <WorkColumn 
-                        type="TODO" 
-                        tasks={todoTasks} 
-                        users={users}
-                        masterOptions={masterOptions}
-                        isDroppable={true}
-                        onDropTask={handleDropTask}
-                        onOpenTask={onOpenTask}
-                        onDeleteTask={onDeleteTask}
-                        onViewAll={() => setActiveModalColumn('TODO')}
-                        isUltimate={isUltimate}
-                    />
+                <div className={`flex xl:grid xl:grid-cols-4 gap-4 md:gap-5 h-full w-full md:w-max xl:w-full ${isUltimate ? '' : 'min-h-[400px] md:min-h-[500px]'}`}>
+                    
+                    <div className={`${activeTab === 'TODO' ? 'flex w-full md:w-[320px] xl:w-auto' : 'hidden md:flex md:w-[320px] xl:w-auto'} flex-col h-full flex-shrink-0 xl:flex-shrink`}>
+                        <WorkColumn 
+                            type="TODO" 
+                            tasks={todoTasks} 
+                            users={users}
+                            masterOptions={masterOptions}
+                            isDroppable={true}
+                            onDropTask={handleDropTask}
+                            onOpenTask={onOpenTask}
+                            onDeleteTask={onDeleteTask}
+                            onViewAll={() => setActiveModalColumn('TODO')}
+                            isUltimate={isUltimate}
+                        />
+                    </div>
 
-                    <WorkColumn 
-                        type="DOING" 
-                        tasks={doingTasks} 
-                        users={users}
-                        masterOptions={masterOptions}
-                        isDroppable={true}
-                        onDropTask={handleDropTask}
-                        onOpenTask={onOpenTask}
-                        onDeleteTask={onDeleteTask}
-                        onViewAll={() => setActiveModalColumn('DOING')}
-                        isUltimate={isUltimate}
-                    />
+                    <div className={`${activeTab === 'DOING' ? 'flex w-full md:w-[320px] xl:w-auto' : 'hidden md:flex md:w-[320px] xl:w-auto'} flex-col h-full flex-shrink-0 xl:flex-shrink`}>
+                        <WorkColumn 
+                            type="DOING" 
+                            tasks={doingTasks} 
+                            users={users}
+                            masterOptions={masterOptions}
+                            isDroppable={true}
+                            onDropTask={handleDropTask}
+                            onOpenTask={onOpenTask}
+                            onDeleteTask={onDeleteTask}
+                            onViewAll={() => setActiveModalColumn('DOING')}
+                            isUltimate={isUltimate}
+                        />
+                    </div>
 
-                    <WorkColumn 
-                        type="WAITING" 
-                        tasks={waitingTasks} 
-                        users={users}
-                        masterOptions={masterOptions}
-                        isDroppable={false}
-                        onDropTask={() => {}}
-                        onOpenTask={onOpenTask}
-                        onDeleteTask={onDeleteTask}
-                        onViewAll={() => setActiveModalColumn('WAITING')}
-                        isUltimate={isUltimate}
-                    />
+                    <div className={`${activeTab === 'WAITING' ? 'flex w-full md:w-[320px] xl:w-auto' : 'hidden md:flex md:w-[320px] xl:w-auto'} flex-col h-full flex-shrink-0 xl:flex-shrink`}>
+                        <WorkColumn 
+                            type="WAITING" 
+                            tasks={waitingTasks} 
+                            users={users}
+                            masterOptions={masterOptions}
+                            isDroppable={false}
+                            onDropTask={() => {}}
+                            onOpenTask={onOpenTask}
+                            onDeleteTask={onDeleteTask}
+                            onViewAll={() => setActiveModalColumn('WAITING')}
+                            isUltimate={isUltimate}
+                        />
+                    </div>
 
-                    <WorkColumn 
-                        type="DONE" 
-                        tasks={doneTasks} 
-                        users={users}
-                        masterOptions={masterOptions}
-                        isDroppable={isAdmin}
-                        onDropTask={handleDropTask}
-                        onOpenTask={onOpenTask}
-                        onDeleteTask={onDeleteTask}
-                        onViewAll={() => setIsDoneHistoryOpen(true)}
-                        isUltimate={isUltimate}
-                    />
+                    <div className={`${activeTab === 'DONE' ? 'flex w-full md:w-[320px] xl:w-auto' : 'hidden md:flex md:w-[320px] xl:w-auto'} flex-col h-full flex-shrink-0 xl:flex-shrink`}>
+                        <WorkColumn 
+                            type="DONE" 
+                            tasks={doneTasks} 
+                            users={users}
+                            masterOptions={masterOptions}
+                            isDroppable={isAdmin}
+                            onDropTask={handleDropTask}
+                            onOpenTask={onOpenTask}
+                            onDeleteTask={onDeleteTask}
+                            onViewAll={() => setIsDoneHistoryOpen(true)}
+                            isUltimate={isUltimate}
+                        />
+                    </div>
                 </div>
             </div>
 

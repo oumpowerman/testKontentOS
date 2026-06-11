@@ -99,13 +99,22 @@ export const UltimateWorkroomView: React.FC<UltimateWorkroomViewProps> = ({
     // --- Particle Explosions Custom Hook ---
     const { particles, triggerExperienceExplosion } = useXpParticles();
 
+    // Filter My Tasks for Board & Focus Zone
+    const myTasks = useMemo(() => {
+        return tasks.filter(t => 
+            t.assigneeIds.includes(currentUser.id) || 
+            t.ideaOwnerIds?.includes(currentUser.id) || 
+            t.editorIds?.includes(currentUser.id)
+        );
+    }, [tasks, currentUser.id]);
+
     // List of tasks in "DOING" to let the user select for focus mode
     const doingTasks = useMemo(() => {
-        return tasks.filter(t => {
+        return myTasks.filter(t => {
             const s = t.status ? t.status.toUpperCase() : '';
             return !t.isUnscheduled && t.type !== 'CONTENT' && s.includes('DOING');
         });
-    }, [tasks]);
+    }, [myTasks]);
 
     // Track active task being focused for real-time presence broadcasting
     const activeFocusTaskName = useMemo(() => {
@@ -447,7 +456,7 @@ export const UltimateWorkroomView: React.FC<UltimateWorkroomViewProps> = ({
 
                             <div className="flex-1 min-h-0 flex flex-col">
                                 <MyWorkBoard 
-                                    tasks={tasks}
+                                    tasks={myTasks}
                                     masterOptions={masterOptions}
                                     users={users}
                                     currentUser={currentUser}

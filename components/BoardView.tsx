@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Channel, User, Status, MasterOption, TaskType } from '../types';
 import { STATUS_LABELS, STATUS_COLORS, PLATFORM_ICONS } from '../constants';
@@ -21,7 +21,7 @@ interface BoardViewProps {
 const BoardView: React.FC<BoardViewProps> = ({ 
     tasks, 
     channels, 
-    users, 
+    users = [], 
     masterOptions,
     viewMode,
     onEditTask, 
@@ -29,7 +29,12 @@ const BoardView: React.FC<BoardViewProps> = ({
     onUpdateStatus 
 }) => {
     const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
-    const [selectedChannelId, setSelectedChannelId] = useState<string>('ALL');
+    const [selectedFilterId, setSelectedFilterId] = useState<string>('ALL');
+
+    // Reset filter when toggling mode
+    useEffect(() => {
+        setSelectedFilterId('ALL');
+    }, [viewMode]);
 
     // --- Dynamic Columns Logic ---
     // Correctly select status type based on view mode
@@ -142,46 +147,100 @@ const BoardView: React.FC<BoardViewProps> = ({
 
     return (
         <div className="h-[calc(100vh-140px)] flex flex-col animate-in fade-in duration-500">
-            {/* --- CHANNEL FILTER CHIPS --- */}
+            {/* --- FILTER CHIPS (dynamic: CHANNEL for content, ASSIGNEE for task) --- */}
             <div className="flex items-center gap-2 overflow-x-auto pb-4 px-1 flex-shrink-0 scrollbar-hide">
                 <div className="flex items-center text-xs font-bold text-gray-400 uppercase mr-2 shrink-0">
-                    <Filter className="w-3 h-3 mr-1" /> กรองช่อง:
+                    {viewMode === 'CONTENT' ? (
+                        <>
+                            <Filter className="w-3 h-3 mr-1" /> กรองช่อง:
+                        </>
+                    ) : (
+                        <>
+                            <UserIcon className="w-3 h-3 mr-1" /> กรองผู้รับผิดชอบ:
+                        </>
+                    )}
                 </div>
                 
-                <button
-                    onClick={() => setSelectedChannelId('ALL')}
-                    className={`
-                        px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap shadow-sm border shrink-0 flex items-center
-                        ${selectedChannelId === 'ALL'
-                            ? 'bg-gray-800 text-white border-gray-800 ring-2 ring-gray-300' 
-                            : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-indigo-600'}
-                    `}
-                >
-                    {selectedChannelId === 'ALL' && <Check className="w-3 h-3 mr-1" />}
-                    รวมทุกช่อง (All)
-                </button>
-
-                {channels.map(channel => {
-                    const isActive = selectedChannelId === channel.id;
-                    const colorClass = (channel.color || 'bg-indigo-100').split(' ')[0] || 'bg-indigo-100'; // Fallback
-
-                    return (
+                {viewMode === 'CONTENT' ? (
+                    <>
                         <button
-                            key={channel.id}
-                            onClick={() => setSelectedChannelId(channel.id)}
+                            onClick={() => setSelectedFilterId('ALL')}
                             className={`
                                 px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap shadow-sm border shrink-0 flex items-center
-                                ${isActive 
-                                    ? `bg-white text-gray-800 border-indigo-500 ring-2 ring-indigo-200` 
-                                    : `bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:-translate-y-0.5`}
+                                ${selectedFilterId === 'ALL'
+                                    ? 'bg-gray-800 text-white border-gray-800 ring-2 ring-gray-300' 
+                                    : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-indigo-600'}
                             `}
                         >
-                            <span className={`w-2 h-2 rounded-full mr-1.5 ${colorClass}`}></span>
-                            {channel.name}
-                            {isActive && <Check className="w-3 h-3 ml-1.5 text-indigo-600" />}
+                            {selectedFilterId === 'ALL' && <Check className="w-3 h-3 mr-1" />}
+                            รวมทุกช่อง (All)
                         </button>
-                    );
-                })}
+
+                        {channels.map(channel => {
+                            const isActive = selectedFilterId === channel.id;
+                            const colorClass = (channel.color || 'bg-indigo-100').split(' ')[0] || 'bg-indigo-100'; // Fallback
+
+                            return (
+                                <button
+                                    key={channel.id}
+                                    onClick={() => setSelectedFilterId(channel.id)}
+                                    className={`
+                                        px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap shadow-sm border shrink-0 flex items-center
+                                        ${isActive 
+                                            ? `bg-white text-gray-800 border-indigo-500 ring-2 ring-indigo-200` 
+                                            : `bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:-translate-y-0.5`}
+                                    `}
+                                >
+                                    <span className={`w-2 h-2 rounded-full mr-1.5 ${colorClass}`}></span>
+                                    {channel.name}
+                                    {isActive && <Check className="w-3 h-3 ml-1.5 text-indigo-600" />}
+                                </button>
+                            );
+                        })}
+                    </>
+                ) : (
+                    <>
+                        <button
+                            onClick={() => setSelectedFilterId('ALL')}
+                            className={`
+                                px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap shadow-sm border shrink-0 flex items-center
+                                ${selectedFilterId === 'ALL'
+                                    ? 'bg-gray-800 text-white border-gray-800 ring-2 ring-gray-300' 
+                                    : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-indigo-600'}
+                            `}
+                        >
+                            {selectedFilterId === 'ALL' && <Check className="w-3 h-3 mr-1" />}
+                            รวมทุกคน (All)
+                        </button>
+
+                        {users.map(user => {
+                            const isActive = selectedFilterId === user.id;
+
+                            return (
+                                <button
+                                    key={user.id}
+                                    onClick={() => setSelectedFilterId(user.id)}
+                                    className={`
+                                        px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap shadow-sm border shrink-0 flex items-center gap-1.5
+                                        ${isActive 
+                                            ? `bg-indigo-50 text-indigo-700 border-indigo-200 ring-2 ring-indigo-100` 
+                                            : `bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:-translate-y-0.5`}
+                                    `}
+                                >
+                                    {user.avatarUrl ? (
+                                        <img src={user.avatarUrl} alt={user.name} className="w-4 h-4 rounded-full object-cover" />
+                                    ) : (
+                                        <div className="w-4 h-4 rounded-full bg-indigo-100 flex items-center justify-center text-[8px] font-bold text-indigo-600">
+                                            {user.name.slice(0, 1).toUpperCase()}
+                                        </div>
+                                    )}
+                                    {user.name}
+                                    {isActive && <Check className="w-3 h-3 text-indigo-600" />}
+                                </button>
+                            );
+                        })}
+                    </>
+                )}
             </div>
 
             {/* --- BOARD COLUMNS (DYNAMIC) --- */}
@@ -206,8 +265,13 @@ const BoardView: React.FC<BoardViewProps> = ({
                         // Filter Tasks
                         const columnTasks = tasks.filter(t => {
                             const matchStatus = t.status === statusKey;
-                            const matchChannel = selectedChannelId === 'ALL' || t.channelId === selectedChannelId;
-                            return matchStatus && matchChannel;
+                            let matchFilter = true;
+                            if (viewMode === 'CONTENT') {
+                                matchFilter = selectedFilterId === 'ALL' || t.channelId === selectedFilterId;
+                            } else {
+                                matchFilter = selectedFilterId === 'ALL' || t.assigneeIds?.includes(selectedFilterId);
+                            }
+                            return matchStatus && matchFilter;
                         });
 
                         return (

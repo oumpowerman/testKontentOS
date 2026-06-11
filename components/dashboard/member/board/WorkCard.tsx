@@ -216,7 +216,6 @@ const WorkCard = React.memo(
                 y: -4,
                 scale: 1.015,
                 boxShadow: "0 12px 20px -8px rgba(99, 102, 241, 0.12), 0 4px 6px -4px rgba(99, 102, 241, 0.08)",
-                borderColor: "rgba(99, 102, 241, 0.35)"
             }}
             whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 380, damping: 28 }}
@@ -228,6 +227,7 @@ const WorkCard = React.memo(
                 ${cardStyle}
                 ${hoverStyle}
                 ${typeConfig.borderClass}
+                ${isUltimate ? 'hover:border-indigo-500/40' : 'hover:border-indigo-200'}
             `}
         >
             <div className="flex flex-wrap justify-between items-center gap-1.5 mb-1.5">

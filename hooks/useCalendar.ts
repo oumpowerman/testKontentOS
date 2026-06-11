@@ -137,6 +137,7 @@ export const useCalendar = ({ tasks, userId, onMoveTask }: UseCalendarProps) => 
             case 'STATUS': return t.status === chip.value;
             case 'PILLAR': return t.pillar === chip.value;
             case 'CATEGORY': return t.category === chip.value;
+            case 'ASSIGNEE': return t.assigneeIds?.includes(chip.value);
             default: return false;
         }
     };

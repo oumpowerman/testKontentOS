@@ -11,7 +11,7 @@ export type AssetCategory = 'SCRIPT' | 'THUMBNAIL' | 'VIDEO_DRAFT' | 'INVOICE' |
 export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export type ReviewStatus = 'PENDING' | 'PASSED' | 'REVISE' | 'EXPIRED';
 export type AssigneeType = 'TEAM' | 'INDIVIDUAL';
-export type FilterType = 'STATUS' | 'FORMAT' | 'CHANNEL' | 'PILLAR' | 'CATEGORY';
+export type FilterType = 'STATUS' | 'FORMAT' | 'CHANNEL' | 'PILLAR' | 'CATEGORY' | 'ASSIGNEE';
 
 export interface Channel {
     id: string;

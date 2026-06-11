@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import NotificationBellBtn from '../NotificationBellBtn';
 import { COLOR_THEMES } from '../../constants';
-import { ChipConfig, Channel } from '../../types';
+import { ChipConfig, Channel, User } from '../../types';
 
 interface CalendarSecondaryHeaderProps {
     show: boolean;
@@ -16,6 +16,7 @@ interface CalendarSecondaryHeaderProps {
     toggleChip: (id: string) => void;
     customChips: ChipConfig[];
     channels: Channel[];
+    users?: User[];
     onManageFilters: () => void;
     
     // Tools logic
@@ -35,7 +36,7 @@ interface CalendarSecondaryHeaderProps {
 
 const CalendarSecondaryHeader: React.FC<CalendarSecondaryHeaderProps> = ({
     show, onClose,
-    activeChipIds, toggleChip, customChips, channels, onManageFilters,
+    activeChipIds, toggleChip, customChips, channels, users = [], onManageFilters,
     unreadCount, onOpenNotifications, onOpenSettings, onToggleWorkbox, onToggleStock,
     isWorkboxOpen, isStockOpen,
     taskDisplayMode, setTaskDisplayMode,
@@ -87,6 +88,7 @@ const CalendarSecondaryHeader: React.FC<CalendarSecondaryHeaderProps> = ({
                                         
                                         let channelLogo = null;
                                         let chColor = (theme as any).hex || '#fff';
+                                        let isAssignee = false;
                                         if (chip.type === 'CHANNEL') {
                                             const ch = channels.find(c => c.id === chip.value);
                                             if (ch?.logoUrl) {
@@ -95,6 +97,13 @@ const CalendarSecondaryHeader: React.FC<CalendarSecondaryHeaderProps> = ({
                                                     chColor = ch.color;
                                                 }
                                             }
+                                        } else if (chip.type === 'ASSIGNEE') {
+                                            isAssignee = true;
+                                            const u = users.find(user => user.id === chip.value);
+                                            if (u?.avatarUrl) {
+                                                channelLogo = u.avatarUrl;
+                                            }
+                                            chColor = '#6366f1';
                                         }
 
                                         const isLogoChip = !!channelLogo;
@@ -127,10 +136,10 @@ const CalendarSecondaryHeader: React.FC<CalendarSecondaryHeaderProps> = ({
                                                         <img 
                                                             src={channelLogo} 
                                                             alt={chip.label} 
-                                                            className={`w-9 h-9 rounded-full object-cover transition-all duration-500 ${isActive ? 'scale-110' : 'hover:scale-105'}`}
+                                                            className={`w-9 h-9 rounded-full object-cover transition-all duration-500 ${isActive ? (isAssignee ? 'scale-110 shadow-[0_0_12px_rgba(99,102,241,0.4)]' : 'scale-110') : 'hover:scale-105'}`}
                                                             style={{ 
                                                                 filter: isActive 
-                                                                    ? `drop-shadow(0 0 4px ${chColor})` 
+                                                                    ? `drop-shadow(0 0 6px ${isAssignee ? '#6366f1' : chColor})`
                                                                     : 'none',
                                                                 border: isActive ? `2px solid ${chColor}` : 'none'
                                                             }}

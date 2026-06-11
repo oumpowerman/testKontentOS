@@ -173,6 +173,11 @@ const FocusZone: React.FC<FocusZoneProps> = ({ tasks, channels, users, masterOpt
         const isDone = isTaskCompleted(t.status as string);
         if (isDone) return false;
         if (t.isUnscheduled) return false;
+
+        // Exclude tasks that are in a revision state so they do not duplicate in both zones
+        const s = t.status as string;
+        const isReviseStatus = s === 'FEEDBACK' || s === 'WAITING' || s === 'REVISE' || s.includes('EDIT_DRAFT');
+        if (isReviseStatus) return false;
         
         const taskDate = startOfDay(new Date(t.endDate));
         const diff = differenceInCalendarDays(taskDate, today);

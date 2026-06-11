@@ -286,6 +286,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
            <CalendarSecondaryHeader 
               show={showFilters}
+              users={users}
               onClose={toggleFilters}
               activeChipIds={activeChipIds}
               toggleChip={toggleChip}
@@ -478,6 +479,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             chips={customChips || []} 
             channels={channels}
             masterOptions={masterOptions} 
+            users={users}
             onSave={saveChip}
             onDelete={deleteChip}
         />
