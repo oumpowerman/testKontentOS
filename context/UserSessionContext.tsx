@@ -75,7 +75,8 @@ const mapProfileToUser = (data: any): User => ({
     startDate: data.start_date ? new Date(data.start_date) : undefined,
     createdAt: data.created_at ? new Date(data.created_at) : undefined,
     waveBgEnabled: data.wave_bg_enabled !== false,
-    ultimateWorkroomEnabled: data.ultimate_workroom_enabled !== false
+    ultimateWorkroomEnabled: data.ultimate_workroom_enabled !== false,
+    emoji: data.emoji || ''
 });
 
 const mapDBToUserUpdates = (u: any): Partial<User> => {
@@ -111,6 +112,7 @@ const mapDBToUserUpdates = (u: any): Partial<User> => {
     if ('owned_bg_ids' in u) updates.ownedBgIds = u.owned_bg_ids;
     if ('wave_bg_enabled' in u) updates.waveBgEnabled = u.wave_bg_enabled;
     if ('ultimate_workroom_enabled' in u) updates.ultimateWorkroomEnabled = u.ultimate_workroom_enabled;
+    if ('emoji' in u) updates.emoji = u.emoji;
     if ('start_date' in u) updates.startDate = u.start_date ? new Date(u.start_date) : undefined;
     if ('last_read_chat_at' in u) updates.lastReadChatAt = u.last_read_chat_at ? new Date(u.last_read_chat_at) : new Date(0);
     if ('last_read_notification_at' in u) updates.lastReadNotificationAt = u.last_read_notification_at ? new Date(u.last_read_notification_at) : new Date(0);
@@ -157,7 +159,7 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
             // - Fetch full data for CURRENT user
             
             const [minProfilesRes, activeProfilesRes, currentProfileRes] = await Promise.all([
-                supabase.from('profiles').select('id, full_name, avatar_url, is_active, role, position, start_date').order('full_name', { ascending: true }),
+                supabase.from('profiles').select('id, full_name, avatar_url, is_active, role, position, start_date, emoji').order('full_name', { ascending: true }),
                 supabase.from('profiles').select('*').eq('is_active', true),
                 supabase.from('profiles').select('*').eq('id', sessionUser.id).maybeSingle()
             ]);
@@ -331,6 +333,7 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
             if (updates.ownedBgIds !== undefined) payload.owned_bg_ids = updates.ownedBgIds;
             if (updates.waveBgEnabled !== undefined) payload.wave_bg_enabled = updates.waveBgEnabled;
             if (updates.ultimateWorkroomEnabled !== undefined) payload.ultimate_workroom_enabled = updates.ultimateWorkroomEnabled;
+            if (updates.emoji !== undefined) payload.emoji = updates.emoji;
 
             if (avatarFile) {
                 const fileExt = avatarFile.name.split('.').pop();

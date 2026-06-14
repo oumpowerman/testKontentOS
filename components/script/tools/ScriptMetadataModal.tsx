@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Tag, Target, Layers, Layout, Save, Hash, ChevronDown, Loader2, Check, Type, Users, Edit3 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useScriptContext } from '../core/ScriptContext';
 import SmartTagInput from '../hub/SmartTagInput';
 
@@ -42,8 +43,6 @@ const ScriptMetadataModal: React.FC = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    if (!isMetadataOpen) return null;
-
     const scriptCategories = masterOptions.filter(o => o.type === 'SCRIPT_CATEGORY' && o.isActive);
     const selectedChannel = channels.find(c => c.id === channelId);
     const selectedCategory = scriptCategories.find(c => c.key === category);
@@ -55,9 +54,22 @@ const ScriptMetadataModal: React.FC = () => {
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-indigo-950/40 backdrop-blur-sm p-4 animate-in fade-in duration-200 font-sans">
-            
-            <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300 border-4 border-white ring-1 ring-gray-100">
+        <AnimatePresence>
+            {isMetadataOpen && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="fixed inset-0 z-[60] flex items-center justify-center bg-indigo-950/40 backdrop-blur-sm p-4 font-sans"
+                >
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
+                        className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] border-4 border-white ring-1 ring-gray-100"
+                    >
                 
                 {/* Header with Gradient */}
                 <div className="px-8 py-6 bg-gradient-to-br from-indigo-600 to-violet-700 text-white flex justify-between items-start shrink-0 relative overflow-hidden">
@@ -359,8 +371,10 @@ const ScriptMetadataModal: React.FC = () => {
                         บันทึกการเปลี่ยนแปลง
                     </button>
                 </div>
-            </div>
-        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 };
 

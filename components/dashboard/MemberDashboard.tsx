@@ -27,7 +27,6 @@ import FocusZone from './member/FocusZone';
 import MyWorkBoard from './member/MyWorkBoard';
 import ItemShopModal from '../gamification/ItemShopModal';
 import WorkloadModal from '../workload/WorkloadModal'; 
-import MemberReportModal from './member/MemberReportModal'; 
 import NegligenceLockModal from '../duty/NegligenceLockModal'; 
 import SortableWidget from './widgets/SortableWidget';
 import AppBackground from '../common/AppBackground';
@@ -130,15 +129,15 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({
         }
     };
 
-    const WIDGET_CONFIG: Record<WidgetId, { span: string }> = {
-        attendance: { span: 'xl:col-span-8' },
-        duty: { span: 'xl:col-span-4' },
-        quest: { span: 'xl:col-span-4' },
-        goal: { span: 'xl:col-span-4' },
-        hall_of_fame: { span: 'xl:col-span-4' },
-        focus_zone: { span: 'xl:col-span-4' },
-        work_board: { span: 'xl:col-span-8' },
-        tribunal_bulletin: { span: 'xl:col-span-4' },
+    const WIDGET_CONFIG: Record<WidgetId, { span: string; hFull?: boolean }> = {
+        attendance: { span: 'xl:col-span-8', hFull: false },
+        duty: { span: 'xl:col-span-4', hFull: true },
+        quest: { span: 'xl:col-span-4', hFull: true },
+        goal: { span: 'xl:col-span-4', hFull: true },
+        hall_of_fame: { span: 'xl:col-span-4', hFull: true },
+        focus_zone: { span: 'xl:col-span-4', hFull: true },
+        work_board: { span: 'xl:col-span-8', hFull: true },
+        tribunal_bulletin: { span: 'xl:col-span-4', hFull: true },
     };
 
     // Sync local user + fallback setting for wave background
@@ -234,27 +233,23 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({
         switch (id) {
             case 'attendance':
                 return (
-                    <div className="bg-white/70 backdrop-blur-xl rounded-[2.5rem] border border-white shadow-sm p-2 hover:shadow-md transition-all h-full">
-                        <SmartAttendance 
-                            user={currentUser} 
-                            masterOptions={masterOptions} 
-                            onNavigate={onNavigate}
-                        />
-                    </div>
+                    <SmartAttendance 
+                        user={currentUser} 
+                        masterOptions={masterOptions} 
+                        onNavigate={onNavigate}
+                        hFull={WIDGET_CONFIG[id].hFull}
+                    />
                 );
             case 'duty':
                 return (
-                    <div className="h-full bg-gradient-to-br from-orange-50 to-amber-50/50 rounded-[2.5rem] border border-orange-100 shadow-sm p-1 relative overflow-hidden group min-h-[200px]">
-                        <div className="absolute top-0 right-0 w-40 h-40 bg-white/40 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none transition-transform group-hover:scale-110"></div>
-                        <MyDutyWidget 
-                            duties={duties} 
-                            currentUser={currentUser} 
-                            users={users}
-                            onNavigate={onNavigate}
-                            onFixNegligence={setNegligenceDuty}
-                            calendarMetadata={calendarMetadata}
-                        />
-                    </div>
+                    <MyDutyWidget 
+                        duties={duties} 
+                        currentUser={currentUser} 
+                        users={users}
+                        onNavigate={onNavigate}
+                        onFixNegligence={setNegligenceDuty}
+                        calendarMetadata={calendarMetadata}
+                    />
                 );
             case 'quest':
                 return (
@@ -426,6 +421,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({
                                     key={id} 
                                     id={id} 
                                     className={WIDGET_CONFIG[id].span}
+                                    hFull={WIDGET_CONFIG[id].hFull}
                                 >
                                     {renderWidget(id)}
                                 </SortableWidget>
@@ -449,13 +445,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({
                 tasks={tasks}
                 users={users}
                 currentUser={currentUser}
-            />
-
-            <MemberReportModal 
-                isOpen={isReportOpen}
-                onClose={() => setIsReportOpen(false)}
-                user={currentUser}
-                tasks={tasks}
+                onOpenTask={onEditTask}
             />
 
             {/* Negligence Lock Modal */}

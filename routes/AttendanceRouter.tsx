@@ -10,7 +10,7 @@ import LeaveQuotaModal from '../components/attendance/LeaveQuotaModal';
 import AttendanceInfoCard from '../components/attendance/AttendanceInfoCard'; 
 import { useAttendanceStats } from '../hooks/attendance/useAttendanceStats'; 
 import { useLeaveRequests } from '../hooks/useLeaveRequests'; 
-import MentorTip from '../components/MentorTip';
+import { WeeklyAttendanceRace } from '../components/attendance/WeeklyAttendanceRace';
 import { Clock, Calendar, PieChart, FileCheck, TableProperties } from 'lucide-react';
 import AppBackground, { BackgroundTheme } from '../components/common/AppBackground';
 
@@ -52,12 +52,6 @@ const AttendanceRouter: React.FC<AttendanceRouterProps> = ({ currentUser, users 
     return (
         <AppBackground theme={bgTheme} pattern="grid" className="p-4 md:p-8 min-h-screen">
             <div className="relative z-10 space-y-6 animate-in fade-in duration-500 pb-20">
-                <MentorTip variant="blue" messages={[
-                    "อย่าลืมกด Check-in เมื่อเริ่มงาน และ Check-out ก่อนกลับบ้านนะ!",
-                    "เช็คโควตาวันลาคงเหลือได้ที่ปุ่ม 'โควต้า' ด้านบน",
-                    "ถ้าป่วยหรือมีเหตุฉุกเฉิน แจ้งผ่านปุ่ม 'แจ้งลา' ได้เลย"
-                ]} />
-
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-end gap-4 bg-white/60 backdrop-blur-xl p-6 rounded-3xl border border-white/60 shadow-xl shadow-indigo-500/5">
                     <div>
@@ -68,6 +62,9 @@ const AttendanceRouter: React.FC<AttendanceRouterProps> = ({ currentUser, users 
                         <p className="text-gray-500 text-sm mt-1 font-medium">บันทึกเวลาเข้า-ออกงาน และตรวจสอบประวัติ</p>
                     </div>
                 </div>
+
+                {/* 8-bit Daily Attendance Racing track */}
+                <WeeklyAttendanceRace />
 
                 {/* Navigation Tabs & Actions */}
                 <div className="flex flex-wrap items-center gap-3">

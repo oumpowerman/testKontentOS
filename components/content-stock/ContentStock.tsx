@@ -1,26 +1,26 @@
 
 import React, { useMemo } from 'react';
-import { Task, Channel, User, MasterOption } from '../../types';
+import { Task, Channel, User, MasterOption } from '../../types.ts';
 import { Plus, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import MentorTip from '../MentorTip';
-import { useStockSync } from '../../hooks/useStockSync';
-import AppBackground, { BackgroundTheme } from '../common/AppBackground';
-import { useContentStockController } from '../../hooks/useContentStockController';
+import MentorTip from '../MentorTip.tsx';
+import { useStockSync } from '../../hooks/useStockSync.ts';
+import AppBackground, { BackgroundTheme } from '../common/AppBackground.tsx';
+import { useContentStockController } from '../../hooks/useContentStockController.ts';
 
 // Sub-Components
 import StockHeader from './stock/StockHeader.tsx';
-import StockFilterBar from './stock/StockFilterBar';
-import StockQuickFilters from './stock/StockQuickFilters';
-import StockTable from './stock/StockTable';
-import StockInventoryModal from './stock/inventory/StockInventoryModal';
-import StockUtilities from './stock/StockUtilities';
-import StockCountBadge from './stock/StockCountBadge';
-import StockShootQueue from './stock/StockShootQueue';
-import StockChannelStack from './stock/StockChannelStack';
-import AnalyticsEntryModal from '../analytics/AnalyticsEntryModal';
-import NotificationBellBtn from '../NotificationBellBtn';
-import { useShootQueueContext } from '../../context/ShootQueueContext';
+import StockFilterBar from './stock/StockFilterBar.tsx';
+import StockQuickFilters from './stock/StockQuickFilters.tsx';
+import StockTable from './stock/StockTable.tsx';
+import StockInventoryModal from './stock/inventory/StockInventoryModal.tsx';
+import StockUtilities from './stock/StockUtilities.tsx';
+import StockCountBadge from './stock/StockCountBadge.tsx';
+import StockShootQueue from './stock/StockShootQueue.tsx';
+import StockChannelStack from './stock/StockChannelStack.tsx';
+import AnalyticsEntryModal from '../analytics/AnalyticsEntryModal.tsx';
+import NotificationBellBtn from '../NotificationBellBtn.tsx';
+import { useShootQueueContext } from '../../context/ShootQueueContext.tsx';
 
 interface ContentStockProps {
   tasks: Task[]; // Sync Source

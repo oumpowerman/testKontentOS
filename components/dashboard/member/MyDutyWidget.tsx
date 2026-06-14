@@ -110,27 +110,37 @@ const MyDutyWidget: React.FC<MyDutyWidgetProps> = ({ duties, currentUser, users,
         return (
             <div 
                 onClick={() => onNavigate('DUTY')}
-                className="relative overflow-hidden bg-gradient-to-br from-orange-100 to-red-100 rounded-[2.5rem] p-6 text-red-900 shadow-lg shadow-orange-100 h-full flex flex-col justify-center group border border-orange-200 cursor-pointer transition-all hover:shadow-xl active:scale-[0.98]"
+                className="relative overflow-hidden bg-gradient-to-br from-orange-50 to-red-100 rounded-[2.5rem] p-8 text-red-900 shadow-lg shadow-orange-100 h-full flex flex-col justify-between items-center text-center group border-4 border-white cursor-pointer transition-all hover:shadow-xl active:scale-[0.98]"
             >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-40 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-                <div className="relative z-10 flex items-center gap-5">
+                <div className="relative z-10 flex flex-col items-center gap-5 w-full my-auto">
                     <div className="w-16 h-16 bg-white/60 backdrop-blur-md rounded-2xl flex items-center justify-center border border-orange-300 shadow-inner shrink-0 animate-pulse">
                         <Clock className="w-10 h-10 text-orange-600" />
                     </div>
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="bg-orange-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                    <div className="flex flex-col items-center">
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                            <span className="bg-orange-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
                                 MISSED DUTY
                             </span>
                         </div>
-                        <h3 className="text-xl font-black tracking-tight leading-none mb-1">
+                        <h3 className="text-2xl font-black tracking-tight leading-none mb-2 text-slate-800">
                             ลืมทำเวรเมื่อวาน! 😱
                         </h3>
-                        <p className="text-orange-800 text-xs font-bold opacity-80">
-                            รีบไปจัดการด่วนก่อนโดนหักคะแนนครับ
+                        <p className="text-orange-950/80 text-xs font-semibold max-w-[240px] leading-relaxed">
+                            รีบไปจัดการด่วนก่อนโดนหักคะแนน HP และระบบบันทึกความประพฤติครับ
                         </p>
                     </div>
                 </div>
+
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onNavigate('DUTY');
+                    }}
+                    className="relative z-10 flex items-center justify-center gap-2 px-6 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-bold text-sm shadow-xl shadow-red-900/20 transition-all active:scale-95 w-full text-center border-t border-red-400"
+                >
+                    ⚡ เคลียร์เวรย้อนหลัง
+                </button>
             </div>
         );
     }

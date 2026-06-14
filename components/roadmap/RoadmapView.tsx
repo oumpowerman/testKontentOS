@@ -18,17 +18,19 @@ import GeneralTaskForm from '../task/GeneralTaskForm';
 import { useTaskContext } from '../../context/TaskContext';
 import { useUserSession } from '../../context/UserSessionContext';
 import { useMasterDataContext } from '../../context/MasterDataContext';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { useChannels } from '../../hooks/useChannels';
 import { useTasks } from '../../hooks/useTasks';
 import { Task } from '../../types';
 
 const RoadmapView: React.FC = () => {
+  const { showConfirm } = useGlobalDialog();
   const { tasks: allTasks } = useTaskContext();
   const { currentUserProfile, activeUsers } = useUserSession();
   const { masterOptions } = useMasterDataContext();
   const { channels } = useChannels();
   const [tasks, setTasks] = useState<RoadmapTask[]>([]);
-  const [categories, setCategories] = useState<{name: string, id: string}[]>([]);
+  const [categories, setCategories] = useState<{name: string, id: string, color?: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('All');
   const [searchTerm, setSearchTerm] = useState('');
@@ -94,7 +96,7 @@ const RoadmapView: React.FC = () => {
         roadmapService.getCategories()
       ]);
       setTasks(taskData);
-      setCategories(catData.map(c => ({ name: c.name, id: c.id })));
+      setCategories(catData.map(c => ({ name: c.name, id: c.id, color: c.color })));
     } catch (error) {
       console.error('Failed to fetch roadmap:', error);
     } finally {
@@ -165,30 +167,47 @@ const RoadmapView: React.FC = () => {
   const handleSaveTask = async (savedTask: RoadmapTask) => {
     try {
       if (selectedTask) {
+        // Optimistic update
+        setTasks(prev => prev.map(t => t.id === savedTask.id ? { ...t, ...savedTask } : t));
+        setIsModalOpen(false);
         await roadmapService.updateTask(savedTask.id, savedTask);
       } else {
         const nextNo = tasks.length > 0 ? Math.max(...tasks.map(t => t.no)) + 1 : 1;
         const { id, ...newTask } = savedTask;
-        // Set initial baseline (D)
-        await roadmapService.createTask({ 
+        const payload = { 
           ...newTask, 
           no: nextNo,
           original_start_week: newTask.start_week,
           original_duration_weeks: newTask.duration_weeks
-        });
+        };
+        setIsModalOpen(false);
+        const created = await roadmapService.createTask(payload);
+        setTasks(prev => [...prev.filter(t => t.id !== id), created]);
       }
-      setIsModalOpen(false);
     } catch (error) {
       console.error('Save failed:', error);
+      fetchData(); // Rollback/Resync
     }
   };
 
   const handleDeleteTask = async (id: string) => {
+    const taskToDelete = tasks.find(t => t.id === id);
+    const initiativeName = taskToDelete?.initiative || 'โครงการนี้';
+    const confirmed = await showConfirm(
+      `คุณต้องการลบโครงการ "${initiativeName}" ใช่หรือไม่? งานปฏิบัติการหลักทั้งหมดที่เชื่อมกับ Roadmap นี้จะไม่สามารถอ้างอิงได้อีกต่อไป และการลบจะไม่สามารถย้อนกลับได้`,
+      'ยืนยันการลบโครงการ'
+    );
+    
+    if (!confirmed) return;
+
     try {
-      await roadmapService.deleteTask(id);
+      // Optimistic update
+      setTasks(prev => prev.filter(t => t.id !== id));
       setIsModalOpen(false);
+      await roadmapService.deleteTask(id);
     } catch (error) {
       console.error('Delete failed:', error);
+      fetchData(); // Rollback/Resync
     }
   };
 
@@ -268,7 +287,7 @@ const RoadmapView: React.FC = () => {
           />
           
           {/* Insight Dashboard (E) */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 px-10 py-6 bg-slate-50/50 border-b border-slate-100">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 px-10 py-6 bg-slate-50/50">
             {[
               { label: 'โครงการที่ดำเนินการอยู่', value: insights.ongoing, sub: 'Active Projects', icon: '⚡', color: 'text-indigo-600' },
               { label: 'แผนงานที่มีผลกระทบสูง', value: insights.highImpact, sub: 'High Impact', icon: '🔥', color: 'text-emerald-600' },
@@ -286,6 +305,35 @@ const RoadmapView: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Actionable Creator Advice Banner */}
+          <div className="px-10 pb-6 bg-slate-50/50 border-b border-slate-100">
+            {insights.peakLoad > 3 ? (
+              <div className="flex items-center gap-3.5 px-6 py-4 bg-amber-50/70 border border-amber-200/50 rounded-2xl text-xs text-amber-800 animate-in fade-in slide-in-from-top-1 font-medium">
+                <span className="text-lg bg-amber-100 p-2 rounded-xl">⚠️</span>
+                <div>
+                  <p className="font-bold text-amber-900">ตรวจพบการกระจุกตัวของภาระงาน (Creator Hustle Congestion)</p>
+                  <p className="text-amber-800/80 mt-0.5">มีโครงการที่รันซ้อนพร้อมกันสูงสุดถึง {insights.peakLoad} แผนงานในบางสัปดาห์ แนะนำให้ลากแบ่งระยะเวลา (Duration) หรือขยับจุดเริ่มต้น เพื่อให้ทีมสคริปต์และทีมตัดต่อมีระยะเวลาพิทช์แบรนด์ที่ดีขึ้น</p>
+                </div>
+              </div>
+            ) : insights.delayed > 0 ? (
+              <div className="flex items-center gap-3.5 px-6 py-4 bg-rose-50/70 border border-rose-200/50 rounded-2xl text-xs text-rose-800 animate-in fade-in slide-in-from-top-1 font-medium">
+                <span className="text-lg bg-rose-100 p-2 rounded-xl">⚠️</span>
+                <div>
+                  <p className="font-bold text-rose-900">พบแผนคอนเทนต์สะสมล่าช้า (Delayed Schedule Alert)</p>
+                  <p className="text-rose-800/80 mt-0.5">มีโครงการที่เสร็จไม่ทันตารางเดิมอยู่ {insights.delayed} แผนงาน แนะนำให้เปิดโหมด "เรียงตามเวลา" เพื่อจัดลำดับแผนงานสำคัญสุดก่อน หรือปรับขยายบัฟเฟอร์การผลิตในหน้ารายละเอียดของแผนนั้นๆ</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3.5 px-6 py-4 bg-indigo-50/70 border border-indigo-100/50 rounded-2xl text-xs text-indigo-800 animate-in fade-in slide-in-from-top-1 font-medium">
+                <span className="text-lg bg-indigo-100/50 p-2 rounded-xl font-bold">✨</span>
+                <div>
+                  <p className="font-bold text-indigo-900">สมดุลของตารางเวลาเป็นระเบียบดีเยี่ยม (Healthy Content Pipeline)</p>
+                  <p className="text-indigo-800/80 mt-0.5">ขีดความสามารถการรันแผนงานมีความกระจายตัวดี (Peak Concurrency อยู่ที่ {insights.peakLoad} งาน) มั่นใจได้ว่าทุกช่องจะไม่ขาดช่วงโพสต์ และคงความพรีเมียมของชิ้นงานได้ตามเป้า</p>
+                </div>
+              </div>
+            )}
           </div>
         </>
       ) : (
@@ -383,6 +431,7 @@ const RoadmapView: React.FC = () => {
                       totalWeeks={totalWeeks}
                       onEdit={handleEditTask}
                       isDraggable={sortMode === 'manual' && filter === 'All' && !searchTerm}
+                      categories={categories}
                     />
                   </Reorder.Item>
                 ))}

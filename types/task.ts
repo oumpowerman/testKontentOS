@@ -20,7 +20,6 @@ export interface Channel {
     color: string;
     platforms: Platform[];
     logoUrl?: string;
-    platform?: Platform; // Legacy
 }
 
 export interface TaskPerformance {

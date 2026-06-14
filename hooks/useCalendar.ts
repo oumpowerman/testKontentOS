@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { addMonths, endOfMonth, endOfWeek, isSameDay } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import { Task, ChipConfig, FilterType } from '../types';
@@ -113,18 +113,23 @@ export const useCalendar = ({ tasks, userId, onMoveTask }: UseCalendarProps) => 
     }), []);
     const goToToday = useCallback(() => setCurrentDate(new Date()), []);
 
-    const getStartOfWeek = (d: Date) => {
+    const getStartOfWeek = useCallback((d: Date) => {
         const date = new Date(d);
         const day = date.getDay();
         const diff = date.getDate() - day; 
         date.setDate(diff);
         date.setHours(0,0,0,0);
         return date;
-    };
-    const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const monthEnd = endOfMonth(monthStart);
-    const startDate = getStartOfWeek(monthStart);
-    const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 });
+    }, []);
+
+    const { startDate, endDate } = useMemo(() => {
+        const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const monthEnd = endOfMonth(monthStart);
+        return {
+            startDate: getStartOfWeek(monthStart),
+            endDate: endOfWeek(monthEnd, { weekStartsOn: 0 })
+        };
+    }, [currentDate.getFullYear(), currentDate.getMonth(), getStartOfWeek]);
 
     // Helper: Check if task matches chip criteria
     const checkMatch = (t: Task, chip: ChipConfig) => {
@@ -265,6 +270,7 @@ export const useCalendar = ({ tasks, userId, onMoveTask }: UseCalendarProps) => 
                 content_id: task.id
             };
             e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+            e.dataTransfer.setData('taskData', JSON.stringify(task));
         }
     }, [tasks]);
 
@@ -282,7 +288,23 @@ export const useCalendar = ({ tasks, userId, onMoveTask }: UseCalendarProps) => 
         const taskId = e.dataTransfer.getData("taskId");
         if (!taskId) return;
 
-        const taskToMove = tasks.find(t => t.id === taskId);
+        let taskToMove = tasks.find(t => t.id === taskId);
+        if (!taskToMove) {
+            const taskDataStr = e.dataTransfer.getData("taskData");
+            if (taskDataStr) {
+                try {
+                    const parsed = JSON.parse(taskDataStr);
+                    if (parsed.startDate) parsed.startDate = new Date(parsed.startDate);
+                    if (parsed.endDate) parsed.endDate = new Date(parsed.endDate);
+                    if (parsed.shootDate) parsed.shootDate = new Date(parsed.shootDate);
+                    if (parsed.createdAt) parsed.createdAt = new Date(parsed.createdAt);
+                    if (parsed.updatedAt) parsed.updatedAt = new Date(parsed.updatedAt);
+                    taskToMove = parsed;
+                } catch (err) {
+                    console.error("Failed to parse dragged task data:", err);
+                }
+            }
+        }
         
         // ALLOW DROP IF: 
         // 1. Task exists AND

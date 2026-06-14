@@ -5,6 +5,8 @@ import SeasonRain from './backgrounds/SeasonRain';
 import SeasonSnow from './backgrounds/SeasonSnow';
 import SeasonSummer from './backgrounds/SeasonSummer';
 import SeasonAutumn from './backgrounds/SeasonAutumn';
+import BeachOcean from './backgrounds/BeachOcean';
+import RainbowSky from './backgrounds/RainbowSky';
 
 export type BackgroundTheme = 
   | 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday'
@@ -12,11 +14,12 @@ export type BackgroundTheme =
   | 'pastel-indigo' | 'pastel-purple' | 'pastel-pink' | 'pastel-rose' | 'pastel-teal'
   | 'pastel-cyan' | 'pastel-sky' | 'pastel-emerald' | 'pastel-lime' | 'pastel-amber'
   | 'pastel-stone' | 'pastel-slate' | 'pastel-zinc' | 'neutral' | 'script' | 'inspector' | 'productivity' | 'rainbow'
-  | 'season-rain' | 'season-snow' | 'season-summer' | 'season-autumn';
+  | 'season-rain' | 'season-snow' | 'season-summer' | 'season-autumn' | 'beach-ocean' | 'rainbow-sky';
 
 interface AppBackgroundProps {
     theme?: BackgroundTheme;
     pattern?: 'grid' | 'dots' | 'icons' | 'none';
+    customBgUrl?: string; // Support for custom wallpaper/scenery background images
     className?: string;
     children?: React.ReactNode;
 }
@@ -24,6 +27,7 @@ interface AppBackgroundProps {
 const AppBackground: React.FC<AppBackgroundProps> = ({ 
     theme = 'neutral', 
     pattern = 'grid', 
+    customBgUrl,
     className = '', 
     children 
 }) => {
@@ -63,6 +67,8 @@ const AppBackground: React.FC<AppBackgroundProps> = ({
             'season-snow': 'from-slate-50 via-sky-50 to-indigo-50/50', // base for snow
             'season-summer': 'from-amber-50 via-yellow-50 to-orange-50', // base for summer
             'season-autumn': 'from-orange-50 via-red-50 to-amber-100', // base for autumn
+            'beach-ocean': 'from-sky-300 via-sky-100 to-amber-50', // base for beach
+            'rainbow-sky': 'from-pink-100 via-purple-100 to-sky-100', // base for rainbow sky
         };
 
         if (theme === 'script') {
@@ -194,12 +200,21 @@ const AppBackground: React.FC<AppBackgroundProps> = ({
     return (
         <div className={`relative w-auto min-h-screen flex flex-col overflow-x-hidden max-w-full ${className}`}>
             {/* Background Layer */}
-            <div 
-                className={`fixed inset-0 bg-gradient-to-br ${themeConfig} transition-colors duration-1000 pointer-events-none z-0`} 
-            />
+            {customBgUrl ? (
+                <div 
+                    className="fixed inset-0 bg-cover bg-center transition-all duration-1000 pointer-events-none z-0"
+                    style={{ backgroundImage: `url(${customBgUrl})` }}
+                >
+                    <div className="absolute inset-0 bg-white/35 backdrop-blur-[2px] transition-all duration-1000" />
+                </div>
+            ) : (
+                <div 
+                    className={`fixed inset-0 bg-gradient-to-br ${themeConfig} transition-colors duration-1000 pointer-events-none z-0`} 
+                />
+            )}
             
             {/* Pattern Layer */}
-            {(!theme.startsWith('season-')) && (
+            {(!theme.startsWith('season-')) && theme !== 'beach-ocean' && theme !== 'rainbow-sky' && !customBgUrl && (
                 <div className="fixed inset-0 pointer-events-none z-0" style={{ ...patternStyle }} />
             )}
 
@@ -208,6 +223,8 @@ const AppBackground: React.FC<AppBackgroundProps> = ({
             {theme === 'season-snow' && <SeasonSnow />}
             {theme === 'season-summer' && <SeasonSummer />}
             {theme === 'season-autumn' && <SeasonAutumn />}
+            {theme === 'beach-ocean' && <BeachOcean />}
+            {theme === 'rainbow-sky' && <RainbowSky />}
             
             {/* Decorative Elements for Script, Inspector, Productivity & Rainbow Theme */}
             {(theme === 'script' || theme === 'inspector' || theme === 'productivity' || theme === 'rainbow') && (

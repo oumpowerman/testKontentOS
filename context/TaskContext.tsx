@@ -22,6 +22,7 @@ interface TaskContextType {
     fetchSubTasks: (contentId: string) => Promise<Task[]>;
     fetchTaskById: (id: string, type: TaskType) => Promise<Task | null>;
     fetchSubTasksCount: (contentId: string) => Promise<number>;
+    fetchCompletedTasks: (params?: { userId?: string; limit?: number; startDate?: Date; endDate?: Date }) => Promise<void>;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -233,7 +234,36 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 tasksQuery = tasksQuery.or('content_id.is.null,show_on_board.eq.true');
             }
 
-            // 🚀 FIX ISSUE 2: Concurrent Fetching (Promise.all)
+            // 🚀 STAGE 1: Exclude standard DONE tasks from the main date range sweep (Massive speedup!)
+            tasksQuery = tasksQuery.neq('status', 'DONE');
+
+            // 🚀 STAGE 2: Pre-fetch only the 7 latest completed tasks for each active team member
+            let doneTasks: any[] = [];
+            try {
+                const { data: activeUsers } = await supabase
+                    .from('profiles')
+                    .select('id')
+                    .eq('is_active', true);
+
+                if (activeUsers && activeUsers.length > 0) {
+                    const userPromises = activeUsers.map(async (u) => {
+                        const { data } = await supabase
+                            .from('tasks')
+                            .select(taskFields)
+                            .eq('status', 'DONE')
+                            .contains('assignee_ids', [u.id])
+                            .order('updated_at', { ascending: false })
+                            .limit(7);
+                        return data || [];
+                    });
+                    const doneResults = await Promise.all(userPromises);
+                    doneTasks = doneResults.flat();
+                }
+            } catch (err) {
+                console.warn('Could not pre-fetch 7 latest done tasks per user:', err);
+            }
+
+            // 🚀 STAGE 3: Concurrent Fetching (Promise.all)
             const [contentsResult, tasksResult] = await Promise.all([
                 contentsQuery,
                 tasksQuery
@@ -251,6 +281,14 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 newTasks = [...newTasks, ...tasksResult.data.map(d => mapSupabaseToTask(d, 'TASK', !forceFull))];
             }
 
+            // Merge in the 7 latest DONE tasks per user while avoiding duplicates
+            if (doneTasks && doneTasks.length > 0) {
+                const mappedDone = doneTasks.map(d => mapSupabaseToTask(d, 'TASK', !forceFull));
+                const existingTaskIds = new Set(newTasks.map(t => t.id));
+                const uniqueDone = mappedDone.filter(t => !existingTaskIds.has(t.id));
+                newTasks = [...newTasks, ...uniqueDone];
+            }
+
             setTasks(newTasks);
         } catch (err) {
             console.error('Fetch error:', err);
@@ -260,6 +298,52 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isInitialLoadRef.current = false;
         }
     }, [dateRange, isAllLoaded, mapSupabaseToTask]);
+
+    // 🚀 LATEST REQUIREMENT: Lazy/On-Demand Completed Tasks Loader
+    const fetchCompletedTasks = useCallback(async (params?: { userId?: string; limit?: number; startDate?: Date; endDate?: Date }) => {
+        setIsFetching(true);
+        try {
+            const taskFields = `
+                id, title, status, priority, start_date, end_date, created_at, updated_at, 
+                assignee_ids, content_id, show_on_board, target_position, roadmap_id, 
+                sla_revert_count, difficulty, assignee_type, estimated_hours, scheduled_time,
+                contents(title), task_reviews(id, round, status, is_completed)
+            `.replace(/\s+/g, '');
+
+            let query = supabase.from('tasks').select(taskFields).eq('status', 'DONE');
+
+            if (params?.userId) {
+                query = query.contains('assignee_ids', [params.userId]);
+            }
+            if (params?.startDate) {
+                query = query.gte('end_date', params.startDate.toISOString());
+            }
+            if (params?.endDate) {
+                query = query.lte('start_date', params.endDate.toISOString());
+            }
+            if (params?.limit) {
+                query = query.limit(params.limit);
+            } else if (!params?.startDate && !params?.endDate) {
+                query = query.limit(100);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            if (data) {
+                const mapped = data.map(d => mapSupabaseToTask(d, 'TASK', false));
+                setTasks(prev => {
+                    const existingIds = new Set(prev.map(t => t.id));
+                    const uniqueNew = mapped.filter(t => !existingIds.has(t.id));
+                    return [...prev, ...uniqueNew];
+                });
+            }
+        } catch (err) {
+            console.error('fetchCompletedTasks failed:', err);
+        } finally {
+            setIsFetching(false);
+        }
+    }, [mapSupabaseToTask]);
 
     const fetchSubTasks = useCallback(async (contentId: string): Promise<Task[]> => {
         try {
@@ -579,7 +663,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             tasks, setTasks,
             dateRange, setDateRange,
             isFetching, isAllLoaded,
-            fetchTasks, fetchAllTasks, checkAndExpandRange, fetchSubTasks, fetchTaskById, fetchSubTasksCount
+            fetchTasks, fetchAllTasks, checkAndExpandRange, fetchSubTasks, fetchTaskById, fetchSubTasksCount,
+            fetchCompletedTasks
         }}>
             {children}
         </TaskContext.Provider>

@@ -219,23 +219,21 @@ const MasterDataManager: React.FC = () => {
                                 </div>
                             </div>
                         ) : activeTab === 'REWARDS' ? (
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4">
-                                <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                                    <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-purple-50">
-                                        <h3 className="font-bold text-purple-700 flex items-center"><Gift className="w-4 h-4 mr-2" /> ของรางวัล</h3>
-                                        <button onClick={handleCreateReward} className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 font-bold flex items-center"><Plus className="w-3 h-3 mr-1" /> เพิ่มรางวัล</button>
-                                    </div>
-                                    {rewardsLoading ? <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-purple-500" /></div> : (
-                                        <div className="divide-y divide-gray-100">
-                                            {rewards.map(r => (
-                                                <div key={r.id} className="p-4 flex items-center justify-between hover:bg-gray-50 group">
-                                                    <div className="flex items-center gap-4"><div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-xl border">{r.icon || '🎁'}</div><div><div className="flex items-center gap-2"><span className="font-bold text-gray-800">{r.title}</span>{!r.isActive && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 rounded">Inactive</span>}</div><p className="text-xs text-gray-500">{r.description}</p></div></div>
-                                                    <div className="flex items-center gap-4"><span className="font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg text-sm">{r.cost} Pts</span><div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditReward(r)} className="p-1.5 text-gray-400 hover:text-indigo-600 bg-gray-50 hover:bg-white rounded-lg"><Edit2 className="w-4 h-4" /></button><button onClick={() => deleteReward(r.id)} className="p-1.5 text-gray-400 hover:text-red-600 bg-gray-50 hover:bg-white rounded-lg"><Trash2 className="w-4 h-4" /></button></div></div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                            <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden animate-in slide-in-from-bottom-4">
+                                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-purple-50">
+                                    <h3 className="font-bold text-purple-700 flex items-center"><Gift className="w-4 h-4 mr-2" /> ของรางวัล</h3>
+                                    <button onClick={handleCreateReward} className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 font-bold flex items-center"><Plus className="w-3 h-3 mr-1" /> เพิ่มรางวัล</button>
                                 </div>
+                                {rewardsLoading ? <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-purple-500" /></div> : (
+                                    <div className="divide-y divide-gray-100">
+                                        {rewards.map(r => (
+                                            <div key={r.id} className="p-4 flex items-center justify-between hover:bg-gray-50 group">
+                                                <div className="flex items-center gap-4"><div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-xl border">{r.icon || '🎁'}</div><div><div className="flex items-center gap-2"><span className="font-bold text-gray-800">{r.title}</span>{!r.isActive && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 rounded">Inactive</span>}</div><p className="text-xs text-gray-500">{r.description}</p></div></div>
+                                                <div className="flex items-center gap-4"><span className="font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg text-sm">{r.cost} Pts</span><div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditReward(r)} className="p-1.5 text-gray-400 hover:text-indigo-600 bg-gray-50 hover:bg-white rounded-lg"><Edit2 className="w-4 h-4" /></button><button onClick={() => deleteReward(r.id)} className="p-1.5 text-gray-400 hover:text-red-600 bg-gray-50 hover:bg-white rounded-lg"><Trash2 className="w-4 h-4" /></button></div></div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         ) : activeTab === 'DASHBOARD' ? (
                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in slide-in-from-bottom-4">

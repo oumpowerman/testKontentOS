@@ -1,28 +1,29 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    ArrowLeft, Save, Check, Printer, Clock, Wand2, PlayCircle, Settings, 
-    User as UserIcon, Users, MessageSquare, Sparkles, Share2, Globe, FileText, 
-    Rocket, MessageSquarePlus, Loader2, Maximize2, Minimize2, Zap, ZapOff, Tag, Hash, Search 
+    User as UserIcon, Users, MessageSquarePlus, Maximize2, Zap, ZapOff, 
+    Minimize2, ChevronRight, MoreHorizontal, Globe, Share2, Loader2
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { ScriptStatus } from '../../../types';
 import { useScriptContext } from '../core/ScriptContext';
 import CharacterManager from '../tools/config/CharacterManager';
 import ScriptMetadataModal from '../tools/ScriptMetadataModal';
 import { useToast } from '../../../context/ToastContext';
 import { useGlobalDialog } from '../../../context/GlobalDialogContext';
 import { handlePrintScript } from '../core/printUtils';
-import { googleDriveService } from '../../../services/googleDriveService';
 
 // Refactored Sub-components & Custom Hooks
 import { GoogleDocsIcon } from './toolbar/components/GoogleDocsIcon';
 import { StatusDropdown } from './toolbar/components/StatusDropdown';
 import { ZoomDropdown } from './toolbar/components/ZoomDropdown';
-import { TemplatesDropdown } from './toolbar/components/TemplatesDropdown';
 import { useToolbarShortcuts } from './toolbar/useToolbarShortcuts';
 import { ShareModal } from './toolbar/modals/ShareModal';
 import { GoogleDocsModals } from './toolbar/modals/GoogleDocsModals';
+
+// Newly extracted modules
+import { DocumentMetaSection } from './toolbar/components/DocumentMetaSection';
+import { CollapsibleToolsArea } from './toolbar/components/CollapsibleToolsArea';
+import { useGoogleDocsIntegration } from './toolbar/hooks/useGoogleDocsIntegration';
+import { useScriptTiming } from './toolbar/hooks/useScriptTiming';
 
 const EditorToolbar: React.FC = () => {
     const { 
@@ -46,7 +47,6 @@ const EditorToolbar: React.FC = () => {
     } = useScriptContext();
     
     const { showToast } = useToast();
-    const { showConfirm } = useGlobalDialog();
 
     // Menu States
     const [showTemplates, setShowTemplates] = useState(false);
@@ -54,120 +54,48 @@ const EditorToolbar: React.FC = () => {
     const [showConfig, setShowConfig] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
     const [showZoomMenu, setShowZoomMenu] = useState(false);
+    const [showMoreTools, setShowMoreTools] = useState(false);
     
     // Save Feedback State
     const [showSaveSuccess, setShowSaveSuccess] = useState(false);
     
-    // Google Drive / Docs Integration States
-    const [isConnectedToDoc, setIsConnectedToDoc] = useState(false);
-    const [isCheckingDoc, setIsCheckingDoc] = useState(true);
-    const [showExportConfirm, setShowExportConfirm] = useState(false);
-    const [isExporting, setIsExporting] = useState(false);
-    const [exportResult, setExportResult] = useState<{ id: string, name: string, webViewLink: string } | null>(null);
-    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    // Custom Hooks for extracted logic
+    const {
+        isConnectedToDoc,
+        isCheckingDoc,
+        showExportConfirm,
+        setShowExportConfirm,
+        isExporting,
+        exportResult,
+        showSuccessModal,
+        setShowSuccessModal,
+        handleConnectGoogle,
+        handleExport
+    } = useGoogleDocsIntegration();
 
-    // Check connection on mount
-    useEffect(() => {
-        let isMounted = true;
-        const checkStatus = async () => {
-            try {
-                const statusInfo = await googleDriveService.getStatus();
-                if (isMounted) {
-                    setIsConnectedToDoc(statusInfo);
-                }
-            } catch (err) {
-                console.error("Failed to check Google Docs connection status", err);
-            } finally {
-                if (isMounted) {
-                    setIsCheckingDoc(false);
-                }
-            }
-        };
-        checkStatus();
-        return () => {
-            isMounted = false;
-        };
-    }, []);
-
-    // Listen to Google Auth Events
-    useEffect(() => {
-        const handleMessage = (event: MessageEvent) => {
-            if (event.data && event.data.type === 'GOOGLE_AUTH_SUCCESS') {
-                setIsConnectedToDoc(true);
-                showToast('เชื่อมต่อ Google Docs สำเร็จเรียบร้อย!', 'success');
-            }
-        };
-
-        const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === 'GOOGLE_AUTH_TIMESTAMP') {
-                setIsConnectedToDoc(true);
-                showToast('เชื่อมต่อ Google Docs สำเร็จเรียบร้อย!', 'success');
-            }
-        };
-
-        window.addEventListener('message', handleMessage);
-        window.addEventListener('storage', handleStorageChange);
-        return () => {
-            window.removeEventListener('message', handleMessage);
-            window.removeEventListener('storage', handleStorageChange);
-        };
-    }, [showToast]);
-
-    // Google Docs Actions
-    const handleConnectGoogle = async () => {
-        try {
-            const url = await googleDriveService.getAuthUrl();
-            if (url) {
-                const width = 600;
-                const height = 650;
-                const left = window.screenX + (window.innerWidth - width) / 2;
-                const top = window.screenY + (window.innerHeight - height) / 2;
-                window.open(url, 'GoogleAuth', `width=${width},height=${height},left=${left},top=${top}`);
-            } else {
-                showToast('ไม่สามารถดึงลิงก์เชื่อมต่อ Google Docs ได้', 'error');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ Google Docs', 'error');
-        }
-    };
-
-    const handleExport = async () => {
-        setShowExportConfirm(false);
-        setIsExporting(true);
-        try {
-            const result = await googleDriveService.exportToGoogleDocs(title || 'Untitled Script', content);
-            setExportResult(result);
-            setShowSuccessModal(true);
-        } catch (err: any) {
-            console.error(err);
-            showToast(err.message || 'ส่งออกสคริปต์ไปยัง Google Docs ไม่สำเร็จ', 'error');
-        } finally {
-            setIsExporting(false);
-        }
-    };
+    const { formattedDuration } = useScriptTiming(content);
     
     // Refs for Portal positioning
     const statusBtnRef = useRef<HTMLDivElement>(null);
     const zoomBtnRef = useRef<HTMLDivElement>(null);
     const templatesBtnRef = useRef<HTMLDivElement>(null);
+    const toolsContainerRef = useRef<HTMLDivElement>(null);
 
-    // Timing helper
-    const cleanContentForTiming = (html: string) => {
-        return html
-            .replace(/\[.*?\]/g, '') // Remove [Stage Directions]
-            .replace(/\(.*?\)/g, '') // Remove (Parenthetical Notes)
-            .replace(/<strong>.*?:?<\/strong>:?\s*/g, '') // Remove Bold Character Names (handles : inside or outside)
-            .replace(/<[^>]*>?/gm, '') // Remove HTML Tags
-            .replace(/^[^\n:]+:\s*/gm, '') // Remove "Name: " at start of lines (fallback)
-            .trim();
-    };
+    // Auto scroll more tools into view on mobile when expanded
+    useEffect(() => {
+        if (showMoreTools && toolsContainerRef.current) {
+            setTimeout(() => {
+                if (toolsContainerRef.current) {
+                    toolsContainerRef.current.scrollTo({
+                        left: toolsContainerRef.current.scrollWidth,
+                        behavior: 'smooth'
+                    });
+                }
+            }, 150);
+        }
+    }, [showMoreTools]);
 
-    const textContent = cleanContentForTiming(content);
-    const estimatedSeconds = Math.ceil(textContent.length / 12); 
-    const formattedDuration = `${Math.floor(estimatedSeconds / 60)}m ${estimatedSeconds % 60}s`;
-    
-    // Find Owner for Print logic
+    // Find Owner info
     const owner = users.find(u => u.id === ideaOwnerId);
 
     const handleManualSave = useCallback(async () => {
@@ -212,6 +140,9 @@ const EditorToolbar: React.FC = () => {
     const isAnyMenuOpen = showStatusMenu || showTemplates || showZoomMenu;
     const openCommentCount = comments.filter(c => c.status === 'OPEN').length;
 
+    // Helper for export action to bind the current script state
+    const handleExportBound = () => handleExport(title, content);
+
     return (
         <>
             {isAnyMenuOpen && (
@@ -230,146 +161,27 @@ const EditorToolbar: React.FC = () => {
                 <div className={`bg-white/80 backdrop-blur-md border-b border-indigo-50 px-4 py-3 flex flex-col xl:flex-row xl:items-center justify-between shrink-0 shadow-sm gap-3 xl:gap-6 relative transition-all ${isAnyMenuOpen ? 'z-50' : 'z-20'}`}>
                     
                     {/* Top Line: Back & Title & Meta */}
-                    <div className="flex items-center gap-3 w-full xl:w-auto overflow-hidden">
-                        <motion.button 
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={onClose} 
-                            className="shrink-0 group p-2 bg-white border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50 rounded-xl transition-all duration-300 hover:-rotate-12 shadow-sm"
-                        >
-                            <ArrowLeft className="w-5 h-5 text-gray-400 group-hover:text-indigo-600" />
-                        </motion.button>
-                        
-                        <div className="flex flex-col min-w-0 flex-1">
-                            <input 
-                                type="text" 
-                                value={title} 
-                                onChange={(e) => setTitle(e.target.value)} 
-                                className="font-kanit font-bold tracking-tight text-gray-800 text-lg md:text-xl outline-none
-                                    bg-transparent 
-                                    placeholder:text-transparent
-                                    placeholder:bg-gradient-to-r
-                                    placeholder:from-gray-300
-                                    placeholder:via-gray-200
-                                    placeholder:to-gray-300
-                                    placeholder:bg-[length:200%_100%]
-                                    placeholder:bg-clip-text
-                                    placeholder:animate-shimmer
-                                    w-full truncate     
-                                    origin-left
-                                    transition-all duration-300
-                                    hover:drop-shadow-[0_2px_6px_rgba(0,0,0,0.15)]
-                                    focus:scale-[1.03]
-                                    focus:drop-shadow-[0_4px_12px_rgba(0,0,0,0.25)]
-                                "
-                                placeholder="Untitled Script ✨"
-                            />
-                            <div className="flex items-center gap-2 md:gap-3 text-[10px] text-gray-400 font-bold mt-0.5 overflow-x-auto scrollbar-hide whitespace-nowrap">
-                                {owner && (
-                                    <div className="flex items-center gap-1.5 shrink-0 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
-                                        <img src={owner.avatarUrl} className="w-3.5 h-3.5 rounded-full object-cover ring-1 ring-white" alt={owner.name} />
-                                        <span className="text-indigo-600">{owner.name.split(' ')[0]}</span>
-                                    </div>
-                                )}
-                                
-                                {/* Manual Save Button */}
-                                <motion.button 
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={handleManualSave}
-                                    disabled={isSaving}
-                                    className={`
-                                        flex items-center gap-1.5 px-3 py-0.5 rounded-full border transition-all shrink-0
-                                        ${showSaveSuccess 
-                                            ? 'bg-green-50 text-green-600 border-green-200' 
-                                            : isSaving 
-                                                ? 'bg-indigo-50 text-indigo-400 border-indigo-200 cursor-wait'
-                                                : 'bg-white text-gray-500 border-gray-200 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-sm'
-                                        }
-                                    `}
-                                    title="คลิกเพื่อบันทึกทันที"
-                                >
-                                    {isSaving ? (
-                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : showSaveSuccess ? (
-                                        <Check className="w-3 h-3" />
-                                    ) : (
-                                        <Save className="w-3 h-3" />
-                                    )}
-                                    
-                                    {isSaving 
-                                        ? 'Saving...' 
-                                        : showSaveSuccess 
-                                            ? 'Saved!' 
-                                            : `Save (${format(lastSaved, 'HH:mm')})`
-                                    }
-                                </motion.button>
-                                
-                                <span className="flex items-center shrink-0" title="Estimated Reading Time">
-                                    <Clock className="w-3 h-3 mr-1 text-orange-400" /> {formattedDuration}
-                                </span>
-
-                                {category && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        className="flex items-center gap-1.5 shrink-0 bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-100 text-pink-600 shadow-sm"
-                                    >
-                                        <Tag className="w-3 h-3" />
-                                        <span className="font-black uppercase tracking-tighter">
-                                            {masterOptions.find(o => o.key === category)?.label || category}
-                                        </span>
-                                    </motion.div>
-                                )}
-
-                                {tags && tags.length > 0 && (
-                                    <div className="flex items-center gap-1.5 overflow-hidden">
-                                        <AnimatePresence>
-                                            {tags.map((tag, idx) => (
-                                                <motion.div 
-                                                    key={tag} 
-                                                    initial={{ opacity: 0, x: -10 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ delay: idx * 0.05 }}
-                                                    className="flex items-center gap-0.5 shrink-0 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-200 text-slate-500 hover:bg-white hover:border-indigo-200 hover:text-indigo-600 transition-all cursor-default group/tag"
-                                                >
-                                                    <Hash className="w-2.5 h-2.5 opacity-40 group-hover/tag:opacity-100 group-hover/tag:scale-110 transition-all" />
-                                                    <span className="font-bold">{tag}</span>
-                                                </motion.div>
-                                            ))}
-                                        </AnimatePresence>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Metadata Button */}
-                        <motion.button 
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setIsMetadataOpen(true)}
-                            className="p-2 text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-100 transition-all shrink-0"
-                            title="แก้ไขรายละเอียด (Metadata)"
-                        >
-                            <FileText className="w-5 h-5" />
-                        </motion.button>
-                        
-                        {/* Promote to Content Button */}
-                        {!contentId && isScriptOwner && (
-                             <motion.button 
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={onPromote}
-                                className="hidden md:flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all shrink-0 animate-pulse"
-                                title="ส่งเข้ากระบวนการผลิต (Create Content)"
-                             >
-                                 <Rocket className="w-4 h-4 text-white" /> ส่งเข้าผลิต
-                             </motion.button>
-                        )}
-                    </div>
+                    <DocumentMetaSection
+                        onClose={onClose}
+                        title={title}
+                        setTitle={setTitle}
+                        owner={owner}
+                        isSaving={isSaving}
+                        showSaveSuccess={showSaveSuccess}
+                        handleManualSave={handleManualSave}
+                        lastSaved={lastSaved}
+                        formattedDuration={formattedDuration}
+                        category={category}
+                        masterOptions={masterOptions}
+                        tags={tags}
+                        setIsMetadataOpen={setIsMetadataOpen}
+                        contentId={contentId}
+                        isScriptOwner={isScriptOwner}
+                        onPromote={onPromote}
+                    />
 
                     {/* Bottom Line (Mobile) / Right Side (Desktop): Tools */}
-                    <div className="flex items-center gap-2 shrink-0 overflow-x-auto xl:overflow-visible pb-1 xl:pb-0 scrollbar-hide w-full xl:w-auto -mx-4 px-4 xl:mx-0 xl:px-0">
+                    <div ref={toolsContainerRef} className="flex items-center gap-2 shrink-0 overflow-x-auto xl:overflow-visible pb-1 xl:pb-0 scrollbar-hide w-full xl:w-auto -mx-4 px-4 xl:mx-0 xl:px-0">
                         
                         {/* Focus Mode Toggle */}
                         <motion.button 
@@ -430,12 +242,20 @@ const EditorToolbar: React.FC = () => {
                             ) : (
                                 <GoogleDocsIcon className="w-3.5 h-3.5 shrink-0" />
                             )}
-                            <span>
+                            <span className="hidden md:inline">
                                 {isCheckingDoc 
                                     ? 'Checking...' 
                                     : isConnectedToDoc 
                                         ? 'Export to Google Doc' 
                                         : 'Connect Google Docs'
+                                }
+                            </span>
+                            <span className="md:hidden">
+                                {isCheckingDoc 
+                                    ? '...' 
+                                    : isConnectedToDoc 
+                                        ? 'Export' 
+                                        : 'Connect'
                                 }
                             </span>
                         </motion.button>
@@ -484,74 +304,44 @@ const EditorToolbar: React.FC = () => {
 
                         <div className="h-6 w-px bg-gray-200 mx-1 shrink-0"></div>
                         
-                        {/* Tools Buttons */}
-                        {scriptType === 'DIALOGUE' && (
-                            <motion.button 
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => setIsChatPreviewOpen(!isChatPreviewOpen)}
-                                className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all border shadow-sm shrink-0 ${isChatPreviewOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-gray-200 text-gray-500 hover:text-indigo-600 hover:border-indigo-200'}`}
-                                title="Chat Preview"
-                            >
-                                <MessageSquare className="w-4 h-4" />
-                            </motion.button>
-                        )}
+                        {/* Collapsible Tools Container */}
+                        <AnimatePresence initial={false}>
+                            {showMoreTools && (
+                                <CollapsibleToolsArea
+                                    scriptType={scriptType}
+                                    isChatPreviewOpen={isChatPreviewOpen}
+                                    setIsChatPreviewOpen={setIsChatPreviewOpen}
+                                    isFindReplaceOpen={isFindReplaceOpen}
+                                    setIsFindReplaceOpen={setIsFindReplaceOpen}
+                                    showConfig={showConfig}
+                                    setShowConfig={setShowConfig}
+                                    setIsTeleprompterOpen={setIsTeleprompterOpen}
+                                    showTemplates={showTemplates}
+                                    setShowTemplates={setShowTemplates}
+                                    templatesBtnRef={templatesBtnRef}
+                                    handlePrint={handlePrint}
+                                    setIsAIOpen={setIsAIOpen}
+                                />
+                            )}
+                        </AnimatePresence>
 
+                        {/* More Tools Toggle Button */}
                         <motion.button 
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            onClick={() => setIsFindReplaceOpen(!isFindReplaceOpen)} 
-                            className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all border shadow-sm shrink-0 ${isFindReplaceOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-gray-200 text-gray-500 hover:text-indigo-600 hover:border-indigo-200'}`}
-                            title="Find & Replace (Ctrl+F)"
+                            onClick={() => setShowMoreTools(!showMoreTools)}
+                            className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all border shadow-sm shrink-0 ${
+                                showMoreTools 
+                                    ? 'bg-indigo-100 border-indigo-300 text-indigo-700' 
+                                    : 'bg-white border-gray-200 text-gray-500 hover:text-indigo-600 hover:border-indigo-200'
+                            }`}
+                            title={showMoreTools ? "ซ่อนเครื่องมือเพิ่มเติม" : "แสดงเครื่องมือเพิ่มเติม (Templates, Print, Prompter, etc.)"}
                         >
-                            <Search className="w-4 h-4" />
-                        </motion.button>
-
-                        <motion.button 
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setShowConfig(true)} 
-                            className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all border shadow-sm shrink-0 ${showConfig ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-gray-200 text-gray-500 hover:text-indigo-600 hover:border-indigo-200'}`}
-                            title="Character Manager"
-                        >
-                            <Settings className="w-4 h-4" />
-                        </motion.button>
-
-                        <motion.button 
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setIsAIOpen(true)} 
-                            className="w-9 h-9 flex items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white rounded-lg shadow-lg shadow-purple-200 transition-all border border-white/20 shrink-0" 
-                            title="AI Magic"
-                        >
-                            <Wand2 className="w-4 h-4" />
-                        </motion.button>
-                        
-                        <motion.button 
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setIsTeleprompterOpen(true)} 
-                            className="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 text-gray-500 hover:text-green-600 hover:border-green-200 hover:bg-green-50 rounded-lg shadow-sm transition-all shrink-0" 
-                            title="Teleprompter"
-                        >
-                            <PlayCircle className="w-4 h-4" />
-                        </motion.button>
-                        
-                        {/* Templates Dropdown */}
-                        <TemplatesDropdown 
-                            showTemplates={showTemplates} 
-                            setShowTemplates={setShowTemplates} 
-                            templatesBtnRef={templatesBtnRef}
-                        />
-
-                        <motion.button 
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={handlePrint} 
-                            className="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg shadow-sm transition-all shrink-0" 
-                            title="Print Script"
-                        >
-                            <Printer className="w-4 h-4" />
+                            {showMoreTools ? (
+                                <ChevronRight className="w-4 h-4" />
+                            ) : (
+                                <MoreHorizontal className="w-4 h-4" />
+                            )}
                         </motion.button>
                     </div>
                 </div>
@@ -607,7 +397,7 @@ const EditorToolbar: React.FC = () => {
                 setShowSuccessModal={setShowSuccessModal}
                 exportResult={exportResult}
                 title={title}
-                handleExport={handleExport}
+                handleExport={handleExportBound}
             />
         </>
     );

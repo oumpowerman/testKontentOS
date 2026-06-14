@@ -26,7 +26,7 @@ const SortableTaskCard: React.FC<SortableTaskCardProps> = (props) => {
     } = useSortable({ id: props.task.id });
 
     const style = {
-        transform: CSS.Translate.toString(transform),
+        transform: isDragging ? undefined : CSS.Translate.toString(transform),
         transition,
     };
 

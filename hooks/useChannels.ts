@@ -21,7 +21,7 @@ export const useChannels = () => {
                 // Ensure platforms is an array
                 setChannels(data.map((c:any) => ({
                     ...c,
-                    platforms: Array.isArray(c.platforms) ? c.platforms : (c.platform ? [c.platform] : ['OTHER']),
+                    platforms: Array.isArray(c.platforms) ? c.platforms : ['OTHER'],
                     logoUrl: c.logo_url // Map DB to Type
                 })));
             }
@@ -71,7 +71,6 @@ export const useChannels = () => {
                 description: channel.description || '', 
                 color: channel.color,
                 platforms: channel.platforms, 
-                platform: channel.platforms[0] || 'OTHER',
                 logo_url: logoUrl
             };
 
@@ -112,7 +111,6 @@ export const useChannels = () => {
                 description: updatedChannel.description || '',
                 color: updatedChannel.color,
                 platforms: updatedChannel.platforms,
-                platform: updatedChannel.platforms[0] || 'OTHER',
                 logo_url: logoUrl
             };
 

@@ -13,9 +13,10 @@ interface SmartAttendanceProps {
     user: User;
     masterOptions: MasterOption[]; // Receive from parent
     onNavigate: (view: ViewMode) => void;
+    hFull?: boolean;
 }
 
-const SmartAttendance: React.FC<SmartAttendanceProps> = ({ user, masterOptions, onNavigate }) => {
+const SmartAttendance: React.FC<SmartAttendanceProps> = ({ user, masterOptions, onNavigate, hFull = false }) => {
     const { todayLog, isLoading } = useAttendanceStatus(user.id);
     const { stats } = useAttendanceStats(user.id);
     
@@ -156,7 +157,7 @@ const SmartAttendance: React.FC<SmartAttendanceProps> = ({ user, masterOptions, 
     // 0. ON LEAVE / WFH (Approved without Time)
     if (isLeaveLog) {
         return (
-            <div className="bg-blue-50/50 border border-blue-100 rounded-[2.5rem] p-6 flex flex-col md:flex-row items-center justify-between shadow-sm relative overflow-hidden w-full">
+            <div className={`bg-blue-50/50 border border-blue-100 rounded-[2.5rem] p-6 flex flex-col md:flex-row items-center justify-between shadow-sm relative overflow-hidden w-full ${hFull ? 'h-full' : ''}`}>
                 <div className="flex items-center gap-4 relative z-10">
                     <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shadow-inner">
                         <Briefcase className="w-7 h-7" />
@@ -187,7 +188,7 @@ const SmartAttendance: React.FC<SmartAttendanceProps> = ({ user, masterOptions, 
         return (
             <div 
                 onClick={() => onNavigate('ATTENDANCE')}
-                className="bg-emerald-50/50 border border-emerald-100 rounded-[2.5rem] p-6 flex flex-col md:flex-row items-center justify-between shadow-sm relative overflow-hidden group gap-4 w-full cursor-pointer hover:bg-emerald-100 transition-all"
+                className={`bg-emerald-50/50 border border-emerald-100 rounded-[2.5rem] p-6 flex flex-col md:flex-row items-center justify-between shadow-sm relative overflow-hidden group gap-4 w-full cursor-pointer hover:bg-emerald-100 transition-all ${hFull ? 'h-full' : ''}`}
             >
                 <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
                     <CheckCircle2 className="w-32 h-32 text-emerald-500" />
@@ -227,8 +228,8 @@ const SmartAttendance: React.FC<SmartAttendanceProps> = ({ user, masterOptions, 
     // 2. WORKING NOW (Gradient Border + Glow)
     if (isCheckedIn) {
         return (
-            <div className="relative p-[2px] rounded-[2.5rem] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-lg shadow-indigo-100/50 w-full">
-                <div className="bg-white rounded-[2.4rem] p-5 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden h-full w-full">
+            <div className={`relative p-[2px] rounded-[2.5rem] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-lg shadow-indigo-100/50 w-full ${hFull ? 'h-full' : ''} flex flex-col`}>
+                <div className={`bg-white rounded-[2.4rem] p-5 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden ${hFull ? 'h-full' : ''} w-full justify-between`}>
                     
                     {/* Pulsing Dot */}
                     <div className="absolute top-4 right-4 flex items-center gap-2">
@@ -274,9 +275,10 @@ const SmartAttendance: React.FC<SmartAttendanceProps> = ({ user, masterOptions, 
 
     // 2.5 NOT CHECKED IN (Config-driven Pastel Card)
     return (
-        <div className="w-full">
+        <div className={`w-full ${hFull ? 'h-full' : ''}`}>
             <div className={`
-                rounded-[2.5rem] p-6 shadow-xl relative overflow-hidden group border-4 border-white w-full transition-all duration-500
+                rounded-[2.5rem] p-6 shadow-xl relative overflow-hidden group border-4 border-white w-full transition-all duration-500 flex flex-col justify-between
+                ${hFull ? 'h-full' : ''}
                 ${config.bg} ${config.shadow}
             `}>
                 {/* Dynamic Background Blobs */}

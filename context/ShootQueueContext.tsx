@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Task } from '../types';
-import { MergedQueueItem } from '../components/checklist/stock/queue/types';
+import { MergedQueueItem } from '../components/content-stock/stock/queue/types';
 
 interface ShootQueueContextType {
     queueItems: MergedQueueItem[];

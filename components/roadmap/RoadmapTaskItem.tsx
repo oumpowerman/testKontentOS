@@ -11,20 +11,80 @@ interface RoadmapTaskItemProps {
   totalWeeks: number;
   onEdit: (task: RoadmapTask) => void;
   isDraggable?: boolean;
+  categories?: any[];
 }
 
-const CategoryPill = ({ category }: { category: string }) => {
-  const colors: Record<string, string> = {
-    TikTok: 'bg-rose-50 text-rose-500 border-rose-100',
-    System: 'bg-indigo-50 text-indigo-500 border-indigo-100',
-    Marketing: 'bg-emerald-50 text-emerald-500 border-emerald-100',
-    Other: 'bg-slate-50 text-slate-500 border-slate-100'
-  };
+// Gorgeous preset creator platforms and sponsorship category themes
+const getCategoryDesign = (categoryName: string, categoriesList: any[] = []) => {
+  const lowerName = categoryName.toLowerCase().trim();
   
-  const colorClass = colors[category] || 'bg-slate-50 text-slate-500 border-slate-100';
+  const presetColors: Record<string, { bg: string, border: string, fill: string, textStyle: React.CSSProperties, pillClass: string }> = {
+    youtube: { bg: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.25)', fill: '#EF4444', textStyle: { color: '#DC2626' }, pillClass: 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100/50' },
+    tiktok: { bg: 'rgba(225, 29, 72, 0.08)', border: 'rgba(225, 29, 72, 0.25)', fill: '#E11D48', textStyle: { color: '#E11D48' }, pillClass: 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100/50' },
+    instagram: { bg: 'rgba(217, 70, 239, 0.08)', border: 'rgba(217, 70, 239, 0.25)', fill: '#D946EF', textStyle: { color: '#C026D3' }, pillClass: 'bg-fuchsia-50 text-fuchsia-600 border-fuchsia-100 hover:bg-fuchsia-100/50' },
+    facebook: { bg: 'rgba(59, 130, 246, 0.08)', border: 'rgba(59, 130, 246, 0.25)', fill: '#3B82F6', textStyle: { color: '#2563EB' }, pillClass: 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100/50' },
+    sponsor: { bg: 'rgba(245, 158, 11, 0.08)', border: 'rgba(245, 158, 11, 0.25)', fill: '#F59E0B', textStyle: { color: '#D97706' }, pillClass: 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100/50' },
+    sponsorship: { bg: 'rgba(245, 158, 11, 0.08)', border: 'rgba(245, 158, 11, 0.25)', fill: '#F59E0B', textStyle: { color: '#D97706' }, pillClass: 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100/50' },
+    brand_deal: { bg: 'rgba(242, 100, 25, 0.08)', border: 'rgba(242, 100, 25, 0.25)', fill: '#f26419', textStyle: { color: '#f26419' }, pillClass: 'bg-orange-50 text-orange-600 border-orange-100 hover:bg-orange-100/50' },
+    marketing: { bg: 'rgba(16, 185, 129, 0.08)', border: 'rgba(16, 185, 129, 0.25)', fill: '#10B981', textStyle: { color: '#059669' }, pillClass: 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100/50' },
+    podcast: { bg: 'rgba(139, 92, 246, 0.08)', border: 'rgba(139, 92, 246, 0.25)', fill: '#8B5CF6', textStyle: { color: '#7C3AED' }, pillClass: 'bg-violet-50 text-violet-600 border-violet-100 hover:bg-violet-100/50' },
+    system: { bg: 'rgba(99, 102, 241, 0.08)', border: 'rgba(99, 102, 241, 0.25)', fill: '#6366F1', textStyle: { color: '#4F46E5' }, pillClass: 'bg-indigo-50 text-indigo-500 border-indigo-100 hover:bg-indigo-100/50' },
+    operations: { bg: 'rgba(99, 102, 241, 0.08)', border: 'rgba(99, 102, 241, 0.25)', fill: '#6366F1', textStyle: { color: '#4F46E5' }, pillClass: 'bg-indigo-50 text-indigo-500 border-indigo-100 hover:bg-indigo-100/50' },
+    newsletter: { bg: 'rgba(13, 148, 136, 0.08)', border: 'rgba(13, 148, 136, 0.25)', fill: '#0D9488', textStyle: { color: '#0D9488' }, pillClass: 'bg-teal-50 text-teal-600 border-teal-100 hover:bg-teal-100/50' },
+    blog: { bg: 'rgba(13, 148, 136, 0.08)', border: 'rgba(13, 148, 136, 0.25)', fill: '#0D9488', textStyle: { color: '#0D9488' }, pillClass: 'bg-teal-50 text-teal-600 border-teal-100 hover:bg-teal-100/50' },
+    product: { bg: 'rgba(236, 72, 153, 0.08)', border: 'rgba(236, 72, 153, 0.25)', fill: '#EC4899', textStyle: { color: '#DB2777' }, pillClass: 'bg-pink-50 text-pink-600 border-pink-100 hover:bg-pink-100/50' },
+    merch: { bg: 'rgba(236, 72, 153, 0.08)', border: 'rgba(236, 72, 153, 0.25)', fill: '#EC4899', textStyle: { color: '#DB2777' }, pillClass: 'bg-pink-50 text-pink-600 border-pink-100 hover:bg-pink-100/50' },
+  };
+
+  if (presetColors[lowerName]) return presetColors[lowerName];
+  
+  for (const key of Object.keys(presetColors)) {
+    if (lowerName.includes(key)) {
+      return presetColors[key];
+    }
+  }
+
+  // Find dynamic hex color from config
+  const found = categoriesList.find(c => c.name.toLowerCase().trim() === lowerName);
+  if (found && found.color) {
+    const hex = found.color;
+    const cleanHex = hex.replace('#', '');
+    const r = parseInt(cleanHex.substring(0, 2), 16) || 129;
+    const g = parseInt(cleanHex.substring(2, 4), 16) || 140;
+    const b = parseInt(cleanHex.substring(4, 6), 16) || 248;
+    
+    return {
+      bg: `rgba(${r}, ${g}, ${b}, 0.08)`,
+      border: `rgba(${r}, ${g}, ${b}, 0.25)`,
+      fill: hex,
+      textStyle: { color: hex },
+      pillClass: '',
+      isCustom: true
+    };
+  }
+
+  // Fallback
+  return { bg: 'rgba(71, 85, 105, 0.08)', border: 'rgba(203, 213, 225, 0.3)', fill: '#475569', textStyle: { color: '#475569' }, pillClass: 'bg-slate-50 text-slate-500 border-slate-100' };
+};
+
+const CategoryPill = ({ category, design }: { category: string, design: any }) => {
+  if (design.isCustom) {
+    return (
+      <span 
+        className="px-4 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wider border transition-all cursor-default"
+        style={{
+          backgroundColor: design.bg,
+          borderColor: design.border,
+          color: design.fill
+        }}
+      >
+        {category}
+      </span>
+    );
+  }
   
   return (
-    <span className={`px-4 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wider border ${colorClass}`}>
+    <span className={`px-4 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wider border transition-all cursor-default ${design.pillClass}`}>
       {category}
     </span>
   );
@@ -32,10 +92,10 @@ const CategoryPill = ({ category }: { category: string }) => {
 
 const StatusPill = ({ status }: { status: TaskStatus }) => {
   const colors: Record<TaskStatus, string> = {
-    Planned: 'bg-slate-100 text-slate-500',
-    Ongoing: 'bg-blue-50 text-blue-500',
-    Done: 'bg-emerald-50 text-emerald-500',
-    Delayed: 'bg-amber-50 text-amber-500'
+    Planned: 'bg-slate-100 text-slate-500 border-slate-200/50',
+    Ongoing: 'bg-blue-50 text-blue-600 border-blue-100',
+    Done: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    Delayed: 'bg-amber-50 text-amber-600 border-amber-100'
   };
   
   const labels: Record<TaskStatus, string> = {
@@ -46,7 +106,7 @@ const StatusPill = ({ status }: { status: TaskStatus }) => {
   };
   
   return (
-    <span className={`px-3 py-1 rounded text-[11px] font-semibold uppercase tracking-tight ${colors[status]}`}>
+    <span className={`px-3 py-1 rounded text-[11px] font-bold border capitalize ${colors[status]}`}>
       {labels[status]}
     </span>
   );
@@ -58,7 +118,8 @@ const RoadmapTaskItem: React.FC<RoadmapTaskItemProps> = ({
   currentWeekIndex,
   totalWeeks,
   onEdit,
-  isDraggable = false
+  isDraggable = false,
+  categories = []
 }) => {
   // 1 week = 40px
   const weekPixel = 40;
@@ -73,14 +134,7 @@ const RoadmapTaskItem: React.FC<RoadmapTaskItemProps> = ({
 
   if (isOutOfWindow) return null;
 
-  const barColors: Record<string, { bg: string, border: string, fill: string, text: string }> = {
-    TikTok: { bg: 'rgba(255, 228, 230, 0.15)', border: 'rgba(253, 164, 175, 0.4)', fill: '#E11D48', text: 'text-rose-600' },
-    System: { bg: 'rgba(224, 231, 255, 0.15)', border: 'rgba(165, 180, 252, 0.4)', fill: '#4F46E5', text: 'text-indigo-600' },
-    Marketing: { bg: 'rgba(209, 250, 229, 0.15)', border: 'rgba(110, 231, 183, 0.4)', fill: '#059669', text: 'text-emerald-600' },
-    Other: { bg: 'rgba(241, 245, 249, 0.15)', border: 'rgba(203, 213, 225, 0.4)', fill: '#475569', text: 'text-slate-600' }
-  };
-
-  const scheme = barColors[task.category] || barColors.Other;
+  const scheme = getCategoryDesign(task.category, categories);
 
   // Highlight check
   const isActive = currentWeekIndex >= task.start_week && currentWeekIndex < (task.start_week + task.duration_weeks);
@@ -133,7 +187,7 @@ const RoadmapTaskItem: React.FC<RoadmapTaskItemProps> = ({
             </div>
           </div>
         </div>
-        <div className="w-[112px] min-w-[112px] max-w-[112px] py-5 px-2 flex justify-center"><CategoryPill category={task.category} /></div>
+        <div className="w-[112px] min-w-[112px] max-w-[112px] py-5 px-2 flex justify-center"><CategoryPill category={task.category} design={scheme} /></div>
         <div className="w-[96px] min-w-[96px] max-w-[96px] py-5 px-2 flex justify-center"><StatusPill status={task.status} /></div>
         <div className="w-[80px] min-w-[80px] max-w-[80px] py-5 px-2 text-xs text-center text-slate-400 font-medium italic truncate px-2">{task.buffer}</div>
         <div className="w-[160px] min-w-[160px] max-w-[160px] py-5 px-4 text-xs text-center font-semibold text-slate-500 truncate">{task.milestone || '-'}</div>
@@ -200,13 +254,13 @@ const RoadmapTaskItem: React.FC<RoadmapTaskItemProps> = ({
                   style={{ backgroundColor: scheme.fill }}
                 />
 
-                {/* Content */}
+                 {/* Content */}
                 <div className="relative z-10 flex items-center justify-between w-full overflow-hidden pl-1">
-                  <span className={`text-[11px] font-bold uppercase truncate ${scheme.text} tracking-tight`}>
+                  <span className="text-[11px] font-bold uppercase truncate tracking-tight" style={scheme.textStyle}>
                     {task.initiative}
                   </span>
                   <div className="flex items-center gap-2 shrink-0 ml-2">
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-100 ${scheme.text}`}>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-100" style={scheme.textStyle}>
                       {task.progress}%
                     </span>
                   </div>
@@ -219,7 +273,7 @@ const RoadmapTaskItem: React.FC<RoadmapTaskItemProps> = ({
                     title={`Milestone: ${task.milestone}`}
                   >
                     <div className="p-1 bg-white rounded-full shadow-md border border-slate-100 group-hover:scale-110 transition-transform">
-                      <Diamond className={`w-3.5 h-3.5 ${scheme.text} fill-current`} />
+                      <Diamond className="w-3.5 h-3.5 fill-current" style={scheme.textStyle} />
                     </div>
                   </div>
                 )}

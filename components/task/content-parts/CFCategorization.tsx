@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Layout, Layers, Tag, ChevronRight } from 'lucide-react';
 import { MasterOption } from '../../../types';
 import OptionSelectionModal from '../../ui/OptionSelectionModal';
+import { useGlobalDialog } from '../../../context/GlobalDialogContext';
 
 interface CFCategorizationProps {
     contentFormats: string[];
@@ -13,12 +14,14 @@ interface CFCategorizationProps {
     formatOptions: MasterOption[];
     pillarOptions: MasterOption[];
     categoryOptions: MasterOption[];
+    channelId?: string;
 }
 
 const CFCategorization: React.FC<CFCategorizationProps> = ({ 
     contentFormats, setContentFormats, pillar, setPillar, category, setCategory,
-    formatOptions, pillarOptions, categoryOptions
+    formatOptions, pillarOptions, categoryOptions, channelId
 }) => {
+    const { showAlert } = useGlobalDialog();
     const [activeModal, setActiveModal] = useState<'FORMAT' | 'PILLAR' | 'CATEGORY' | null>(null);
 
     // Helpers to get display values
@@ -31,14 +34,18 @@ const CFCategorization: React.FC<CFCategorizationProps> = ({
         placeholder, 
         icon: Icon, 
         theme, 
-        onClick 
+        onClick,
+        isWarning = false,
+        warningMsg = ''
     }: { 
         label: string, 
         value: string, 
         placeholder: string,
         icon: any, 
         theme: 'pink' | 'blue' | 'emerald', 
-        onClick: () => void 
+        onClick: () => void,
+        isWarning?: boolean,
+        warningMsg?: string
     }) => {
         // Theme Configurations
         const styles = {
@@ -72,6 +79,16 @@ const CFCategorization: React.FC<CFCategorizationProps> = ({
                 ring: 'focus:ring-emerald-100',
                 badge: 'bg-emerald-100 text-emerald-600'
             },
+            warning: {
+                bg: 'bg-gradient-to-br from-amber-50 to-orange-50/80 animate-pulse', 
+                border: 'border-amber-300 shadow-[0_0_15px_rgba(217,119,6,0.2)] ring-2 ring-amber-200/50', 
+                hoverBorder: 'hover:border-amber-400 hover:shadow-[0_0_20px_rgba(217,119,6,0.3)]', 
+                text: 'text-amber-800 font-extrabold', 
+                subText: 'text-amber-600 font-bold',
+                icon: 'text-amber-200/80',
+                ring: 'focus:ring-amber-300',
+                badge: 'bg-amber-100 text-amber-700 border border-amber-200 animate-bounce'
+            },
             empty: {
                 bg: 'bg-white',
                 border: 'border-dashed border-gray-200',
@@ -84,7 +101,7 @@ const CFCategorization: React.FC<CFCategorizationProps> = ({
             }
         };
 
-        const activeStyle = value ? styles[theme] : styles.empty;
+        const activeStyle = value ? (isWarning ? styles.warning : styles[theme]) : styles.empty;
         const hasValue = !!value;
 
         return (
@@ -110,30 +127,44 @@ const CFCategorization: React.FC<CFCategorizationProps> = ({
                 {/* Top Label */}
                 <div className="flex justify-between items-center w-full z-10">
                     <span className={`
-                        text-[12px] font-bold uppercase tracking-widest transition-colors duration-300
+                        text-[12px] font-bold uppercase tracking-widest transition-colors duration-300 flex items-center gap-1.5
                         ${hasValue ? activeStyle.subText : 'text-gray-300'}
                     `}>
-                        {label}
+                        {isWarning && <span className="inline-block animate-ping rounded-full w-2 h-2 bg-amber-500" />}
+                        {isWarning ? '⚠️ ' + label : label}
                     </span>
                     {hasValue ? (
                         <div className={`p-1.5 rounded-full ${activeStyle.badge} flex items-center justify-center`}>
                              <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></div>
                         </div>
                     ) : (
-                         <ChevronRight className="w-4 h-4 text-gray-300 opacity-50 group-hover:translate-x-1 transition-transform" />
+                          <ChevronRight className="w-4 h-4 text-gray-300 opacity-50 group-hover:translate-x-1 transition-transform" />
                     )}
                 </div>
 
                 {/* Main Value */}
-                <span className={`
-                    relative z-10 font-bold leading-tight transition-all duration-300 line-clamp-2 pr-8
-                    ${hasValue ? `text-[16px] ${activeStyle.text}` : 'text-md text-gray-300 font-medium italic'}
-                `}>
-                    {value || placeholder}
-                </span>
+                <div className="z-10 flex flex-col items-start gap-0.5">
+                    <span className={`
+                        relative font-bold leading-tight transition-all duration-300 line-clamp-2 pr-8
+                        ${hasValue ? `text-[16px] ${activeStyle.text}` : 'text-md text-gray-300 font-medium italic'}
+                    `}>
+                        {value || placeholder}
+                    </span>
+                    {isWarning && warningMsg && (
+                        <p className="text-[10px] font-semibold text-amber-600/90 tracking-wide animate-pulse">
+                            {warningMsg}
+                        </p>
+                    )}
+                </div>
             </button>
         );
     };
+
+    const pillarLabel = pillar ? getLabel(pillarOptions, pillar) : '';
+    const isPillarWarning = pillarLabel.includes('นอกแกน') || pillarLabel.includes('ปิดการใช้งาน');
+
+    const categoryLabel = category ? getLabel(categoryOptions, category) : '';
+    const isCategoryWarning = categoryLabel.includes('นอกหมวดหมู่') || categoryLabel.includes('ปิดการใช้งาน');
 
     return (
         <>
@@ -156,21 +187,37 @@ const CFCategorization: React.FC<CFCategorizationProps> = ({
                 {/* 2. PILLAR */}
                 <SelectionCard 
                     label="Content Pillar" 
-                    value={pillar ? getLabel(pillarOptions, pillar) : ''}
+                    value={pillarLabel}
                     placeholder="เลือกแกน"
                     icon={Layers}
                     theme="blue"
-                    onClick={() => setActiveModal('PILLAR')}
+                    isWarning={isPillarWarning}
+                    warningMsg={pillarLabel.includes('ปิดการใช้งาน') ? 'ตัวเลือกนี้ถูกปิดใช้งานแล้ว' : 'อยู่นอกแกนของช่องปัจจุบัน'}
+                    onClick={() => {
+                        if (!channelId) {
+                            showAlert('กรุณาเลือกช่องรายการ (Channel) ก่อนเลือกแกนเนื้อหา (Content Pillar) นะครับ');
+                            return;
+                        }
+                        setActiveModal('PILLAR');
+                    }}
                 />
 
                 {/* 3. CATEGORY */}
                 <SelectionCard 
                     label="Category" 
-                    value={category ? getLabel(categoryOptions, category) : ''}
+                    value={categoryLabel}
                     placeholder="เลือกหมวด"
                     icon={Tag}
                     theme="emerald"
-                    onClick={() => setActiveModal('CATEGORY')}
+                    isWarning={isCategoryWarning}
+                    warningMsg={categoryLabel.includes('ปิดการใช้งาน') ? 'ประเภทนี้ถูกปิดใช้งานแล้ว' : 'อยู่นอกหมวดหมู่ของช่องปัจจุบัน'}
+                    onClick={() => {
+                        if (!channelId) {
+                            showAlert('กรุณาเลือกช่องรายการ (Channel) ก่อนเลือกหมวดหมู่ (Category) นะครับ');
+                            return;
+                        }
+                        setActiveModal('CATEGORY');
+                    }}
                 />
 
             </div>

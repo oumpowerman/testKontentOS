@@ -15,7 +15,6 @@ import { supabase } from '../lib/supabase';
 import DutyCalendarGrid from './duty/DutyCalendarGrid';
 import RandomizerModal from './duty/RandomizerModal';
 import ConfigModal from './duty/ConfigModal';
-import MyDutyWidget from './dashboard/member/MyDutyWidget';
 import SwapInbox from './duty/SwapInbox';
 import SwapRequestModal from './duty/SwapRequestModal';
 import MobileDutyAction from './duty/MobileDutyAction';

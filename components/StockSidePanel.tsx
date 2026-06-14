@@ -247,6 +247,59 @@ const StockSidePanel: React.FC<StockSidePanelProps> = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, searchQuery, filters]);
 
+    // Sync localStockTasks with parent tasks to add or remove items immediately on user action
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const scheduledIds = new Set(
+            tasks
+                .filter(t => t.type === 'CONTENT' && !t.isUnscheduled)
+                .map(t => t.id)
+        );
+
+        const unscheduledItemsToSync = tasks.filter(t => 
+            t.type === 'CONTENT' && 
+            t.isUnscheduled && 
+            matchesFilters(t)
+        );
+
+        setLocalStockTasks(prev => {
+            let updatedList = [...prev];
+            let modified = false;
+
+            // Remove any items that have been scheduled
+            if (scheduledIds.size > 0) {
+                const filtered = updatedList.filter(t => !scheduledIds.has(t.id));
+                if (filtered.length !== updatedList.length) {
+                    updatedList = filtered;
+                    modified = true;
+                }
+            }
+
+            // Sync/Insert unscheduled items
+            unscheduledItemsToSync.forEach(task => {
+                const index = updatedList.findIndex(t => t.id === task.id);
+                if (index === -1) {
+                    updatedList = [task, ...updatedList];
+                    modified = true;
+                } else {
+                    const existing = updatedList[index];
+                    if (
+                        existing.title !== task.title ||
+                        existing.status !== task.status ||
+                        existing.channelId !== task.channelId ||
+                        existing.isUnscheduled !== task.isUnscheduled
+                    ) {
+                        updatedList[index] = task;
+                        modified = true;
+                    }
+                }
+            });
+
+            return modified ? updatedList : prev;
+        });
+    }, [tasks, isOpen, matchesFilters]);
+
     // Realtime Database Linkage
     useEffect(() => {
         if (!isOpen) return;
@@ -301,9 +354,10 @@ const StockSidePanel: React.FC<StockSidePanelProps> = ({
     }, [isOpen, matchesFilters]);
 
     // --- Helpers ---
-    const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    const handleDragStart = (e: React.DragEvent, task: Task) => {
         e.dataTransfer.setData('source', 'ContentStock'); 
-        e.dataTransfer.setData('taskId', taskId);
+        e.dataTransfer.setData('taskId', task.id);
+        e.dataTransfer.setData('taskData', JSON.stringify(task));
         e.dataTransfer.effectAllowed = 'move';
         e.currentTarget.classList.add('opacity-50');
     };
@@ -334,7 +388,26 @@ const StockSidePanel: React.FC<StockSidePanelProps> = ({
         const source = e.dataTransfer.getData("source");
         
         if (taskId && source !== "ContentStock") {
-            const task = tasks.find(t => t.id === taskId);
+            let task = tasks.find(t => t.id === taskId);
+            
+            // Fallback deserialization from native drag transfer payload
+            if (!task) {
+                const taskDataStr = e.dataTransfer.getData("taskData");
+                if (taskDataStr) {
+                    try {
+                        const parsed = JSON.parse(taskDataStr);
+                        if (parsed.startDate) parsed.startDate = new Date(parsed.startDate);
+                        if (parsed.endDate) parsed.endDate = new Date(parsed.endDate);
+                        if (parsed.shootDate) parsed.shootDate = new Date(parsed.shootDate);
+                        if (parsed.createdAt) parsed.createdAt = new Date(parsed.createdAt);
+                        if (parsed.updatedAt) parsed.updatedAt = new Date(parsed.updatedAt);
+                        task = parsed;
+                    } catch (err) {
+                        console.error("Failed to parse taskData in StockSidePanel:", err);
+                    }
+                }
+            }
+
             if (task && onMoveTask) {
                 onMoveTask({
                     ...task,
@@ -454,7 +527,7 @@ const StockSidePanel: React.FC<StockSidePanelProps> = ({
                                 <div
                                     key={task.id}
                                     draggable
-                                    onDragStart={(e) => handleDragStart(e, task.id)}
+                                    onDragStart={(e) => handleDragStart(e, task)}
                                     onDragEnd={handleDragEnd}
                                     onClick={() => onEditTask(task)}
                                     className="group relative bg-white p-3.5 rounded-2xl border border-gray-200 shadow-sm cursor-grab active:cursor-grabbing hover:border-indigo-300 hover:shadow-md transition-all overflow-hidden"

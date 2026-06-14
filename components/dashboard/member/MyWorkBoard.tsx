@@ -8,6 +8,7 @@ import TaskCategoryModal from '../../TaskCategoryModal';
 import DoneHistoryModal from './board/DoneHistoryModal'; // Import New Modal
 import WorkColumn from './board/WorkColumn';
 import { useGlobalDialog } from '../../../context/GlobalDialogContext';
+import { useTaskContext } from '../../../context/TaskContext';
 
 import { motion } from 'framer-motion';
 
@@ -52,6 +53,14 @@ const MyWorkBoard: React.FC<MyWorkBoardProps> = ({
             container.removeEventListener('wheel', handleWheelEvent);
         };
     }, []);
+
+    // 🚀 Lazy-load more items when opening history modal
+    const { fetchCompletedTasks } = useTaskContext();
+    useEffect(() => {
+        if (isDoneHistoryOpen && currentUser?.id) {
+            fetchCompletedTasks({ userId: currentUser.id, limit: 100 });
+        }
+    }, [isDoneHistoryOpen, currentUser?.id, fetchCompletedTasks]);
 
     // --- Logic: Categorize Tasks ---
     const getPhase = (status: string): ColumnType => {

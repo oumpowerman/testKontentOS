@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, Check } from 'lucide-react';
-import { ScriptStatus } from '../../../../../types';
+import { ScriptStatus } from '../../../../../types/features';
 import { FloatingPortal } from './FloatingPortal';
 
 export const STATUS_CONFIG: Record<ScriptStatus, { label: string, color: string, icon: string }> = {

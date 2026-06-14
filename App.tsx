@@ -67,11 +67,17 @@ function App() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
 
   // --- INITIAL AUTH CHECK ---
   useEffect(() => {
-    // 1. Check current session
+    // 1. Check current session and recovery parameters
     const checkSession = async () => {
+      if (window.location.hash.includes('type=recovery')) {
+        setIsRecoveryMode(true);
+        setShowLogin(true);
+      }
+
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
@@ -82,7 +88,10 @@ function App() {
             setSession(null);
           }
         } else {
-          setSession(session);
+          // Only set standard session if we're not actively handling recovery on initial mount
+          if (session && !window.location.hash.includes('type=recovery')) {
+            setSession(session);
+          }
         }
       } catch (err: any) {
         console.error("Unexpected auth error:", err);
@@ -98,14 +107,32 @@ function App() {
       console.log('Auth Event:', event);
       if (event === 'SIGNED_OUT') {
         setSession(null);
+        setIsRecoveryMode(false);
+      } else if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveryMode(true);
+        setShowLogin(true);
+        setSession(null); // Keep standard session state null during recovery to block authenticated app view
       } else if (session) {
-        setSession(session);
+        // If we are currently in recovery mode, don't let the authed app load yet
+        if (!isRecoveryMode) {
+          setSession(session);
+        }
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isRecoveryMode]);
+
+  const handlePasswordUpdateSuccess = async () => {
+    setIsRecoveryMode(false);
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (currentSession) {
+      setSession(currentSession);
+    } else {
+      setShowLogin(true);
+    }
+  };
 
   let content;
   if (loading) {
@@ -114,6 +141,15 @@ function App() {
             <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mb-4" />
         </div>
      );
+  } else if (isRecoveryMode) {
+    content = (
+      <AuthPage 
+        onLoginSuccess={() => {}} 
+        onPasswordUpdateSuccess={handlePasswordUpdateSuccess}
+        onBack={undefined}
+        initialMode="UPDATE" 
+      />
+    );
   } else if (!session) {
     if (showLogin) {
       content = <AuthPage onLoginSuccess={() => {}} onBack={() => setShowLogin(false)} />;

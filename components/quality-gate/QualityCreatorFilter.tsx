@@ -20,7 +20,19 @@ const QualityCreatorFilter: React.FC<QualityCreatorFilterProps> = ({
     const [isHovered, setIsHovered] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     
-    const activeUsers = users.filter(u => u.isActive);
+    // Sort users so that positions containing "Creative" come first
+    const sortedUsers = [...users].sort((a, b) => {
+        const aHasCreative = a.position ? a.position.toLowerCase().includes('creative') : false;
+        const bHasCreative = b.position ? b.position.toLowerCase().includes('creative') : false;
+        
+        if (aHasCreative && !bHasCreative) return -1;
+        if (!aHasCreative && bHasCreative) return 1;
+        
+        // Secondary sort by name for consistent ordering
+        return a.name.localeCompare(b.name, 'th');
+    });
+
+    const activeUsers = sortedUsers.filter(u => u.isActive);
     const unselectedUsers = activeUsers.filter(u => !selectedIds.includes(u.id));
     const selectedUsers = activeUsers.filter(u => selectedIds.includes(u.id));
 

@@ -1,7 +1,10 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Save, Check, Loader2, Gift, Tag, Type, Palette, AlignLeft, Hash, Percent } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useChannels } from '../../../hooks/useChannels';
+import FilterDropdown from '../../common/FilterDropdown';
 
 interface MasterFormModalProps {
     isOpen: boolean;
@@ -33,14 +36,20 @@ const MasterFormModal: React.FC<MasterFormModalProps> = ({
     isOpen, onClose, onSubmit, isSubmitting, isEditing, 
     formData, setFormData, rewardFormData, setRewardFormData, activeTab 
 }) => {
-    if (!isOpen) return null;
+    const { channels, fetchChannels } = useChannels();
+
+    useEffect(() => {
+        if (isOpen && channels.length === 0) {
+            fetchChannels();
+        }
+    }, [isOpen, channels.length, fetchChannels]);
 
     const isRewardMode = activeTab === 'REWARDS' && rewardFormData && setRewardFormData;
 
-    return (
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+                <div id="master-modal-overlay" className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                     {/* Backdrop */}
                     <motion.div 
                         initial={{ opacity: 0 }}
@@ -161,7 +170,27 @@ const MasterFormModal: React.FC<MasterFormModalProps> = ({
                                         />
                                     </div>
 
-                                    {formData.parentKey && (
+                                    {/* Channel Selector for PILLAR, CATEGORY & SCRIPT_CATEGORY */}
+                                    {(activeTab === 'PILLAR' || activeTab === 'CATEGORY' || activeTab === 'SCRIPT_CATEGORY') && (
+                                        <div className="space-y-2">
+                                            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                ช่องรายการที่ต้องการเปิดใช้งาน (Select Channel)
+                                            </label>
+                                            <FilterDropdown
+                                                label="เลือกช่องรายการ"
+                                                options={channels.map(channel => ({ key: channel.id, label: channel.name }))}
+                                                value={formData.parentKey || 'ALL'}
+                                                onChange={(val) => setFormData({ ...formData, parentKey: val === 'ALL' ? '' : val })}
+                                                multiSelect={false}
+                                                activeColorClass="bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm ring-2 ring-indigo-500/10"
+                                                showAllOption={true}
+                                                placeholder="ทุกช่อง (Global - ใช้งานร่วมกัน)"
+                                                clearable={true}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {formData.parentKey && activeTab !== 'PILLAR' && activeTab !== 'CATEGORY' && activeTab !== 'SCRIPT_CATEGORY' && (
                                         <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <div className="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg">
@@ -281,7 +310,8 @@ const MasterFormModal: React.FC<MasterFormModalProps> = ({
                     </motion.div>
                 </div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 };
 

@@ -152,7 +152,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = (props) => {
                         initial={{ opacity: 0, y: 10, scale: 0.95, filter: 'blur(10px)' }}
                         animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
                         exit={{ opacity: 0, y: 10, scale: 0.95, filter: 'blur(10px)' }}
-                        className="absolute top-full left-0 mt-3 w-72 bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 z-50 p-3 overflow-hidden origin-top-left"
+                        className="absolute top-full left-0 right-0 sm:right-auto mt-3 w-auto sm:w-72 bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 z-50 p-3 overflow-hidden origin-top-left"
                     >
                         {/* Search Bar */}
                         <div className="relative mb-3 group">

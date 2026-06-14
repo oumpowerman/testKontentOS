@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format, isValid } from 'date-fns';
 import { Task, Status, Priority, ContentPillar, ContentFormat, Platform, TaskAsset, Channel, MasterOption, TaskPerformance, Difficulty, AssigneeType, Script, User } from '../types';
 
@@ -56,10 +56,106 @@ export const useContentForm = ({ initialData, selectedDate, sourceScript, channe
     const [isSaving, setIsSaving] = useState(false); // NEW: Track saving state
 
     // --- Options from Master Data ---
-    const formatOptions = masterOptions.filter(o => o.type === 'FORMAT' && o.isActive).sort((a,b) => a.sortOrder - b.sortOrder);
-    const pillarOptions = masterOptions.filter(o => o.type === 'PILLAR' && o.isActive).sort((a,b) => a.sortOrder - b.sortOrder);
-    const categoryOptions = masterOptions.filter(o => o.type === 'CATEGORY' && o.isActive).sort((a,b) => a.sortOrder - b.sortOrder);
-    const statusOptions = masterOptions.filter(o => o.type === 'STATUS' && o.isActive).sort((a,b) => a.sortOrder - b.sortOrder);
+    const formatOptions = useMemo(() => 
+        masterOptions.filter(o => o.type === 'FORMAT' && o.isActive).sort((a,b) => a.sortOrder - b.sortOrder),
+    [masterOptions]);
+
+    const pillarOptions = useMemo(() => {
+        const base = masterOptions.filter(o => o.type === 'PILLAR' && o.isActive);
+        const filtered = !channelId
+            ? base
+            : base.filter(o => !o.parentKey || o.parentKey === channelId);
+        
+        // Append current selected pillar if missing from list (e.g. legacy/deactivated option)
+        const currentPillarOption = pillar ? masterOptions.find(o => o.key === pillar) : null;
+        if (currentPillarOption && !filtered.some(o => o.key === pillar)) {
+            const suffix = !currentPillarOption.isActive ? ' (ปิดการใช้งาน)' : ' (นอกแกนปัจจุบัน)';
+            filtered.push({
+                ...currentPillarOption,
+                label: `${currentPillarOption.label}${suffix}`
+            });
+        }
+
+        return filtered.map(o => {
+            if (o.parentKey) {
+                const channel = channels.find(c => c.id === o.parentKey);
+                if (channel) {
+                    const cleanedLabel = o.label.includes('(') ? o.label : `${o.label} (${channel.name})`;
+                    return {
+                        ...o,
+                        label: cleanedLabel
+                    };
+                }
+            }
+            return o;
+        }).sort((a,b) => a.sortOrder - b.sortOrder);
+    }, [masterOptions, channelId, channels, pillar]);
+
+    const categoryOptions = useMemo(() => {
+        const base = masterOptions.filter(o => o.type === 'CATEGORY' && o.isActive);
+        const filtered = !channelId
+            ? base
+            : base.filter(o => !o.parentKey || o.parentKey === channelId);
+
+        // Append current selected category if missing from list
+        const currentCatOption = category ? masterOptions.find(o => o.key === category) : null;
+        if (currentCatOption && !filtered.some(o => o.key === category)) {
+            const suffix = !currentCatOption.isActive ? ' (ปิดการใช้งาน)' : ' (นอกหมวดหมู่ปัจจุบัน)';
+            filtered.push({
+                ...currentCatOption,
+                label: `${currentCatOption.label}${suffix}`
+            });
+        }
+
+        return filtered.map(o => {
+            if (o.parentKey) {
+                const channel = channels.find(c => c.id === o.parentKey);
+                if (channel) {
+                    const cleanedLabel = o.label.includes('(') ? o.label : `${o.label} (${channel.name})`;
+                    return {
+                        ...o,
+                        label: cleanedLabel
+                    };
+                }
+            }
+            return o;
+        }).sort((a,b) => a.sortOrder - b.sortOrder);
+    }, [masterOptions, channelId, channels, category]);
+
+    const statusOptions = useMemo(() => 
+        masterOptions.filter(o => o.type === 'STATUS' && o.isActive).sort((a,b) => a.sortOrder - b.sortOrder),
+    [masterOptions]);
+
+    // Safety sync: If channelId changes, reset selected pillar/category if they are not allowed on the new channel
+    // However, if the pillar or category is the initial saved value of this content task, AND the channel hasn't changed, we keep it!
+    useEffect(() => {
+        if (channelId) {
+            const hasChannelChanged = initialData && initialData.type === 'CONTENT' && initialData.channelId !== channelId;
+
+            if (pillar) {
+                const isOriginalPillar = initialData && initialData.type === 'CONTENT' && initialData.pillar === pillar;
+                const keepPillar = isOriginalPillar && !hasChannelChanged;
+
+                if (!keepPillar) {
+                    const validPillars = masterOptions.filter(o => o.type === 'PILLAR' && o.isActive && (!o.parentKey || o.parentKey === channelId));
+                    if (!validPillars.some(o => o.key === pillar)) {
+                        setPillar('');
+                    }
+                }
+            }
+            if (category) {
+                const isOriginalCat = initialData && initialData.type === 'CONTENT' && initialData.category === category;
+                const keepCat = isOriginalCat && !hasChannelChanged;
+
+                if (!keepCat) {
+                    const validCats = masterOptions.filter(o => o.type === 'CATEGORY' && o.isActive && (!o.parentKey || o.parentKey === channelId));
+                    if (!validCats.some(o => o.key === category)) {
+                        setCategory('');
+                    }
+                }
+            }
+        }
+    }, [channelId, masterOptions, initialData]);
 
     // --- Initialization ---
     useEffect(() => {

@@ -6,6 +6,7 @@ import { User as UserType } from '../types';
 import ImageCropper from './ImageCropper';
 import { useGlobalDialog } from '../context/GlobalDialogContext';
 import { useProfileForm } from '../hooks/useProfileForm';
+import { EMOJI_POOL } from '../constants/emojis';
 import ProfileAvatarUploader from './profile/ProfileAvatarUploader';
 import ProfileStatusSection from './profile/ProfileStatusSection';
 import ProfileBasicInfo from './profile/ProfileBasicInfo';
@@ -47,7 +48,9 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, us
     cropImageSrc, setCropImageSrc,
     positions,
     isSubmitting,
-    isConvertingImg
+    isConvertingImg,
+    emoji, setEmoji,
+    takenEmojis
   } = formState;
 
   return (
@@ -140,6 +143,44 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, us
                     onPositionChange={setPosition}
                     onPhoneChange={setPhone}
                 />
+
+                {/* 8-bit Emoji Picker Selection */}
+                <div className="space-y-4 bg-indigo-50/20 border-2 border-indigo-100/30 p-5 rounded-3xl">
+                    <div className="flex justify-between items-center">
+                        <label className="text-sm font-black text-indigo-950 flex items-center gap-1.5 uppercase">
+                            <span>👾 Personal Emoji / อิโมจิประจำตัว</span>
+                            <span className="text-[11px] font-medium text-indigo-400 font-sans lowercase hidden sm:inline">(ใช้สำหรับแสดงบนสนามวิ่ง ห้ามซ้ำกัน)</span>
+                        </label>
+                        <span className="font-mono text-xl select-none px-3.5 py-1.5 bg-white rounded-2xl border border-indigo-100 shadow-sm">
+                            {emoji || '👾'}
+                        </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-10 gap-1.5 max-h-[115px] overflow-y-auto p-1.5 bg-white/70 rounded-2xl border border-indigo-50/50 scrollbar-thin scrollbar-thumb-indigo-150">
+                        {EMOJI_POOL.map((emo) => {
+                            const isTaken = takenEmojis.includes(emo);
+                            const isSelected = emoji === emo;
+                            return (
+                                <button
+                                    key={emo}
+                                    type="button"
+                                    disabled={isTaken}
+                                    onClick={() => setEmoji(emo)}
+                                    className={`text-xl p-1 rounded-xl transition-transform duration-100 ease-out flex items-center justify-center relative select-none
+                                        ${isSelected ? 'bg-indigo-500 scale-110 shadow-md border border-indigo-600 ring-2 ring-indigo-200 z-10 text-white' : 'hover:scale-105 active:scale-95'}
+                                        ${isTaken ? 'opacity-25 bg-slate-100 cursor-not-allowed filter grayscale line-through' : 'cursor-pointer hover:bg-slate-50'}
+                                    `}
+                                    title={isTaken ? 'เพื่อนในทีมเลือกไปแล้วครับ' : 'คลิกเพื่อเลือกอิโมจินี้'}
+                                >
+                                    <span className="leading-none">{emo}</span>
+                                    {isTaken && (
+                                        <span className="absolute text-[8px] bottom-0 right-0">🔒</span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
 
                 {/* Bio Input */}
                 <ProfileBioSection 

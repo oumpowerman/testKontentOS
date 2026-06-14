@@ -33,6 +33,7 @@ const TribunalReportModal = React.lazy(() => import('./team/TribunalReportModal'
 
 import { useInterns } from '../hooks/useInterns';
 import AppBackground, { BackgroundTheme } from './common/AppBackground';
+import { useTaskContext } from '../context/TaskContext';
 
 // Import DnD Hook
 import { useTeamDragDrop } from '../hooks/useTeamDragDrop';
@@ -139,6 +140,14 @@ const TeamView: React.FC<TeamViewProps> = ({
       dateRange: { start, end },
       pageSize: 10 // Show 10 people per page for performance
   });
+
+  // 🚀 Lazy-load completed tasks for this week's Team View on-demand (only when TeamView is open)
+  const { fetchCompletedTasks } = useTaskContext();
+  useEffect(() => {
+      if (start && end) {
+          fetchCompletedTasks({ startDate: start, endDate: end });
+      }
+  }, [start, end, fetchCompletedTasks]);
 
   // --- Pool Tasks Logic (Global, not per user) ---
   const { teamPoolTasks, unassignedTasks } = useMemo(() => {

@@ -23,15 +23,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
 }) => {
     return (
         <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto">
-             {/* Report Button */}
-             <button 
-                onClick={onOpenReport}
-                className="p-2.5 sm:p-3 bg-white border border-gray-200 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-95 flex flex-col items-center justify-center flex-1 sm:flex-none sm:w-[50px] group"
-                title="สรุปผลงาน (My Report)"
-            >
-                <FileBarChart className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            </button>
-
              {/* Workload Monitor Button */}
              <button 
                 onClick={onOpenWorkload}

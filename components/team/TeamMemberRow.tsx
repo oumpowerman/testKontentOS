@@ -9,6 +9,7 @@ import FeelingBubble, { BUBBLE_THEMES } from '../common/FeelingBubble';
 import UserAvatarWithHP from '../common/UserAvatarWithHP';
 import { motion, AnimatePresence } from 'framer-motion';
 import { isStockTerminalStatus } from '../../config/status';
+import MemberProfileTooltip from './MemberProfileTooltip';
 
 // DnD Wrappers
 import DraggableTask from './dnd/DraggableTask';
@@ -90,6 +91,8 @@ const TeamMemberRow: React.FC<TeamMemberRowProps> = ({
     channels,
     masterOptions
 }) => {
+    const [isHovered, setIsHovered] = useState(false);
+
     // 1. Calculate Slots for Timeline View (Tetris Logic)
     const { slots, maxRows } = useMemo(() => {
         const weekStart = weekDays[0];
@@ -325,6 +328,8 @@ const TeamMemberRow: React.FC<TeamMemberRowProps> = ({
             <div 
                 className={`col-span-1 pl-5 pr-3 py-3 flex flex-col items-center text-center border-r border-gray-100 bg-white relative cursor-pointer hover:bg-gray-50 transition-all pt-4 ${isFocused ? 'border-r-indigo-100' : ''}`}
                 onClick={() => onSelectUser(user)}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
             >
                 {/* Avatar & Status */}
                 <div className="relative mb-2">
@@ -352,6 +357,16 @@ const TeamMemberRow: React.FC<TeamMemberRowProps> = ({
 
                 <div className="w-full bg-gray-100 rounded-full h-1 overflow-hidden mb-2"><div className="bg-indigo-500 h-full rounded-full" style={{ width: `${levelProgress}%` }}></div></div>
                 <div className={`text-[9px] px-2 py-0.5 rounded-md font-bold flex items-center justify-center gap-1 w-full border ${statusInfo.color.replace('text-', 'border-').replace('bg-', 'bg-opacity-20 ')} bg-white text-gray-600`}>{statusInfo.icon} {formatWorkload(weeklyHours)}</div>
+
+                {/* Elegant Gamified Tooltip */}
+                <MemberProfileTooltip
+                    user={user}
+                    tasks={tasks}
+                    isHovered={isHovered}
+                    weeklyHours={weeklyHours}
+                    statusInfo={statusInfo}
+                    statusColorClass={statusColorClass}
+                />
             </div>
 
             {/* Timeline Grid */}

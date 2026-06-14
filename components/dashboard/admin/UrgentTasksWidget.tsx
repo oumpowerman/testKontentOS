@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Channel, User, MasterOption } from '../../../types';
-import { Siren, PartyPopper, CalendarClock, X, HelpCircle } from 'lucide-react';
+import { PartyPopper, CalendarClock, X, HelpCircle } from 'lucide-react';
+import { SirenIndicator, SirenInsetOverlay } from './urgent-tasks/SirenIndicator';
 import { UrgentTasksFilterTabs } from './urgent-tasks/UrgentTasksFilterTabs';
 import { UrgentTasksStats } from './urgent-tasks/UrgentTasksStats';
 import { UrgentTaskItem } from './urgent-tasks/UrgentTaskItem';
@@ -32,7 +33,7 @@ const UrgentTasksWidget: React.FC<UrgentTasksWidgetProps> = ({
     onNavigateToCalendar
 }) => {
     const [isCommandCenterOpen, setIsCommandCenterOpen] = useState(false);
-    const [isSirenHovered, setIsSirenHovered] = useState(false);
+    const [isSirenOpen, setIsSirenOpen] = useState(false);
     const {
         selectedType,
         activeFilter,
@@ -61,6 +62,14 @@ const UrgentTasksWidget: React.FC<UrgentTasksWidgetProps> = ({
     return (
         <div className="glass-card rounded-[2.5rem] overflow-hidden flex flex-col h-full relative transition-all duration-500 shadow-indigo-100/50">
             
+            {/* Siren 6-Level Inset Overlaid Slide Panel */}
+            <SirenInsetOverlay 
+                overdueCount={stats.overdue} 
+                todayCount={stats.today} 
+                isOpen={isSirenOpen} 
+                onClose={() => setIsSirenOpen(false)} 
+            />
+
             {/* --- Header: Stats Filter --- */}
             <div className="p-6 pb-6 border-b border-white/40 relative z-25">
                 <div className="absolute top-0 right-0 w-48 h-48 bg-red-100/30 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none opacity-60"></div>
@@ -68,78 +77,12 @@ const UrgentTasksWidget: React.FC<UrgentTasksWidgetProps> = ({
                 
                 <div className="flex justify-between items-start relative z-30 mb-6 col-span-3">
                     <div className="flex items-center gap-4">
-                        <div className="relative z-45">
-                            <motion.div 
-                                onMouseEnter={() => setIsSirenHovered(true)}
-                                onMouseLeave={() => setIsSirenHovered(false)}
-                                onFocus={() => setIsSirenHovered(true)}
-                                onBlur={() => setIsSirenHovered(false)}
-                                tabIndex={0}
-                                animate={stats.overdue > 0 ? { scale: [1, 1.1, 1] } : {}}
-                                transition={{ repeat: Infinity, duration: 2 }}
-                                className={`p-3.5 rounded-2xl shadow-sm border transition-colors cursor-help outline-none focus:ring-2 focus:ring-indigo-500/20 ${stats.overdue > 0 ? 'bg-red-50 text-red-500 border-red-100' : 'bg-green-50 text-green-500 border-green-100'}`}
-                            >
-                                <Siren className={`w-7 h-7 ${stats.overdue > 0 ? 'animate-pulse' : ''}`} />
-                            </motion.div>
-
-                            <AnimatePresence>
-                                {isSirenHovered && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        transition={{ duration: 0.2, ease: "easeOut" }}
-                                        className="absolute top-full left-0 mt-3 w-80 bg-white/95 backdrop-blur-xl rounded-3xl border border-slate-100 shadow-xl p-4.5 z-[100] pointer-events-none text-slate-800"
-                                    >
-                                        <div className="flex items-center gap-2 pb-2.5 mb-3 border-b border-slate-100">
-                                            <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
-                                                <Siren className="w-4 h-4" />
-                                            </span>
-                                            <span className="font-extrabold text-xs text-slate-800">คู่มือนำทางสีไฟแจ้งเตือน</span>
-                                        </div>
-                                        
-                                        <div className="space-y-2.5">
-                                            {/* Red Indicator Explanation */}
-                                            <div className={`p-2.5 rounded-2xl border transition-all ${stats.overdue > 0 ? 'bg-red-50/50 border-red-100/80 ring-1 ring-red-500/20' : 'bg-slate-50/40 border-slate-100/60 opacity-60'}`}>
-                                                <div className="flex items-start gap-2">
-                                                    <span className={`w-2.5 h-2.5 rounded-full mt-1 bg-red-500 shrink-0 ${stats.overdue > 0 ? 'animate-ping' : ''}`} />
-                                                    <div>
-                                                        <p className="font-black text-xs text-red-600 flex items-center gap-1">
-                                                            สีแดงแจ้งเตือนวิกฤต
-                                                            {stats.overdue > 0 && <span className="text-[9px] bg-red-100 text-red-700 px-1.5 py-0.2 rounded-full font-extrabold">Active</span>}
-                                                        </p>
-                                                        <p className="text-[11px] text-slate-500 font-bold mt-0.5 leading-relaxed">
-                                                            มีงานค้างส่ง (Overdue) เลยดีดไลน์แล้วแต่ยังไม่สำเร็จ ควรรีบเร่งจัดการทันทีเพื่อป้องกันความล่าช้าสะสม
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Green Indicator Explanation */}
-                                            <div className={`p-2.5 rounded-2xl border transition-all ${stats.overdue === 0 ? 'bg-green-50/50 border-green-100/80 ring-1 ring-green-500/20' : 'bg-slate-50/40 border-slate-100/60 opacity-60'}`}>
-                                                <div className="flex items-start gap-2">
-                                                    <span className="w-2.5 h-2.5 rounded-full mt-1 bg-green-500 shrink-0" />
-                                                    <div>
-                                                        <p className="font-black text-xs text-green-600 flex items-center gap-1">
-                                                            สีเขียวสถานการณ์สุดยอด
-                                                            {stats.overdue === 0 && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.2 rounded-full font-extrabold">Active</span>}
-                                                        </p>
-                                                        <p className="text-[11px] text-slate-500 font-bold mt-0.5 leading-relaxed">
-                                                            ไม่มีงานที่ค้างส่งเลยในทีมขณะนี้ ระบบดำเนินไปได้อย่างไหลลื่นและตรงตามแผนงาน 100%
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-bold">
-                                            <span>ความถี่: ตรวจสอบเรียลไทม์</span>
-                                            <span>สถานะปัจจุบัน: {stats.overdue > 0 ? '🔴 มีงานค้างส่ง' : '🟢 ปกติสมบูรณ์'}</span>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
+                        <SirenIndicator 
+                            overdueCount={stats.overdue} 
+                            todayCount={stats.today} 
+                            isOpen={isSirenOpen} 
+                            setIsOpen={setIsSirenOpen} 
+                        />
                         <div>
                             <h3 className="font-bold text-2xl tracking-tighter text-slate-800">งานด่วน (Priority)</h3>
                             <div className="flex items-center gap-2 mt-1">

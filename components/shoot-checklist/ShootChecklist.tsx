@@ -1,17 +1,17 @@
 
 import React, { useState, useMemo } from 'react';
 import { Camera, Mic, Box, Plus, Trash2, Lightbulb, Layout, CheckCircle2, Archive, RotateCcw, PackageOpen, PlusCircle, Compass, Info, Edit2, Check, ArrowRight } from 'lucide-react';
-import { ChecklistItem, ChecklistPreset, MasterOption, InventoryItem } from '../types';
-import MentorTip from './MentorTip';
-import { useChecklist } from '../hooks/useChecklist';
-import InventoryModal from './checklist/InventoryModal';
-import PresetModal from './checklist/PresetModal';
-import PresetEditorModal from './checklist/PresetEditorModal';
-import ItemVerifyModal from './checklist/ItemVerifyModal';
-import { useGlobalDialog } from '../context/GlobalDialogContext';
-import InfoModal from './ui/InfoModal'; 
-import ChecklistGuide from './checklist/ChecklistGuide'; 
-import AppBackground from './common/AppBackground';
+import { ChecklistItem, ChecklistPreset, MasterOption, InventoryItem } from '../../types';
+import MentorTip from '../MentorTip';
+import { useChecklist } from '../../hooks/useChecklist';
+import InventoryModal from './InventoryModal';
+import PresetModal from './PresetModal';
+import PresetEditorModal from './PresetEditorModal';
+import ItemVerifyModal from './ItemVerifyModal';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
+import InfoModal from '../ui/InfoModal'; 
+import ChecklistGuide from './ChecklistGuide'; 
+import AppBackground from '../common/AppBackground';
 
 interface ShootChecklistProps {
     items: ChecklistItem[]; 

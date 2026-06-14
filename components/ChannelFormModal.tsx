@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, LayoutTemplate, Youtube, Facebook, Instagram, Video, Globe, Palette, Loader2, Image as ImageIcon, Camera, Plus, Edit2 } from 'lucide-react';
+import { X, Check, Palette, Loader2, Edit2, Plus } from 'lucide-react';
 import { Channel, Platform } from '../types';
 import { useGlobalDialog } from '../context/GlobalDialogContext';
+import { useMasterData } from '../hooks/useMasterData';
+import { ChannelLogoSelector } from './channel/ChannelLogoSelector';
+import { PlatformGridSelector } from './channel/PlatformGridSelector';
+import { ChannelPillarsCategoriesManager } from './channel/ChannelPillarsCategoriesManager';
 
 export interface ChannelFormModalProps {
   isOpen: boolean;
@@ -25,30 +29,30 @@ export const BRAND_COLORS = [
   { id: 'slate', class: 'bg-slate-100 text-slate-700 border-slate-200 ring-slate-500' },
 ];
 
-export const PLATFORM_OPTIONS: { id: Platform, label: string, icon: any, color: string }[] = [
-    { id: 'YOUTUBE', label: 'YouTube', icon: Youtube, color: 'text-red-600' },
-    { id: 'FACEBOOK', label: 'Facebook', icon: Facebook, color: 'text-blue-600' },
-    { id: 'TIKTOK', label: 'TikTok', icon: Video, color: 'text-zinc-800' },
-    { id: 'INSTAGRAM', label: 'Instagram', icon: Instagram, color: 'text-pink-600' },
-    { id: 'OTHER', label: 'Other/Website', icon: Globe, color: 'text-gray-600' },
-];
-
 const ChannelFormModal: React.FC<ChannelFormModalProps> = ({ isOpen, onClose, channel, onSave }) => {
   const { showAlert } = useGlobalDialog();
+  const { addMasterOption } = useMasterData();
+  
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(['YOUTUBE']);
   const [color, setColor] = useState(BRAND_COLORS[0].class);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Allocate an ID that stays stable during creation
+  const targetId = useRef(channel?.id || crypto.randomUUID()).current;
+
+  // Local state for temp options only when creating a new channel
+  const [tempOptions, setTempOptions] = useState<{ id: string; type: 'PILLAR' | 'CATEGORY'; key: string; label: string }[]>([]);
+
   // Image upload state
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load and populate fields when the channel prop changes
   useEffect(() => {
     if (isOpen) {
+      setTempOptions([]);
       if (channel) {
         setName(channel.name);
         setDescription(channel.description || '');
@@ -86,9 +90,6 @@ const ChannelFormModal: React.FC<ChannelFormModalProps> = ({ isOpen, onClose, ch
     e.stopPropagation();
     setLogoFile(null);
     setLogoPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -105,7 +106,6 @@ const ChannelFormModal: React.FC<ChannelFormModalProps> = ({ isOpen, onClose, ch
 
     setIsSubmitting(true);
     try {
-      const targetId = channel?.id || crypto.randomUUID();
       const payload: Channel = {
         id: targetId,
         name: name.trim(),
@@ -117,6 +117,23 @@ const ChannelFormModal: React.FC<ChannelFormModalProps> = ({ isOpen, onClose, ch
 
       const success = await onSave(payload, logoFile);
       if (success) {
+        // Save temp options if creating a new channel
+        if (tempOptions.length > 0) {
+          for (const opt of tempOptions) {
+            await addMasterOption({
+              type: opt.type,
+              key: opt.key,
+              label: opt.label,
+              color: opt.type === 'PILLAR' 
+                ? 'bg-indigo-100 text-indigo-700 border-indigo-200' 
+                : 'bg-emerald-100 text-emerald-700 border-emerald-200',
+              sortOrder: 10,
+              isActive: true,
+              isDefault: false,
+              parentKey: targetId
+            });
+          }
+        }
         onClose();
       }
     } catch (err) {
@@ -168,39 +185,14 @@ const ChannelFormModal: React.FC<ChannelFormModalProps> = ({ isOpen, onClose, ch
             {/* Modal Body */}
             <form onSubmit={handleSubmit} className="p-8 space-y-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
               <div className="flex flex-col md:flex-row gap-8">
+                
                 {/* Logo Uploader */}
-                <div className="flex flex-col items-center gap-3 shrink-0">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Logo</label>
-                  <div
-                    className="relative w-24 h-24 rounded-full bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/50 transition-all overflow-hidden group"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {logoPreview ? (
-                      <img src={logoPreview} alt="Logo Preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <ImageIcon className="w-8 h-8 text-slate-300 group-hover:text-indigo-400 transition-colors" />
-                    )}
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Camera className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept="image/png, image/jpeg, image/jpg"
-                  />
-                  {logoPreview && (
-                    <button
-                      type="button"
-                      onClick={handleRemovePhoto}
-                      className="text-xs font-bold text-rose-500 hover:text-rose-600 hover:underline"
-                    >
-                      ลบรูป
-                    </button>
-                  )}
-                </div>
+                <ChannelLogoSelector
+                  logoPreview={logoPreview}
+                  onFileChange={handleFileChange}
+                  onRemovePhoto={handleRemovePhoto}
+                  isSubmitting={isSubmitting}
+                />
 
                 <div className="flex-1 space-y-6">
                   {/* Name Input */}
@@ -267,44 +259,21 @@ const ChannelFormModal: React.FC<ChannelFormModalProps> = ({ isOpen, onClose, ch
               <div className="border-t border-gray-100 my-6"></div>
 
               {/* Active Platforms */}
-              <div className="space-y-4">
-                <label className="block text-sm font-bold text-gray-700 flex items-center">
-                  <LayoutTemplate className="w-4 h-4 mr-2 text-indigo-500" />
-                  3. รายการนี้ลงที่ไหนบ้าง? (Active Platforms)
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
-                  {PLATFORM_OPTIONS.map((p) => {
-                    const isSelected = selectedPlatforms.includes(p.id);
-                    const Icon = p.icon;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => togglePlatform(p.id)}
-                        disabled={isSubmitting}
-                        className={`
-                          flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all relative group/platform
-                          ${isSelected
-                            ? `border-indigo-500 bg-indigo-50/50 shadow-sm`
-                            : 'border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50'
-                          }
-                          ${isSubmitting ? 'cursor-not-allowed opacity-50' : 'hover:-translate-y-0.5 active:translate-y-0'}
-                        `}
-                      >
-                        <Icon className={`w-8 h-8 mb-2 ${isSelected ? p.color : 'text-slate-300 group-hover/platform:text-slate-400'} transition-all`} />
-                        <span className={`font-bold text-xs ${isSelected ? 'text-gray-800' : 'text-slate-400 group-hover/platform:text-slate-500'}`}>
-                          {p.label}
-                        </span>
-                        {isSelected && (
-                          <div className="absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center shadow-sm">
-                            <Check className="w-3 h-3 text-white" />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <PlatformGridSelector
+                selectedPlatforms={selectedPlatforms}
+                togglePlatform={togglePlatform}
+                isSubmitting={isSubmitting}
+              />
+
+              <div className="border-t border-gray-100 my-6"></div>
+
+              {/* Pillars & Categories Settings */}
+              <ChannelPillarsCategoriesManager
+                targetId={targetId}
+                channel={channel}
+                tempOptions={tempOptions}
+                setTempOptions={setTempOptions}
+              />
 
               {/* Action Buttons */}
               <div className="flex justify-end pt-6 border-t border-gray-100 gap-3">

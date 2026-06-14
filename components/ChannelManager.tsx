@@ -7,7 +7,8 @@ import { PLATFORM_ICONS } from '../constants';
 import MentorTip from './MentorTip';
 import NotificationBellBtn from './NotificationBellBtn';
 import { useGlobalDialog } from '../context/GlobalDialogContext';
-import ChannelFormModal, { PLATFORM_OPTIONS } from './ChannelFormModal.tsx';
+import ChannelFormModal from './ChannelFormModal.tsx';
+import { PLATFORM_OPTIONS } from './channel/PlatformGridSelector';
 
 interface ChannelManagerProps {
   tasks: Task[];

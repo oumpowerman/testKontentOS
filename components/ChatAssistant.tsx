@@ -6,9 +6,9 @@ import { useToast } from '../context/ToastContext';
 interface ChatAssistantProps {
   tasks: Task[];
   channels: Channel[];
-  onAddChannel: (channel: Channel) => void;
-  onDeleteChannel: (id: string) => void;
-  onAddTask: (task: Task) => void;
+  onAddChannel: (channel: Channel, file?: File) => Promise<boolean> | void;
+  onDeleteChannel: (id: string) => Promise<boolean> | void;
+  onAddTask: (task: Task) => Promise<any> | void;
 }
 
 interface Message {
@@ -35,6 +35,7 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
   
   // Context state for future multi-turn conversation logic
   const [context, setContext] = useState<{ lastIntent?: string, lastEntity?: any }>({});
@@ -200,20 +201,68 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({
     return 'ขอโทษครับ ผมยังไม่เข้าใจคำสั่งนี้ ลองพิมพ์ "Help" หรือ "ทำอะไรได้บ้าง" ดูนะครับ 😅';
   };
 
-  const handleSend = (e?: React.FormEvent) => {
+  const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isThinking) return;
 
-    // User Message
-    addMessage(input, 'user');
     const userCmd = input;
     setInput('');
+    addMessage(userCmd, 'user');
+    setIsThinking(true);
 
-    // Simulate Thinking Delay for realism
-    setTimeout(() => {
-        const response = processCommand(userCmd);
-        addMessage(response, 'bot');
-    }, 600);
+    try {
+        const res = await fetch('/api/chat/assist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: userCmd, tasks, channels })
+        });
+        const data = await res.json();
+        
+        // Add the AI response message
+        addMessage(data.text, 'bot');
+
+        // Check if there are function/tool calls to execute client-side
+        if (data.functionCalls && data.functionCalls.length > 0) {
+            for (const call of data.functionCalls) {
+                if (call.name === 'createTask') {
+                    const { title, description, priority, channelId } = call.args;
+                    const newTask: Task = {
+                        id: crypto.randomUUID(),
+                        type: 'TASK',
+                        title: title,
+                        description: description || 'สร้างเสียงสวรรค์จากสคริปต์ผู้ช่วย AI',
+                        status: 'TODO',
+                        priority: priority || 'MEDIUM',
+                        tags: ['AI-Generated'],
+                        startDate: new Date(),
+                        endDate: new Date(),
+                        assigneeIds: [],
+                        channelId: channelId || undefined
+                    };
+                    await onAddTask(newTask);
+                    showToast(`📝 จดงาน "${title}" เข้าระบบเรียบร้อย!`, 'success');
+                } else if (call.name === 'createChannel') {
+                    const { name, platform, description } = call.args;
+                    const newChannel: Channel = {
+                        id: crypto.randomUUID(),
+                        name: name,
+                        platforms: [platform],
+                        color: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+                        description: description || 'กำลังสร้างแบรนด์รุ่งเรืองด้วย AI'
+                    };
+                    await onAddChannel(newChannel);
+                    showToast(`📺 สร้างช่อง "${name}" บนแพลตฟอร์ม ${platform} สำเร็จ!`, 'success');
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Chat Assist AI call failed:", err);
+        // Clean fallback to local regex command engine
+        const fallbackMsg = processCommand(userCmd);
+        addMessage(fallbackMsg, 'bot');
+    } finally {
+        setIsThinking(false);
+    }
   };
 
   const handleQuickAction = (cmd: string) => {
@@ -238,7 +287,7 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-40 lg:bottom-24 right-4 lg:right-6 w-[350px] md:w-[400px] h-[550px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-[100] flex flex-col animate-in slide-in-from-bottom-10 fade-in duration-200 overflow-hidden">
+        <div className="fixed bottom-40 lg:bottom-24 right-4 lg:right-6 w-[calc(100vw-32px)] sm:w-[350px] md:w-[400px] h-[480px] sm:h-[550px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-[100] flex flex-col animate-in slide-in-from-bottom-10 fade-in duration-200 overflow-hidden">
           
           {/* Header */}
           <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white flex items-center justify-between">
@@ -284,6 +333,15 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({
                 </div>
               </div>
             ))}
+            {isThinking && (
+              <div className="flex justify-start">
+                <div className="bg-white text-gray-400 border border-gray-200 rounded-2xl rounded-bl-none px-4 py-2 flex items-center space-x-1.5 shadow-sm">
+                  <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 

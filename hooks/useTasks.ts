@@ -189,7 +189,7 @@ export const useTasks = (setIsModalOpen?: (isOpen: boolean) => void) => {
         tasks, setTasks, 
         fetchTasks, fetchSubTasks, fetchTaskById,
         checkAndExpandRange, fetchAllTasks, 
-        isFetching 
+        isFetching, fetchCompletedTasks
     } = useTaskContext();
     
     const { showToast } = useToast();
@@ -206,8 +206,17 @@ export const useTasks = (setIsModalOpen?: (isOpen: boolean) => void) => {
         const table = isContent ? 'contents' : 'tasks';
         
         // Check update based on ID existence in current list, or explicit editingTask passed
-        const existingTask = editingTask || tasks.find(t => t.id === task.id);
-        const isUpdate = !!existingTask;
+        let existingTask = editingTask || tasks.find(t => t.id === task.id);
+        let isUpdate = !!existingTask;
+
+        // --- 🚀 DB Existence Check for Unscheduled/Filtered Items ---
+        if (!isUpdate && task.id) {
+            const dbTask = await fetchTaskById(task.id, task.type);
+            if (dbTask) {
+                existingTask = dbTask;
+                isUpdate = true;
+            }
+        }
 
         // --- 🚀 Resiliency for Partial Tasks ---
         let taskToSave = { ...task };
@@ -611,6 +620,7 @@ export const useTasks = (setIsModalOpen?: (isOpen: boolean) => void) => {
         handleSendToQC,
         checkAndExpandRange,
         fetchAllTasks,
-        isFetching
+        isFetching,
+        fetchCompletedTasks
     };
 };

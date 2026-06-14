@@ -15,6 +15,7 @@ import ScriptCategoryFilter from './hub/ScriptCategoryFilter';
 import ScriptStatsGrid from './hub/ScriptStatsGrid';
 import ScriptModeSwitcher, { ScriptHubMode } from './hub/ScriptModeSwitcher';
 import AppBackground from '../common/AppBackground';
+import scenicSunsetBg from '../../src/assets/images/scenic_lake_sunset_background_1781330433260.jpg';
 import ScriptLabView from './lab/ScriptLabView';
 import { Clapperboard, FileText, Edit3, CheckCircle2, Layers, ChevronRight, Loader2, ChevronLeft, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -61,6 +62,53 @@ const ScriptHubView: React.FC<ScriptHubViewProps> = ({ currentUser, users, initi
 
     // UI State / switcher
     const [mode, setMode] = useState<ScriptHubMode>(initialMode); 
+
+    // Background Preference State
+    const [selectedBg, setSelectedBg] = useState<string>(() => {
+        return localStorage.getItem('scripthub_background_theme') || 'default';
+    });
+
+    const handleBgChange = (bg: string) => {
+        setSelectedBg(bg);
+        localStorage.setItem('scripthub_background_theme', bg);
+    };
+
+    const bgProps = useMemo(() => {
+        if (selectedBg === 'sunset') {
+            return {
+                theme: 'neutral' as const,
+                customBgUrl: scenicSunsetBg
+            };
+        }
+        if (selectedBg === 'midnight') {
+            return {
+                theme: 'inspector' as const,
+                pattern: 'none' as const
+            };
+        }
+        if (selectedBg === 'rainbow') {
+            return {
+                theme: 'rainbow' as const,
+                pattern: 'dots' as const
+            };
+        }
+        if (selectedBg === 'beach') {
+            return {
+                theme: 'beach-ocean' as const,
+                pattern: 'none' as const
+            };
+        }
+        if (selectedBg === 'rainbow-sky') {
+            return {
+                theme: 'rainbow-sky' as const,
+                pattern: 'none' as const
+            };
+        }
+        return {
+            theme: (mode === 'STUDIO' ? 'pastel-indigo' : 'script') as any,
+            pattern: 'dots' as const
+        };
+    }, [selectedBg, mode]);
 
     // Lab Mode State (Lifted to persist across mode switches)
     const [labSequence, setLabSequence] = useState<LabSequenceItem[]>([]);
@@ -197,10 +245,7 @@ const ScriptHubView: React.FC<ScriptHubViewProps> = ({ currentUser, users, initi
 
     // --- RENDER LOGIC WITH ANIMATIONS ---
     return (
-        <AppBackground 
-            theme={mode === 'STUDIO' ? 'pastel-indigo' : 'script'} 
-            pattern="dots" 
-        >
+        <AppBackground {...bgProps}>
             <AnimatePresence mode="wait">
                 {mode === 'LAB' ? (
                     <motion.div
@@ -255,7 +300,7 @@ const ScriptHubView: React.FC<ScriptHubViewProps> = ({ currentUser, users, initi
 
                         {isPromoteModalOpen && promoteScriptData && createPortal(
                             <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-                                <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 border-4 border-white ring-1 ring-gray-100">
+                                <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col h-[85vh] max-h-[90vh] animate-in zoom-in-95 border-4 border-white ring-1 ring-gray-100">
                                     <div className="px-8 py-5 border-b border-gray-100 bg-gradient-to-r from-orange-500 to-amber-500 text-white flex justify-between items-center">
                                         <div>
                                             <h3 className="text-xl font-bold flex items-center gap-2">🚀 ส่งเข้าผลิต (Promote to Content)</h3>
@@ -339,6 +384,8 @@ const ScriptHubView: React.FC<ScriptHubViewProps> = ({ currentUser, users, initi
                                 onInfoClick={() => setIsInfoOpen(true)} 
                                 mode={mode}
                                 onModeChange={setMode}
+                                selectedBg={selectedBg}
+                                onBgChange={handleBgChange}
                             />
 
                             <AnimatePresence mode="wait">

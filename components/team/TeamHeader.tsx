@@ -1,6 +1,6 @@
 
 import React, { memo, useState, useRef, useEffect } from 'react';
-import { Send, ShoppingBag, Wallet, Settings, Sparkles, MoreHorizontal, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Send, ShoppingBag, Wallet, Settings, Sparkles, MoreHorizontal, AlertTriangle, ChevronDown, Zap } from 'lucide-react';
 import { User } from '../../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MobileActionSheet } from './MobileActionSheet';
@@ -194,13 +194,39 @@ const TeamHeader: React.FC<TeamHeaderProps> = ({
                                 {/* Distribute Task Button */}
                                 {onAddTask && (
                                     <motion.button 
-                                        whileHover={{ scale: 1.05, y: -2 }}
-                                        whileTap={{ scale: 0.95 }}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.98 }}
                                         onClick={() => onAddTask('TASK')} 
-                                        className="group flex items-center px-6 py-3.5 bg-gradient-to-br from-emerald-400 to-teal-600 text-white rounded-2xl text-sm font-black shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all border border-white/20"
+                                        className="relative group flex items-center px-6 py-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white rounded-2xl text-sm font-black shadow-[0_4px_20px_rgba(16,185,129,0.3)] hover:shadow-[0_8px_30px_rgba(20,184,166,0.45)] border-b-[4px] border-emerald-700 hover:border-teal-600 active:border-b-0 translate-y-0 active:translate-y-[4px] transition-all select-none cursor-pointer"
                                     >
-                                        <Send className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
-                                        สั่งงานด่วน
+                                        {/* Dynamic Halo Aura Behind Button */}
+                                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 opacity-0 group-hover:opacity-100 blur transition-opacity duration-300 -z-10" />
+
+                                        {/* Container for overflow hidden elements inside the button shape */}
+                                        <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+                                            {/* Moving ambient highlight strip */}
+                                            <motion.div 
+                                                className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
+                                                initial={{ x: '-150%' }}
+                                                animate={{ x: '150%' }}
+                                                transition={{ 
+                                                    duration: 3, 
+                                                    repeat: Infinity, 
+                                                    repeatDelay: 1.5,
+                                                    ease: "easeInOut" 
+                                                }}
+                                            />
+                                            {/* Top highlight line for extra dimension */}
+                                            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+                                        </div>
+
+                                        <span className="relative z-10 flex items-center gap-2">
+                                            <div className="relative">
+                                                <Zap className="w-4 h-4 text-amber-300 fill-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.9)] group-hover:scale-120 group-hover:rotate-[15deg] transition-transform duration-300" />
+                                                <Sparkles className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 text-yellow-100 animate-pulse" />
+                                            </div>
+                                            <span className="tracking-wider text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]">สั่งงานด่วน</span>
+                                        </span>
                                     </motion.button>
                                 )}
 
@@ -332,9 +358,10 @@ const TeamHeader: React.FC<TeamHeaderProps> = ({
                             <motion.button 
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => onAddTask('TASK')} 
-                                className="flex-1 min-w-0 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-br from-emerald-400 to-teal-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/10 border border-white/10"
+                                className="relative overflow-hidden flex-1 min-w-0 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/15 border border-emerald-400/20 active:from-teal-600 active:to-emerald-500 transition-all select-none"
                             >
-                                <Send className="w-3.5 h-3.5 shrink-0" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-150%] active:translate-x-[150%] transition-transform duration-700 pointer-events-none" />
+                                <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300 shrink-0" />
                                 <span className="truncate">สั่งงานด่วน</span>
                             </motion.button>
                         )}

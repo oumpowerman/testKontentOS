@@ -67,7 +67,7 @@ const LeaveQuotaWidget: React.FC<LeaveQuotaWidgetProps> = ({ leaveUsage, onHisto
     }, [masterOptions]);
 
     return (
-        <div className="bg-white rounded-[3rem] border-4 border-[#F8F9FA] shadow-[0_20px_50px_rgba(0,0,0,0.05)] p-8 relative overflow-hidden group">
+        <div className="bg-white rounded-[3rem] border-4 border-[#F8F9FA] shadow-[0_20px_50px_rgba(0,0,0,0.05)] p-8 relative overflow-hidden group h-full flex flex-col justify-between">
             
             {/* Background Decor - Cute Floating Elements */}
             <motion.div 

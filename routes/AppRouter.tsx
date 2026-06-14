@@ -27,6 +27,7 @@ import WorkboxTrigger from '../components/workbox/WorkboxTrigger';
 import { ViewRouteRegistry } from './ViewRouteRegistry';
 import { GlobalModalRegistry } from './GlobalModalRegistry';
 import { PWAShareTargetModal } from '../components/nexus/PWAShareTargetModal';
+import ChatAssistant from '../components/ChatAssistant';
 
 // --- LAZY LOAD ULTIMATE SCREEN & PALETTE ---
 const UltimateWorkroomView = lazy(() => import('../components/dashboard/member/UltimateWorkroomView'));
@@ -550,6 +551,15 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
                       isOpen={isWorkboxOpen} 
                       onClose={() => setIsWorkboxOpen(false)} 
                       currentUser={currentUserProfile} 
+                  />
+
+                  {/* AI Floating Chat Assistant - Globally Accessible */}
+                  <ChatAssistant 
+                      tasks={tasks}
+                      channels={channels}
+                      onAddChannel={handleAddChannel}
+                      onDeleteChannel={handleDeleteChannel}
+                      onAddTask={handleSaveTask}
                   />
                   
               </AppShell>

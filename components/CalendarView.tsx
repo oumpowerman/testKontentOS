@@ -20,6 +20,7 @@ import DelayModal from './DelayModal';
 import AppBackground, { BackgroundTheme } from './common/AppBackground';
 import MobileLandscapeWrapper from './common/MobileLandscapeWrapper';
 import { useGlobalDialog } from '../context/GlobalDialogContext';
+import { useTaskContext } from '../context/TaskContext';
 export type TaskDisplayMode = 'MINIMAL' | 'DOT' | 'EMOJI' | 'FULL';
 export type CalendarViewType = 'MONTH' | 'WEEK';
 
@@ -132,6 +133,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   const { showAlert } = useGlobalDialog();
 
+  // 🚀 Lazy-load completed tasks for the active calendar date range
+  const { fetchCompletedTasks } = useTaskContext();
+  const startDateTime = startDate ? startDate.getTime() : 0;
+  const endDateTime = endDate ? endDate.getTime() : 0;
+
+  useEffect(() => {
+      if (viewMode === 'TASK' && startDate && endDate) {
+          fetchCompletedTasks({ startDate, endDate });
+      }
+  }, [viewMode, startDateTime, endDateTime, fetchCompletedTasks]);
+
   useEffect(() => {
     if (isExpanded) {
       document.body.classList.add('calendar-focus-mode');
@@ -144,11 +156,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   }, [isExpanded]);
 
   // Trigger Range Change when month changes
+  const currentTime = currentDate ? currentDate.getTime() : 0;
   useEffect(() => {
-      if (onRangeChange) {
+      if (onRangeChange && currentDate) {
           onRangeChange(currentDate);
       }
-  }, [currentDate, onRangeChange]);
+  }, [currentTime, onRangeChange]);
 
   // Auto-close stock panel when switching to TASK mode
   useEffect(() => {

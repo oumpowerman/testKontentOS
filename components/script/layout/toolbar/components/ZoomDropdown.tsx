@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
-import { FloatingPortal } from './../components/FloatingPortal';
+import { FloatingPortal } from './FloatingPortal';
 
 const ZOOM_OPTIONS = [50, 75, 100, 125, 150, 200];
 

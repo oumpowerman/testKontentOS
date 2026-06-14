@@ -218,6 +218,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({
           tasks={tasks}
           users={users}
           currentUser={currentUser}
+          onOpenTask={onEditTask}
         />
       </motion.div>
     </AppBackground>

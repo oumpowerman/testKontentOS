@@ -191,13 +191,45 @@ const StockFilterBar: React.FC<StockFilterBarProps> = React.memo(({
         masterOptions.filter(o => o.type === 'FORMAT' && o.isActive).sort((a,b) => a.sortOrder - b.sortOrder),
     [masterOptions]);
 
-    const pillarOptions = useMemo(() => 
-        masterOptions.filter(o => o.type === 'PILLAR' && o.isActive).sort((a,b) => a.sortOrder - b.sortOrder),
-    [masterOptions]);
+    const pillarOptions = useMemo(() => {
+        const base = masterOptions.filter(o => o.type === 'PILLAR' && o.isActive);
+        const filtered = filterChannel.length === 0 
+            ? base 
+            : base.filter(o => !o.parentKey || filterChannel.includes(o.parentKey));
+            
+        return filtered.map(o => {
+            if (o.parentKey) {
+                const channel = channels.find(c => c.id === o.parentKey);
+                if (channel) {
+                    return {
+                        ...o,
+                        label: `${o.label} (${channel.name})`
+                    };
+                }
+            }
+            return o;
+        }).sort((a, b) => a.sortOrder - b.sortOrder);
+    }, [masterOptions, channels, filterChannel]);
 
-    const categoryOptions = useMemo(() => 
-        masterOptions.filter(o => o.type === 'CATEGORY' && o.isActive).sort((a,b) => a.sortOrder - b.sortOrder),
-    [masterOptions]);
+    const categoryOptions = useMemo(() => {
+        const base = masterOptions.filter(o => o.type === 'CATEGORY' && o.isActive);
+        const filtered = filterChannel.length === 0 
+            ? base 
+            : base.filter(o => !o.parentKey || filterChannel.includes(o.parentKey));
+            
+        return filtered.map(o => {
+            if (o.parentKey) {
+                const channel = channels.find(c => c.id === o.parentKey);
+                if (channel) {
+                    return {
+                        ...o,
+                        label: `${o.label} (${channel.name})`
+                    };
+                }
+            }
+            return o;
+        }).sort((a, b) => a.sortOrder - b.sortOrder);
+    }, [masterOptions, channels, filterChannel]);
 
     const statusOptions = useMemo(() => 
         masterOptions.filter(o => o.type === 'STATUS' && o.isActive).sort((a,b) => a.sortOrder - b.sortOrder),

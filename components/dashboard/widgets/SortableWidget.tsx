@@ -8,9 +8,10 @@ interface SortableWidgetProps {
     id: string;
     children: React.ReactNode;
     className?: string;
+    hFull?: boolean;
 }
 
-const SortableWidget: React.FC<SortableWidgetProps> = ({ id, children, className }) => {
+const SortableWidget: React.FC<SortableWidgetProps> = ({ id, children, className, hFull = true }) => {
     const {
         attributes,
         listeners,
@@ -31,7 +32,7 @@ const SortableWidget: React.FC<SortableWidgetProps> = ({ id, children, className
         <div 
             ref={setNodeRef} 
             style={style} 
-            className={`relative group/widget ${className}`}
+            className={`relative group/widget ${hFull ? 'h-full' : 'h-auto'} flex flex-col ${className}`}
         >
             {/* Drag Handle */}
             <div 

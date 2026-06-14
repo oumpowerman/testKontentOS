@@ -28,6 +28,7 @@ const RoadmapTaskModal: React.FC<RoadmapTaskModalProps> = ({
 }) => {
   const [categories, setCategories] = useState<{name: string, color: string, id: string}[]>([]);
   const [newCat, setNewCat] = useState('');
+  const [selectedColor, setSelectedColor] = useState('#818CF8');
   const [loading, setLoading] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   
@@ -101,10 +102,11 @@ const RoadmapTaskModal: React.FC<RoadmapTaskModalProps> = ({
     if (newCat && !categories.find(c => c.name === newCat)) {
       setLoading(true);
       try {
-        const result = await roadmapService.addCategory(newCat);
+        const result = await roadmapService.addCategory(newCat, selectedColor);
         setCategories([...categories, result]);
         setFormData({ ...formData, category: newCat });
         setNewCat('');
+        setSelectedColor('#818CF8'); // Reset
       } catch (err) {
         console.error('Add category failed', err);
       } finally {
@@ -249,6 +251,56 @@ const RoadmapTaskModal: React.FC<RoadmapTaskModalProps> = ({
                     เพิ่ม
                   </button>
                 </div>
+              </div>
+              
+              {/* Creator-friendly preset dots selector */}
+              <div className="flex flex-col gap-2 p-4 bg-slate-50/50 rounded-2xl border border-slate-100/60">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-2">โค้ดสีหมวดหมู่:</span>
+                  {[
+                    '#EF4444', // YouTube Red
+                    '#E11D48', // TikTok Rose
+                    '#D946EF', // Instagram Fuchsia
+                    '#8B5CF6', // Podcast Purple
+                    '#3B82F6', // Facebook/Tech Blue
+                    '#0D9488', // Newsletter Teal
+                    '#10B981', // Marketing Emerald
+                    '#F59E0B', // Sponsor Gold
+                    '#6366F1', // System Indigo
+                    '#64748B'  // Other Slate
+                  ].map((hex) => (
+                    <button
+                      key={hex}
+                      type="button"
+                      onClick={() => setSelectedColor(hex)}
+                      className="w-5.5 h-5.5 rounded-full border-2 transition-all hover:scale-110 active:scale-95 flex items-center justify-center relative shadow-sm"
+                      style={{ 
+                        backgroundColor: hex, 
+                        borderColor: selectedColor === hex ? '#4F46E5' : 'transparent' 
+                      }}
+                      title={hex}
+                    >
+                      {selectedColor === hex && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-white shadow-sm" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {newCat && (
+                  <div className="flex items-center gap-2 text-[10px] font-semibold text-slate-400 mt-1">
+                    <span>ต้วอย่างป้ายชื่อ:</span>
+                    <span 
+                      className="px-3 py-1 rounded-full text-[9px] font-bold uppercase border tracking-wider" 
+                      style={{ 
+                        backgroundColor: `${selectedColor}0b`, 
+                        borderColor: `${selectedColor}30`, 
+                        color: selectedColor 
+                      }}
+                    >
+                      {newCat}
+                    </span>
+                  </div>
+                )}
               </div>
               
               <AnimatePresence>

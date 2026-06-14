@@ -1,7 +1,7 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { User } from '../types';
-import { useLeaderboard, TimeRange } from '../hooks/useLeaderboard';
+import { useLeaderboard, TimeRange, LeaderboardEntry } from '../hooks/useLeaderboard';
 import { Trophy, Sparkles, Crown } from 'lucide-react';
 import MentorTip from './MentorTip';
 import { motion } from 'framer-motion';
@@ -11,6 +11,7 @@ import PodiumSection from './leaderboard/PodiumSection';
 import RankingList from './leaderboard/RankingList';
 import UserStatsFooter from './leaderboard/UserStatsFooter';
 import PastelStageBackground from './leaderboard/PastelStageBackground';
+import LeaderboardProfileCardModal from './leaderboard/LeaderboardProfileCardModal';
 
 interface LeaderboardViewProps {
     users: User[];
@@ -19,6 +20,7 @@ interface LeaderboardViewProps {
 
 const LeaderboardView: React.FC<LeaderboardViewProps> = ({ users, currentUser }) => {
     const { topThree, restList, myStats, timeRange, setTimeRange } = useLeaderboard(users, currentUser);
+    const [selectedUser, setSelectedUser] = useState<LeaderboardEntry | null>(null);
 
     return (
         <PastelStageBackground>
@@ -83,16 +85,24 @@ const LeaderboardView: React.FC<LeaderboardViewProps> = ({ users, currentUser })
             </div>
 
             {/* 1. TOP 3 PODIUM */}
-            <PodiumSection topThree={topThree} />
+            <PodiumSection topThree={topThree} onSelectUser={setSelectedUser} />
 
             {/* 2. RANKING LIST */}
             <RankingList 
                 list={restList} 
                 emptyMessage={topThree.length === 0 ? "ยังไม่มีข้อมูลในรอบนี้" : undefined}
+                onSelectUser={(entry) => setSelectedUser(entry)}
             />
 
             {/* 3. STICKY FOOTER (MY STATS) */}
             <UserStatsFooter myStats={myStats} />
+
+            {/* RPG Character Profile Card Modal */}
+            <LeaderboardProfileCardModal 
+                entry={selectedUser} 
+                onClose={() => setSelectedUser(null)} 
+                onQuickCheer={() => {}} // Local animations and state handles clicks automatically in premium detail
+            />
         </div>
         </PastelStageBackground>
     );

@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { LayoutTemplate, Sparkles } from 'lucide-react';
-import { FloatingPortal } from './../components/FloatingPortal';
+import { FloatingPortal } from './FloatingPortal';
 import { useScriptContext } from '../../../core/ScriptContext';
 import { useToast } from '../../../../../context/ToastContext';
 import { useGlobalDialog } from '../../../../../context/GlobalDialogContext';

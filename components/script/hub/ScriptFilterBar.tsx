@@ -111,6 +111,26 @@ const ScriptFilterBar: React.FC<ScriptFilterBarProps> = React.memo(({
         };
     }, [localSearch, setSearchQuery, searchQuery]);
 
+    const scriptCategoryOptions = React.useMemo(() => {
+        const base = masterOptions.filter(o => o.type === 'SCRIPT_CATEGORY' && o.isActive);
+        const filtered = filterChannel.length === 0 
+            ? base 
+            : base.filter(o => !o.parentKey || filterChannel.includes(o.parentKey));
+            
+        return filtered.map(o => {
+            if (o.parentKey) {
+                const channel = channels.find(c => c.id === o.parentKey);
+                if (channel) {
+                    return {
+                        ...o,
+                        label: `${o.label} (${channel.name})`
+                    };
+                }
+            }
+            return o;
+        }).sort((a, b) => a.sortOrder - b.sortOrder);
+    }, [masterOptions, channels, filterChannel]);
+
     const toggleFilter = (id: string, currentList: string[], setList: (l: string[]) => void) => {
         if (currentList.includes(id)) {
             setList(currentList.filter(x => x !== id));
@@ -174,7 +194,7 @@ const ScriptFilterBar: React.FC<ScriptFilterBarProps> = React.memo(({
                                     <Layers className="w-3 h-3" /> Category Filter
                                 </div>
                                 <ScriptCategoryFilter
-                                    categories={masterOptions.filter(o => o.type === 'SCRIPT_CATEGORY' && o.isActive).sort((a,b) => a.sortOrder - b.sortOrder)}
+                                    categories={scriptCategoryOptions}
                                     value={filterCategory}
                                     onChange={setFilterCategory}
                                 />

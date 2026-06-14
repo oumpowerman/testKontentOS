@@ -439,6 +439,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
                                 pillar={pillar} setPillar={setPillar}
                                 category={category} setCategory={setCategory}
                                 formatOptions={formatOptions} pillarOptions={pillarOptions} categoryOptions={categoryOptions}
+                                channelId={channelId}
                             />
 
                             {/* Tags / Hashtags Section */}

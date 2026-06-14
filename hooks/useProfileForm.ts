@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import heic2any from 'heic2any';
 import { supabase } from '../lib/supabase';
 import { useMasterData } from './useMasterData';
+import { DEFAULT_EMOJI } from '../constants/emojis';
 
 interface UseProfileFormProps {
   user: User;
@@ -26,6 +27,29 @@ export const useProfileForm = ({ user, onSave, onClose }: UseProfileFormProps) =
 
   // Line User ID
   const [lineUserId, setLineUserId] = useState(user.lineUserId || '');
+
+  // Emoji State
+  const [emoji, setEmoji] = useState(user.emoji || DEFAULT_EMOJI);
+  const [takenEmojis, setTakenEmojis] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchTakenEmojis = async () => {
+      try {
+        const { data } = await supabase.from('profiles').select('emoji');
+        if (data) {
+          // Exclude current user's own emoji
+          const emojis = data
+            .map(p => p.emoji)
+            .filter(Boolean)
+            .filter(e => e !== user.emoji);
+          setTakenEmojis(emojis);
+        }
+      } catch (err) {
+        console.error("Error fetching taken emojis:", err);
+      }
+    };
+    fetchTakenEmojis();
+  }, [user.emoji]);
 
   // Image State
   const [previewUrl, setPreviewUrl] = useState(user.avatarUrl || '');
@@ -125,7 +149,8 @@ export const useProfileForm = ({ user, onSave, onClose }: UseProfileFormProps) =
         workStatus: workStatus,
         leaveStartDate: startDate,
         leaveEndDate: endDate,
-        lineUserId: lineUserId.trim()
+        lineUserId: lineUserId.trim(),
+        emoji: emoji
     }, selectedFile || undefined);
 
     setIsSubmitting(false);
@@ -148,7 +173,9 @@ export const useProfileForm = ({ user, onSave, onClose }: UseProfileFormProps) =
       cropImageSrc, setCropImageSrc,
       positions,
       isSubmitting,
-      isConvertingImg
+      isConvertingImg,
+      emoji, setEmoji,
+      takenEmojis
     },
     fileInputRef,
     handleFileSelect,

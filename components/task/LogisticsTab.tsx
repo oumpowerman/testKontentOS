@@ -222,22 +222,28 @@ const LogisticsTab: React.FC<LogisticsTabProps> = ({ parentTask, users, currentU
 
             {/* Modals */}
             <AnimatePresence>
-                <UserPickerModal 
-                    isOpen={isAssigneeModalOpen}
-                    onClose={() => setIsAssigneeModalOpen(false)}
-                    users={users}
-                    selectedUserId={newTaskAssignee}
-                    onSelectUser={(id) => setNewTaskAssignee(id)}
-                />
+                {isAssigneeModalOpen && (
+                    <UserPickerModal 
+                        key="user-picker-modal"
+                        isOpen={isAssigneeModalOpen}
+                        onClose={() => setIsAssigneeModalOpen(false)}
+                        users={users}
+                        selectedUserId={newTaskAssignee}
+                        onSelectUser={(id) => setNewTaskAssignee(id)}
+                    />
+                )}
                 
-                <LogisticsActionModal 
-                    task={actionTask}
-                    isAdmin={isAdmin}
-                    isActionProcessing={isActionProcessing}
-                    onClose={() => setActionTask(null)}
-                    onSendToQC={handleSendToQC}
-                    onAdminQuickPass={handleAdminQuickPass}
-                />
+                {actionTask && (
+                    <LogisticsActionModal 
+                        key="logistics-action-modal"
+                        task={actionTask}
+                        isAdmin={isAdmin}
+                        isActionProcessing={isActionProcessing}
+                        onClose={() => setActionTask(null)}
+                        onSendToQC={handleSendToQC}
+                        onAdminQuickPass={handleAdminQuickPass}
+                    />
+                )}
             </AnimatePresence>
         </div>
     );
