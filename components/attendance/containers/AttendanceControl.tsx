@@ -10,9 +10,9 @@ import { useGlobalDialog } from '../../../context/GlobalDialogContext';
 import { format } from 'date-fns';
 import { Info, AlertTriangle ,HelpCircle} from 'lucide-react';
 import StatusCard from '../widget/StatusCard';
-import CheckInModal from '../CheckInModal';
+import CheckInModal from '../widget/CheckInModal';
 import LiveClock from '../widget/LiveClock';
-import AttendanceRulesModal from '../AttendanceRulesModal';
+import AttendanceRulesModal from '../widget/AttendanceRulesModal';
 
 interface AttendanceControlProps {
     user: User;

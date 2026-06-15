@@ -6,9 +6,9 @@ import {
     LogOut, CheckCircle, Zap, MapPin, CalendarHeart, Ghost, 
     TrendingDown, ArrowRightCircle, Sparkles
 } from 'lucide-react';
-import { useGameConfig } from '../../context/GameConfigContext';
-import { useMasterData } from '../../hooks/useMasterData';
-import { DEFAULT_GAME_CONFIG } from '../../lib/gameLogic';
+import { useGameConfig } from '../../../context/GameConfigContext';
+import { useMasterData } from '../../../hooks/useMasterData';
+import { DEFAULT_GAME_CONFIG } from '../../../lib/gameLogic';
 
 interface Props {
     isOpen: boolean;

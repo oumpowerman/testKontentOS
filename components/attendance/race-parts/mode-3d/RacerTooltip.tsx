@@ -1,5 +1,5 @@
 import React from 'react';
-import { RacetrackActiveUser } from './types';
+import { RacetrackActiveUser } from '../types';
 
 interface RacerTooltipProps {
     racer: RacetrackActiveUser;
@@ -27,7 +27,7 @@ export const RacerTooltip: React.FC<RacerTooltipProps> = ({ racer, safeIndex, pc
 
     return (
         <div 
-            className="absolute hidden group-hover:flex items-center gap-2.5 bg-white text-slate-800 p-2.5 rounded-xl shadow-[0_12px_30px_rgba(0,0,0,0.12)] border border-slate-100/90 pointer-events-none z-[10000] whitespace-nowrap"
+            className="absolute hidden group-hover:flex items-center gap-2.5 bg-white text-slate-800 p-2.5 rounded-xl shadow-[0_12px_30px_rgba(0,0,0,0.12)] border border-slate-100/90 pointer-events-none z-[10000] whitespace-nowrap w-max min-w-max"
             style={combinedStyle}
         >
             {racer.user.avatarUrl ? (

@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { AttendanceLog, LeaveType } from '../../types/attendance';
-import { useAttendanceHistory } from '../../hooks/attendance/useAttendanceHistory';
-import { useLeaveRequests } from '../../hooks/useLeaveRequests'; 
-import { useUserSession } from '../../context/UserSessionContext';
-import { supabase } from '../../lib/supabase';
+import { AttendanceLog, LeaveType } from '../../../types/attendance';
+import { useAttendanceHistory } from '../../../hooks/attendance/useAttendanceHistory';
+import { useLeaveRequests } from '../../../hooks/useLeaveRequests'; 
+import { useUserSession } from '../../../context/UserSessionContext';
+import { supabase } from '../../../lib/supabase';
 import { format, isSameDay, isBefore, startOfDay, eachDayOfInterval, parseISO, isFuture } from 'date-fns';
+import startOfDayFn from 'date-fns/startOfDay'; // avoid namespace clash
 import startOfMonth from 'date-fns/startOfMonth';
 import endOfMonth from 'date-fns/endOfMonth';
 import th from 'date-fns/locale/th';
@@ -14,13 +15,13 @@ import {
     ExternalLink, ChevronLeft, ChevronRight, Filter, RefreshCw, Loader2, ArrowRight,
     AlertTriangle, Clock, CheckCircle2, HelpCircle
 } from 'lucide-react';
-import { parseAttendanceMetadata, getWorkingDaysDifference, checkIsLate } from '../../lib/attendanceUtils';
-import { useMasterDataContext } from '../../context/MasterDataContext';
-import { getDirectDriveUrl } from '../../lib/imageUtils';
-import { isWorkingDay, isUserOnLeave } from '../../utils/judgeUtils';
-import LeaveRequestModal from './LeaveRequestModal'; 
+import { parseAttendanceMetadata, getWorkingDaysDifference, checkIsLate } from '../../../lib/attendanceUtils';
+import { useMasterDataContext } from '../../../context/MasterDataContext';
+import { getDirectDriveUrl } from '../../../lib/imageUtils';
+import { isWorkingDay, isUserOnLeave } from '../../../utils/judgeUtils';
+import LeaveRequestModal from '../leave-request/LeaveRequestModal'; 
 import MyRequestHistory from './MyRequestHistory'; 
-import { AnnualHoliday } from '../../types';
+import { AnnualHoliday } from '../../../types';
 
 interface AttendanceHistoryProps {
     userId: string;

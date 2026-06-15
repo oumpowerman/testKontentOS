@@ -2,16 +2,16 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, AlertTriangle, Clock, ArrowRight, CheckCircle2, CloudOff } from 'lucide-react';
-import { calculateDistance, OFFICE_COORDS, getRandomPose } from '../../lib/locationUtils';
-import { WorkLocation, LocationDef } from '../../types/attendance';
+import { calculateDistance, OFFICE_COORDS, getRandomPose } from '../../../lib/locationUtils';
+import { WorkLocation, LocationDef } from '../../../types/attendance';
 import CameraView from './CameraView';
-import { compressImage } from '../../lib/imageUtils';
-import { useGlobalDialog } from '../../context/GlobalDialogContext';
+import { compressImage } from '../../../lib/imageUtils';
+import { useGlobalDialog } from '../../../context/GlobalDialogContext';
 
 // Sub-steps components
-import LocationStep from './steps/LocationStep';
-import WorkTypeStep from './steps/WorkTypeStep';
-import PreviewStep from './steps/PreviewStep';
+import LocationStep from '../steps/LocationStep';
+import WorkTypeStep from '../steps/WorkTypeStep';
+import PreviewStep from '../steps/PreviewStep';
 
 interface CheckInModalProps {
     isOpen: boolean;

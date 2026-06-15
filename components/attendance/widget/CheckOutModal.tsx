@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, MapPin, Loader2, AlertTriangle, Send, LogOut, RefreshCw, Clock, CheckCircle2, MessageSquare } from 'lucide-react';
-import { LocationDef } from '../../types/attendance';
-import { calculateDistance } from '../../lib/locationUtils';
+import { LocationDef } from '../../../types/attendance';
+import { calculateDistance } from '../../../lib/locationUtils';
 import { format } from 'date-fns';
-import { calculateCheckOutStatus } from '../../lib/attendanceUtils';
-import { useMasterData } from '../../hooks/useMasterData';
-import { useGlobalDialog } from '../../context/GlobalDialogContext';
-import TimePickerModal from '../ui/TimePickerModal';
+import { calculateCheckOutStatus } from '../../../lib/attendanceUtils';
+import { useMasterData } from '../../../hooks/useMasterData';
+import { useGlobalDialog } from '../../../context/GlobalDialogContext';
+import TimePickerModal from '../../ui/TimePickerModal';
 
 interface CheckOutModalProps {
     isOpen: boolean;

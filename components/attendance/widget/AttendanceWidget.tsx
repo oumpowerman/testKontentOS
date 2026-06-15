@@ -1,16 +1,16 @@
 
 import React, { useState, useMemo } from 'react';
-import { useMasterData } from '../../hooks/useMasterData';
-import { useLeaveRequests } from '../../hooks/useLeaveRequests';
-import { User } from '../../types';
-import { LeaveType } from '../../types/attendance';
+import { useMasterData } from '../../../hooks/useMasterData';
+import { useLeaveRequests } from '../../../hooks/useLeaveRequests';
+import { User } from '../../../types';
+import { LeaveType } from '../../../types/attendance';
 import { isWithinInterval, startOfDay, endOfDay, isFuture, isSameDay, isValid } from 'date-fns';
 
-import AttendanceControl from './containers/AttendanceControl';
-import AttendanceStats from './containers/AttendanceStats';
-import AttendanceAlerts from './containers/AttendanceAlerts';
-import UpcomingLeaveList from './widget/UpcomingLeaveList';
-import LeaveRequestModal from './LeaveRequestModal';
+import AttendanceControl from '../containers/AttendanceControl';
+import AttendanceStats from '../containers/AttendanceStats';
+import AttendanceAlerts from '../containers/AttendanceAlerts';
+import UpcomingLeaveList from './UpcomingLeaveList';
+import LeaveRequestModal from '../leave-request/LeaveRequestModal';
 
 interface AttendanceWidgetProps {
     user: User;

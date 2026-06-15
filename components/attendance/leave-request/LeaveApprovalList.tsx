@@ -3,11 +3,11 @@ import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, XCircle, FileText, Calendar, ExternalLink, Clock, Briefcase, User, Info, ChevronDown, Filter, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
-import { LeaveRequest } from '../../types/attendance';
-import { useGlobalDialog } from '../../context/GlobalDialogContext';
+import { LeaveRequest } from '../../../types/attendance';
+import { useGlobalDialog } from '../../../context/GlobalDialogContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getWorkingDaysDifference } from '../../lib/attendanceUtils';
-import { useMasterData } from '../../hooks/useMasterData';
+import { getWorkingDaysDifference } from '../../../lib/attendanceUtils';
+import { useMasterData } from '../../../hooks/useMasterData';
 
 interface LeaveApprovalListProps {
     requests: LeaveRequest[];

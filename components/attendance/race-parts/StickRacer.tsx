@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { User } from '../../types/core';
-import { getDeterministicEmoji } from '../../constants/emojis';
+import { User } from '../../../types';
+import { getDeterministicEmoji } from '../../../constants/emojis';
 
 export interface StickRacerProps {
     user: User;
@@ -103,9 +103,8 @@ export const StickRacer: React.FC<StickRacerProps> = ({
                 }}
             >
                 <span 
-                    className="leading-none transition-all duration-300 transform group-hover:scale-115"
+                    className="leading-none transition-all duration-300 transform group-hover:scale-115 text-[24px] sm:text-[28px] md:text-[32px]"
                     style={{ 
-                        fontSize: '32px',
                         ...glowStyle,
                         imageRendering: 'pixelated'
                     }}

@@ -1,16 +1,18 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { User } from '../types';
-import AttendanceWidget from '../components/attendance/AttendanceWidget';
-import AttendanceHistory from '../components/attendance/AttendanceHistory'; 
-import AdminAttendanceDashboard from '../components/attendance/AdminAttendanceDashboard'; 
-import AdminWeeklyTimesheet from '../components/attendance/AdminWeeklyTimesheet'; 
-import LeaveApprovalList from '../components/attendance/LeaveApprovalList'; 
-import LeaveQuotaModal from '../components/attendance/LeaveQuotaModal'; 
-import AttendanceInfoCard from '../components/attendance/AttendanceInfoCard'; 
+import { 
+    AttendanceWidget, 
+    AttendanceHistory, 
+    AdminAttendanceDashboard, 
+    AdminWeeklyTimesheet, 
+    LeaveApprovalList, 
+    LeaveQuotaModal, 
+    AttendanceInfoCard, 
+    WeeklyAttendanceRace 
+} from '../components/attendance';
 import { useAttendanceStats } from '../hooks/attendance/useAttendanceStats'; 
-import { useLeaveRequests } from '../hooks/useLeaveRequests'; 
-import { WeeklyAttendanceRace } from '../components/attendance/WeeklyAttendanceRace';
+import { useLeaveRequests } from '../hooks/useLeaveRequests';
 import { Clock, Calendar, PieChart, FileCheck, TableProperties } from 'lucide-react';
 import AppBackground, { BackgroundTheme } from '../components/common/AppBackground';
 

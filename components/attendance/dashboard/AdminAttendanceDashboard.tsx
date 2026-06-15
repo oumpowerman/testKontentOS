@@ -1,21 +1,21 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { User } from '../../types';
-import { supabase } from '../../lib/supabase';
+import { User } from '../../../types';
+import { supabase } from '../../../lib/supabase';
 import { format } from 'date-fns';
 import { Download } from 'lucide-react';
-import { AttendanceLog } from '../../types/attendance';
-import { checkIsLate, getAttendanceSummary } from '../../lib/attendanceUtils';
-import { useGameConfig } from '../../context/GameConfigContext';
-import { useAnnualHolidays } from '../../hooks/useAnnualHolidays';
-import { useCalendarExceptions } from '../../hooks/useCalendarExceptions';
+import { AttendanceLog } from '../../../types/attendance';
+import { checkIsLate, getAttendanceSummary } from '../../../lib/attendanceUtils';
+import { useGameConfig } from '../../../context/GameConfigContext';
+import { useAnnualHolidays } from '../../../hooks/useAnnualHolidays';
+import { useCalendarExceptions } from '../../../hooks/useCalendarExceptions';
 import { eachDayOfInterval, startOfMonth, endOfMonth, isWeekend } from 'date-fns';
 
 // Import Separated Components
-import DashboardHeader from './dashboard/DashboardHeader';
-import DashboardStats from './dashboard/DashboardStats';
-import DashboardTable from './dashboard/DashboardTable';
-import DashboardUserDetailModal from './dashboard/DashboardUserDetailModal';
+import DashboardHeader from './DashboardHeader';
+import DashboardStats from './DashboardStats';
+import DashboardTable from './DashboardTable';
+import DashboardUserDetailModal from './DashboardUserDetailModal';
 
 interface AdminAttendanceDashboardProps {
     users: User[];
@@ -32,7 +32,7 @@ interface UserStat {
     logs: AttendanceLog[];
 }
 
-import { useMasterData } from '../../hooks/useMasterData';
+import { useMasterData } from '../../../hooks/useMasterData';
 
 const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ users }) => {
     const { masterOptions } = useMasterData();

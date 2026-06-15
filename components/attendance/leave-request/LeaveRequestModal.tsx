@@ -2,10 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { LeaveType, LeaveUsage, LeaveRequest } from '../../types/attendance';
-import { MasterOption } from '../../types';
-import LeaveTypeSelector from './leave-request/LeaveTypeSelector';
-import LeaveFormContainer from './leave-request/LeaveFormContainer';
+import { LeaveType, LeaveUsage, LeaveRequest } from '../../../types/attendance';
+import { MasterOption } from '../../../types';
+import LeaveTypeSelector from './LeaveTypeSelector';
+import LeaveFormContainer from './LeaveFormContainer';
 
 interface LeaveRequestModalProps {
     isOpen: boolean;

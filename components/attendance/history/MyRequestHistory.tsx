@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { LeaveRequest } from '../../types/attendance';
+import { LeaveRequest } from '../../../types/attendance';
 import { format, differenceInDays } from 'date-fns';
 import th from 'date-fns/locale/th';
 import { 

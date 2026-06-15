@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { History } from 'lucide-react';
-import LeaveRequestModal from '../LeaveRequestModal';
+import LeaveRequestModal from '../leave-request/LeaveRequestModal';
 import { LeaveType, LeaveUsage } from '../../../types/attendance';
 import { setHours, setMinutes, addMinutes, addHours, isWithinInterval } from 'date-fns';
 

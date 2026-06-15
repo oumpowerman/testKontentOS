@@ -2,8 +2,8 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { LeaveUsage } from '../../types/attendance';
-import LeaveQuotaWidget from '../dashboard/widgets/LeaveQuotaWidget';
+import { LeaveUsage } from '../../../types/attendance';
+import LeaveQuotaWidget from '../../dashboard/widgets/LeaveQuotaWidget';
 
 interface LeaveQuotaModalProps {
     isOpen: boolean;
