@@ -49,7 +49,7 @@ const TeamHeader: React.FC<TeamHeaderProps> = ({
     }, [isCommandHubOpen]);
 
     return (
-        <div className="relative z-[200] p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem] bg-white/40 backdrop-blur-xl border border-white/80 shadow-2xl shadow-indigo-500/10 group w-full">
+        <div className={`relative ${isCommandHubOpen ? 'z-[200]' : 'z-10'} p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem] bg-white/40 backdrop-blur-xl border border-white/80 shadow-2xl shadow-indigo-500/10 group w-full`}>
             {/* Decorative Floating Elements (Clipped inside a dedicated overlay container) */}
             <div className="absolute inset-0 rounded-[2rem] md:rounded-[2.5rem] overflow-hidden pointer-events-none">
                 <motion.div 

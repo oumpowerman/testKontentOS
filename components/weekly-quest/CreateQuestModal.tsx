@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Target, X, PlusCircle, Trash2, CheckCircle2, Sparkles, Calendar, ArrowRight, CheckSquare, Square, ChevronDown, Layers } from 'lucide-react';
 import { Channel, MasterOption, WeeklyQuest, Platform } from '../../types';
 import { CONTENT_FORMATS } from '../../constants';
@@ -232,11 +233,28 @@ const CreateQuestModal: React.FC<CreateQuestModalProps> = ({ isOpen, onClose, ch
     // Calculate Duration
     const durationDays = differenceInDays(new Date(customEndDate), new Date(customStartDate)) + 1;
 
-    if (!isOpen) return null;
+    return createPortal(
+        <AnimatePresence>
+            {isOpen && (
+                <div className="fixed inset-0 z-[8500] flex items-center justify-center p-4 font-sans">
+                    {/* Backdrop */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        onClick={onClose}
+                    />
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden border border-gray-100 scale-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+                    {/* Modal Content */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden border border-gray-100 max-h-[90vh] flex flex-col z-[8501] relative"
+                    >
                 <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 flex justify-between items-start text-white shrink-0">
                     <div>
                         <h3 className="font-bold text-xl flex items-center gap-2">
@@ -418,7 +436,7 @@ const CreateQuestModal: React.FC<CreateQuestModalProps> = ({ isOpen, onClose, ch
 
                                         {/* Count */}
                                         <div className="col-span-1">
-                                            <input type="number" min={1} className="w-full border border-gray-200 rounded-lg px-1 py-2 text-sm text-center focus:border-indigo-500 outline-none" value={item.targetCount} onChange={e => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, targetCount: Number(e.target.value) } : i))} />
+                                            <input type="number" min={1} className="w-full border border-gray-200 rounded-lg px-1 py-1 text-sm text-center focus:border-indigo-500 outline-none" value={item.targetCount} onChange={e => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, targetCount: Number(e.target.value) } : i))} />
                                         </div>
                                         
                                         {/* Delete */}
@@ -436,8 +454,11 @@ const CreateQuestModal: React.FC<CreateQuestModalProps> = ({ isOpen, onClose, ch
                         <button type="button" onClick={onClose} className="px-5 py-2.5 text-gray-600 font-bold hover:bg-gray-200 rounded-xl transition-colors">ยกเลิก</button>
                         <button type="submit" form="quest-form" className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center"><CheckCircle2 className="w-5 h-5 mr-2" /> สร้างภารกิจ</button>
                 </div>
-            </div>
-        </div>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>,
+        document.body
     );
 };
 

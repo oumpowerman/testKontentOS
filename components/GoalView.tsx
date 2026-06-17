@@ -7,6 +7,7 @@ import GoalStatsHeader from './goal/GoalStatsHeader';
 import GoalCard from './goal/GoalCard';
 import { GoalFormModal, UpdateProgressModal } from './goal/GoalActionModals';
 import SpaceBackground from './common/SpaceBackground';
+import FilterDropdown from './common/FilterDropdown';
 import { Plus, Filter, Calendar, ChevronLeft, ChevronRight, LayoutGrid, List, Target, X, CalendarDays, Rocket } from 'lucide-react';
 import { format, isSameMonth, addMonths, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, subDays, eachDayOfInterval, isSameDay, getDay, startOfWeek, endOfWeek } from 'date-fns';
 import th from 'date-fns/locale/th';
@@ -42,6 +43,40 @@ const GoalView: React.FC<GoalViewProps> = ({ channels, users, currentUser }) => 
     
     // Pagination
     const [page, setPage] = useState(1);
+
+    // Channel Options for FilterDropdown
+    const channelOptions = useMemo(() => {
+        return [
+            {
+                key: 'ALL',
+                label: 'All Sectors (ทุกช่องทาง)',
+                icon: (
+                    <div className="w-5 h-5 rounded-full bg-slate-800 border border-white/15 flex items-center justify-center text-[8px] font-black text-indigo-400 shrink-0">
+                        ALL
+                    </div>
+                )
+            },
+            ...channels.map(ch => ({
+                key: ch.id,
+                label: ch.name,
+                icon: ch.logoUrl ? (
+                    <img 
+                        src={ch.logoUrl} 
+                        alt={ch.name} 
+                        className="w-5 h-5 rounded-full object-cover shrink-0 bg-white/10" 
+                        referrerPolicy="no-referrer"
+                    />
+                ) : (
+                    <div 
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                        style={{ backgroundColor: ch.color || '#4f46e5' }}
+                    >
+                        {ch.name.substring(0, 1).toUpperCase()}
+                    </div>
+                )
+            }))
+        ];
+    }, [channels]);
 
     // --- Filtering Logic ---
     const filteredGoals = useMemo(() => {
@@ -291,25 +326,17 @@ const GoalView: React.FC<GoalViewProps> = ({ channels, users, currentUser }) => 
                     </div>
 
                     {/* Right: Channel Filter */}
-                    <div className="w-full xl:w-auto overflow-x-auto pb-1 xl:pb-0 scrollbar-hide shrink-0">
-                        <div className="flex gap-2 flex-nowrap">
-                            <button 
-                                onClick={() => setFilterChannel('ALL')}
-                                className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${filterChannel === 'ALL' ? 'bg-white text-black border-white shadow-lg' : 'bg-white/5 text-gray-500 border-white/5 hover:bg-white/10 hover:text-gray-300'}`}
-                            >
-                                All Sectors
-                            </button>
-                            {channels.map(c => (
-                                <button
-                                    key={c.id}
-                                    onClick={() => setFilterChannel(c.id)}
-                                    className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest border whitespace-nowrap transition-all flex items-center gap-1.5 sm:gap-2 ${filterChannel === c.id ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/50 shadow-sm ring-1 ring-indigo-500/30' : 'bg-white/5 text-gray-500 border-white/5 hover:bg-white/10 hover:text-gray-300'}`}
-                                >
-                                    {c.logoUrl && <img src={c.logoUrl} className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full opacity-70 bg-white/20 object-cover" />}
-                                    {c.name}
-                                </button>
-                            ))}
-                        </div>
+                    <div className="w-full xl:w-72 shrink-0">
+                        <FilterDropdown
+                            label="All Sectors"
+                            options={channelOptions}
+                            value={filterChannel}
+                            onChange={(val) => setFilterChannel(val)}
+                            showAllOption={false}
+                            clearable={false}
+                            theme="dark"
+                            placeholder="เลือกช่องทาง"
+                        />
                     </div>
                 </div>
 

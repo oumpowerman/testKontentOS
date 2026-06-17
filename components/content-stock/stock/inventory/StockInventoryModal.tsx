@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, LayoutGrid, BarChart3, PackageSearch, Loader2, RotateCw, Landmark } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { Task, MasterOption, Channel } from '../../../../types';
 import InventorySummaryTable from './InventorySummaryTable';
 import InventoryDashboard from './InventoryDashboard';
+import FilterDropdown from '../../../common/FilterDropdown';
 
 interface StockInventoryModalProps {
     isOpen: boolean;
@@ -19,6 +21,37 @@ const StockInventoryModal: React.FC<StockInventoryModalProps> = ({ isOpen, onClo
     const [selectedChannel, setSelectedChannel] = useState<string>('ALL');
     const [stockTasks, setStockTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+
+    const channelOptions = [
+        {
+            key: 'ALL',
+            label: 'ทุกช่องทาง',
+            icon: (
+                <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[9px] font-black text-white shrink-0">
+                    ALL
+                </div>
+            )
+        },
+        ...channels.map(ch => ({
+            key: ch.id,
+            label: ch.name,
+            icon: ch.logoUrl ? (
+                <img 
+                    src={ch.logoUrl} 
+                    alt={ch.name} 
+                    className="w-5 h-5 rounded-full object-cover shrink-0" 
+                    referrerPolicy="no-referrer"
+                />
+            ) : (
+                <div 
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                    style={{ backgroundColor: ch.color || '#4f46e5' }}
+                >
+                    {ch.name.substring(0, 1).toUpperCase()}
+                </div>
+            )
+        }))
+    ];
 
     useEffect(() => {
         if (isOpen) {
@@ -64,8 +97,8 @@ const StockInventoryModal: React.FC<StockInventoryModalProps> = ({ isOpen, onClo
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+    return createPortal(
+        <div className="fixed inset-0 z-[9000] flex items-center justify-center p-4 sm:p-6 font-sans">
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -94,17 +127,16 @@ const StockInventoryModal: React.FC<StockInventoryModalProps> = ({ isOpen, onClo
 
                     <div className="flex items-center gap-3">
                         {/* Channel Filter */}
-                        <div className="flex items-center bg-gray-100 p-1 rounded-2xl border border-gray-200">
-                            <select 
+                        <div className="w-56">
+                            <FilterDropdown
+                                label="ทุกช่องทาง"
+                                options={channelOptions}
                                 value={selectedChannel}
-                                onChange={(e) => setSelectedChannel(e.target.value)}
-                                className="bg-transparent text-[10px] font-bold text-gray-600 px-3 py-1.5 outline-none cursor-pointer uppercase tracking-widest"
-                            >
-                                <option value="ALL">ทุกช่อง (All Channels)</option>
-                                {channels.map(ch => (
-                                    <option key={ch.id} value={ch.id}>{ch.name}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => setSelectedChannel(val)}
+                                showAllOption={false}
+                                clearable={false}
+                                placeholder="เลือกช่องทาง"
+                            />
                         </div>
 
                         {/* Refresh Button */}
@@ -161,9 +193,9 @@ const StockInventoryModal: React.FC<StockInventoryModalProps> = ({ isOpen, onClo
                                 transition={{ duration: 0.2 }}
                             >
                                 {activeTab === 'STATS' ? (
-                                    <InventoryDashboard tasks={stockTasks} masterOptions={masterOptions} />
+                                    <InventoryDashboard tasks={stockTasks} masterOptions={masterOptions} selectedChannel={selectedChannel} />
                                 ) : (
-                                    <InventorySummaryTable tasks={stockTasks} masterOptions={masterOptions} />
+                                    <InventorySummaryTable tasks={stockTasks} masterOptions={masterOptions} selectedChannel={selectedChannel} />
                                 )}
                             </motion.div>
                         </AnimatePresence>
@@ -175,7 +207,8 @@ const StockInventoryModal: React.FC<StockInventoryModalProps> = ({ isOpen, onClo
                     <span>Last Updated: {new Date().toLocaleTimeString()}</span>
                 </div>
             </motion.div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

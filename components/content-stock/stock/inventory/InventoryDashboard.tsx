@@ -8,13 +8,20 @@ import { Package, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
 interface InventoryDashboardProps {
     tasks: Task[];
     masterOptions: MasterOption[];
+    selectedChannel?: string;
 }
 
 const COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444'];
 
-const InventoryDashboard: React.FC<InventoryDashboardProps> = ({ tasks, masterOptions }) => {
-    const pillarOptions = masterOptions.filter(o => o.type === 'PILLAR');
-    const categoryOptions = masterOptions.filter(o => o.type === 'CATEGORY');
+const InventoryDashboard: React.FC<InventoryDashboardProps> = ({ tasks, masterOptions, selectedChannel = 'ALL' }) => {
+    const pillarOptions = masterOptions.filter(o => 
+        o.type === 'PILLAR' && 
+        (selectedChannel === 'ALL' || !o.parentKey || o.parentKey === selectedChannel)
+    );
+    const categoryOptions = masterOptions.filter(o => 
+        o.type === 'CATEGORY' && 
+        (selectedChannel === 'ALL' || !o.parentKey || o.parentKey === selectedChannel)
+    );
 
     // Data for Pillar Bar Chart
     const pillarData = pillarOptions.map(p => ({

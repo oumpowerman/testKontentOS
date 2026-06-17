@@ -18,6 +18,7 @@ type FilterDropdownProps = {
     showAllOption?: boolean;
     clearable?: boolean;
     disabled?: boolean;
+    theme?: 'light' | 'dark';
 } & (
     | { multiSelect?: false; value: string; onChange: (value: string) => void }
     | { multiSelect: true; value: string[]; onChange: (value: string[]) => void }
@@ -33,7 +34,8 @@ const FilterDropdown: React.FC<FilterDropdownProps> = (props) => {
         showAllOption = true,
         clearable = true,
         multiSelect = false,
-        disabled = false
+        disabled = false,
+        theme = 'light'
     } = props;
 
     const value = props.value;
@@ -44,8 +46,17 @@ const FilterDropdown: React.FC<FilterDropdownProps> = (props) => {
     const dropdownRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    const isDark = theme === 'dark';
     const isMulti = Array.isArray(value);
     const isActive = isMulti ? value.length > 0 : value !== 'ALL';
+
+    const defaultActiveColor = isDark 
+        ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.25)] ring-1 ring-indigo-500/30'
+        : 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-[0_0_15px_rgba(79,70,229,0.15)]';
+
+    const resolvedActiveColor = activeColorClass !== 'bg-indigo-50 border-indigo-200 text-indigo-700' 
+        ? activeColorClass 
+        : defaultActiveColor;
 
     const selectedOptions = isMulti 
         ? options.filter(opt => (value as string[]).includes(opt.key))
@@ -117,15 +128,20 @@ const FilterDropdown: React.FC<FilterDropdownProps> = (props) => {
                 title={getDisplayLabel()}
                 className={`
                     flex items-center justify-between px-5 py-3.5 border rounded-2xl text-sm font-bold transition-all active:scale-95 w-full
-                    ${disabled ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed pointer-events-none' : 
-                      isActive 
-                        ? `${activeColorClass} shadow-[0_0_15px_rgba(79,70,229,0.15)] border-indigo-300 ring-2 ring-indigo-500/10` 
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 shadow-sm'}
+                    ${disabled 
+                        ? isDark 
+                            ? 'bg-slate-950/20 border-white/5 text-slate-700 pointer-events-none' 
+                            : 'bg-slate-50 border-slate-100 text-slate-300 pointer-events-none cursor-not-allowed' 
+                        : isActive 
+                            ? resolvedActiveColor 
+                            : isDark 
+                                ? 'bg-slate-900/60 border-white/10 text-gray-300 hover:bg-slate-800/60 hover:border-white/20 shadow-lg' 
+                                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 shadow-sm'}
                 `}
             >
                 <div className="flex items-center gap-3 truncate">
                     {icon && (
-                        <span className={`transition-colors ${isActive ? 'text-indigo-600' : 'text-slate-400'}`}>
+                        <span className={`transition-colors ${isActive ? (isDark ? 'text-indigo-400' : 'text-indigo-600') : (isDark ? 'text-slate-500' : 'text-slate-400')}`}>
                             {icon}
                         </span>
                     )}
@@ -137,12 +153,12 @@ const FilterDropdown: React.FC<FilterDropdownProps> = (props) => {
                     {isActive && clearable && (
                         <div 
                             onClick={(e) => { e.stopPropagation(); handleClearAll(); }}
-                            className="p-1 hover:bg-black/5 rounded-full transition-colors"
+                            className={`p-1 rounded-full transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
                         >
-                            <X className="w-3 h-3 text-slate-400" />
+                            <X className={`w-3 h-3 ${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-slate-400 hover:text-slate-600'}`} />
                         </div>
                     )}
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-500 ${isOpen ? 'rotate-180' : ''} ${isActive ? 'text-indigo-500' : 'text-slate-400'}`} />
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-500 ${isOpen ? 'rotate-180' : ''} ${isActive ? (isDark ? 'text-indigo-400' : 'text-indigo-500') : (isDark ? 'text-gray-500' : 'text-slate-400')}`} />
                 </div>
             </button>
 
@@ -152,22 +168,32 @@ const FilterDropdown: React.FC<FilterDropdownProps> = (props) => {
                         initial={{ opacity: 0, y: 10, scale: 0.95, filter: 'blur(10px)' }}
                         animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
                         exit={{ opacity: 0, y: 10, scale: 0.95, filter: 'blur(10px)' }}
-                        className="absolute top-full left-0 right-0 sm:right-auto mt-3 w-auto sm:w-72 bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 z-50 p-3 overflow-hidden origin-top-left"
+                        className={`absolute top-full left-0 right-0 sm:right-auto mt-3 w-auto sm:w-72 backdrop-blur-xl rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-50 p-3 overflow-hidden origin-top-left border ${
+                            isDark 
+                                ? 'bg-slate-950/95 border-white/10 text-white' 
+                                : 'bg-white/95 border-slate-100 text-slate-600'
+                        }`}
                     >
                         {/* Search Bar */}
                         <div className="relative mb-3 group">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                            <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${isDark ? 'text-gray-500 group-focus-within:text-indigo-400' : 'text-slate-400 group-focus-within:text-indigo-500'}`} />
                             <input 
                                 ref={inputRef}
                                 type="text"
                                 placeholder="ค้นหา..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-11 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-indigo-500/10 transition-all placeholder:text-slate-400"
+                                className={`w-full pl-11 pr-4 py-3 rounded-2xl text-sm font-bold outline-none transition-all ${
+                                    isDark 
+                                        ? 'bg-black/40 text-white placeholder:text-gray-600 focus:ring-2 focus:ring-indigo-500/20' 
+                                        : 'bg-slate-50 text-slate-600 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/10'
+                                }`}
                             />
                         </div>
 
-                        <div className="text-[12px] font-medium text-slate-400 px-4 py-2 mb-1 uppercase tracking-widest bg-slate-50/50 rounded-xl flex justify-between items-center">
+                        <div className={`text-[12px] font-medium px-4 py-2 mb-1 uppercase tracking-widest rounded-xl flex justify-between items-center ${
+                            isDark ? 'bg-black/20 text-gray-400' : 'bg-slate-50/50 text-slate-400'
+                        }`}>
                             <span>เลือก {label}</span>
                             <span className="text-[10px] opacity-60">{filteredOptions.length} รายการ</span>
                         </div>
@@ -176,13 +202,21 @@ const FilterDropdown: React.FC<FilterDropdownProps> = (props) => {
                             <div className="flex gap-1 mb-2 px-1">
                                 <button 
                                     onClick={handleSelectAll}
-                                    className="flex-1 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors uppercase tracking-widest"
+                                    className={`flex-1 py-2 text-[10px] font-bold rounded-xl transition-colors uppercase tracking-widest ${
+                                        isDark 
+                                            ? 'text-indigo-400 bg-indigo-950/50 hover:bg-indigo-900/50' 
+                                            : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100'
+                                    }`}
                                 >
                                     เลือกทั้งหมด
                                 </button>
                                 <button 
                                     onClick={handleClearAll}
-                                    className="flex-1 py-2 text-[9px] font-bold text-slate-400 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors uppercase tracking-widest"
+                                    className={`flex-1 py-2 text-[9px] font-bold rounded-xl transition-colors uppercase tracking-widest ${
+                                        isDark 
+                                            ? 'text-gray-400 bg-white/5 hover:bg-white/10' 
+                                            : 'text-slate-400 bg-slate-50 hover:bg-slate-100'
+                                    }`}
                                 >
                                     ล้างทั้งหมด
                                 </button>
@@ -194,10 +228,16 @@ const FilterDropdown: React.FC<FilterDropdownProps> = (props) => {
                                 <button
                                     type="button"
                                     onClick={() => { (onChange as (v: string) => void)('ALL'); setIsOpen(false); }}
-                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all group ${value === 'ALL' ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-200' : 'hover:bg-slate-50 text-slate-500'}`}
+                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all group ${
+                                        value === 'ALL' 
+                                            ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-900/20' 
+                                            : isDark 
+                                                ? 'hover:bg-white/5 text-gray-400' 
+                                                : 'hover:bg-slate-50 text-slate-500'
+                                    }`}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-2 h-2 rounded-full ${value === 'ALL' ? 'bg-white' : 'bg-slate-300 group-hover:bg-indigo-400'} transition-colors`} />
+                                        <div className={`w-2 h-2 rounded-full ${value === 'ALL' ? 'bg-white' : isDark ? 'bg-gray-800 group-hover:bg-indigo-400' : 'bg-slate-300 group-hover:bg-indigo-400'} transition-colors`} />
                                         <span className="text-sm">ทั้งหมด</span>
                                     </div>
                                     {value === 'ALL' && <Check className="w-4 h-4" />}
@@ -214,15 +254,21 @@ const FilterDropdown: React.FC<FilterDropdownProps> = (props) => {
                                         type="button"
                                         key={opt.key}
                                         onClick={() => handleSelect(opt.key)}
-                                        className={`w-full flex items-start justify-between px-4 py-3 rounded-xl transition-all text-left group ${isSelected ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-200' : 'hover:bg-slate-50 text-slate-600'}`}
+                                        className={`w-full flex items-start justify-between px-4 py-3 rounded-xl transition-all text-left group ${
+                                            isSelected 
+                                                ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-900/20' 
+                                                : isDark 
+                                                    ? 'hover:bg-white/5 text-gray-300' 
+                                                    : 'hover:bg-slate-50 text-slate-600'
+                                        }`}
                                     >
                                         <div className="flex items-start gap-3">
                                             {opt.icon ? (
-                                                <span className={`mt-0.5 ${isSelected ? 'text-white' : 'text-slate-400 group-hover:text-indigo-500'}`}>
+                                                <span className={`mt-0.5 ${isSelected ? 'text-white' : isDark ? 'text-gray-500 group-hover:text-indigo-400' : 'text-slate-400 group-hover:text-indigo-500'}`}>
                                                     {opt.icon}
                                                 </span>
                                             ) : (
-                                                <div className={`w-2 h-2 rounded-full mt-2 ${isSelected ? 'bg-white' : 'bg-slate-300 group-hover:bg-indigo-400'} transition-colors`} />
+                                                <div className={`w-2 h-2 rounded-full mt-2 ${isSelected ? 'bg-white' : isDark ? 'bg-gray-800 group-hover:bg-indigo-400' : 'bg-slate-300 group-hover:bg-indigo-400'} transition-colors`} />
                                             )}
                                             <span className="text-sm leading-tight tracking-tight">{opt.label}</span>
                                         </div>
@@ -233,10 +279,10 @@ const FilterDropdown: React.FC<FilterDropdownProps> = (props) => {
 
                             {filteredOptions.length === 0 && (
                                 <div className="py-8 text-center">
-                                    <div className="text-slate-300 mb-2">
+                                    <div className={`${isDark ? 'text-gray-800' : 'text-slate-300'} mb-2`}>
                                         <Search className="w-8 h-8 mx-auto opacity-20" />
                                     </div>
-                                    <p className="text-xs text-slate-400 font-bold">ไม่พบข้อมูลที่ค้นหา</p>
+                                    <p className={`text-xs font-bold ${isDark ? 'text-gray-600' : 'text-slate-400'}`}>ไม่พบข้อมูลที่ค้นหา</p>
                                 </div>
                             )}
                         </div>

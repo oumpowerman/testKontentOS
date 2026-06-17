@@ -6,11 +6,18 @@ import { Landmark, Tags, Layers } from 'lucide-react';
 interface InventorySummaryTableProps {
     tasks: Task[];
     masterOptions: MasterOption[];
+    selectedChannel?: string;
 }
 
-const InventorySummaryTable: React.FC<InventorySummaryTableProps> = ({ tasks, masterOptions }) => {
-    const pillarOptions = masterOptions.filter(o => o.type === 'PILLAR');
-    const categoryOptions = masterOptions.filter(o => o.type === 'CATEGORY');
+const InventorySummaryTable: React.FC<InventorySummaryTableProps> = ({ tasks, masterOptions, selectedChannel = 'ALL' }) => {
+    const pillarOptions = masterOptions.filter(o => 
+        o.type === 'PILLAR' && 
+        (selectedChannel === 'ALL' || !o.parentKey || o.parentKey === selectedChannel)
+    );
+    const categoryOptions = masterOptions.filter(o => 
+        o.type === 'CATEGORY' && 
+        (selectedChannel === 'ALL' || !o.parentKey || o.parentKey === selectedChannel)
+    );
 
     // Grouping logic
     const pillarCounts = pillarOptions.map(p => ({

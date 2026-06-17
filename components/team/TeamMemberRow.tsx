@@ -292,7 +292,7 @@ const TeamMemberRow: React.FC<TeamMemberRowProps> = ({
     const spacerClass = isFocused ? 'h-11 mb-1.5' : 'h-8 mb-1';
 
     return (
-        <div className={`grid grid-cols-8 group transition-all duration-500 relative z-60 hover:z-[170] ${isMe ? 'bg-indigo-50/10' : 'hover:bg-gray-50/30'}`}>
+        <div className={`grid grid-cols-8 group transition-all duration-500 relative z-60 hover:z-[300] ${isMe ? 'bg-indigo-50/10' : 'hover:bg-gray-50/30'}`}>
             {/* Vertical Status Rail (Mood & Workload Gain) */}
             <div className="absolute left-0 top-0 bottom-0 w-2 flex flex-col z-30 border-r border-gray-100/50">
                 {/* Workload Gain Meter (Segmented) */}

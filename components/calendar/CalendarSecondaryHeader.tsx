@@ -56,7 +56,7 @@ const CalendarSecondaryHeader: React.FC<CalendarSecondaryHeaderProps> = ({
                         opacity: { duration: 0.25, ease: 'easeInOut' }
                     }}
                     className={`
-                        z-30 overflow-hidden
+                        z-30 ${isViewMenuOpen ? 'overflow-visible' : 'overflow-hidden'}
                         ${isExpanded 
                             ? 'bg-transparent border-t border-slate-100/60' 
                             : 'bg-white/80 backdrop-blur-2xl border-x border-b border-white/60 rounded-b-[2.5rem] -mt-1'

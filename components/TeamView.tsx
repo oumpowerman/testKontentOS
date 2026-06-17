@@ -285,7 +285,7 @@ const TeamView: React.FC<TeamViewProps> = ({
       filter: 'blur(10px)'
     }),
     center: {
-      zIndex: 1,
+      zIndex: 20,
       x: 0,
       opacity: 1,
       scale: 1,
@@ -336,7 +336,7 @@ const TeamView: React.FC<TeamViewProps> = ({
               opacity: { duration: 0.3 },
               filter: { duration: 0.3 }
             }}
-            className="space-y-6"
+            className="space-y-6 relative z-20"
           >
             {viewMode === 'TEAM' ? (
               <>
