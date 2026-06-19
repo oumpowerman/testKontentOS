@@ -134,7 +134,7 @@ export const RaceTrackPodium: React.FC<RaceTrackPodiumProps> = ({
                                             <div className="flex items-center gap-2">
                                                 {/* Rank Indicator */}
                                                 <div className="relative">
-                                                    <div className={`w-5.5 h-5.5 flex items-center justify-center rounded-lg text-[10px] font-mono leading-none ${bgRank}`}>
+                                                    <div className={`w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-mono leading-none ${bgRank}`}>
                                                         {index + 1}
                                                     </div>
                                                     {medalEmoji && !isWinner && (

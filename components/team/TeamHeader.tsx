@@ -238,7 +238,7 @@ const TeamHeader: React.FC<TeamHeaderProps> = ({
                                     >
                                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/wallet:translate-x-full transition-transform duration-1000" />
                                         <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center mr-3 backdrop-blur-md border border-white/10">
-                                            <Wallet className="w-4.5 h-4.5 text-yellow-300 drop-shadow-sm" />
+                                            <Wallet className="w-5 h-5 text-yellow-300 drop-shadow-sm" />
                                         </div>
                                         <div>
                                             <p className="text-[10px] text-indigo-100 font-black uppercase tracking-widest leading-none mb-1">My Points</p>
@@ -305,7 +305,7 @@ const TeamHeader: React.FC<TeamHeaderProps> = ({
                                                         className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-gradient-to-r hover:from-red-50 hover:to-orange-50 border border-transparent hover:border-red-100 text-left transition-all group w-full"
                                                     >
                                                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-400 to-orange-500 text-white flex items-center justify-center shadow-sm shrink-0 group-hover:scale-110 transition-transform">
-                                                            <AlertTriangle className="w-4.5 h-4.5 text-white" />
+                                                            <AlertTriangle className="w-5 h-5 text-white" />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-xs font-black text-gray-800">ฟ้อง/แจ้งเหตุ</p>
@@ -323,7 +323,7 @@ const TeamHeader: React.FC<TeamHeaderProps> = ({
                                                     className={`flex items-center gap-3 p-2.5 rounded-2xl text-left transition-all group border border-transparent w-full ${isShopOpen ? 'bg-indigo-50 border-indigo-100' : 'hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:border-indigo-100'}`}
                                                 >
                                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm shrink-0 group-hover:scale-110 transition-transform ${isShopOpen ? 'bg-indigo-600 text-white' : 'bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white'}`}>
-                                                        <ShoppingBag className="w-4.5 h-4.5" />
+                                                        <ShoppingBag className="w-5 h-5" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-xs font-black text-gray-800">{isShopOpen ? 'ปิดร้านค้า' : 'ร้านค้าพอยต์'}</p>

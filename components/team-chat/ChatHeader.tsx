@@ -53,7 +53,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
                         className={`lg:hidden p-2 rounded-xl border transition-all flex items-center justify-center relative ${isSidebarOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
                         title="ดูสมาชิกและวิธีใช้งาน"
                     >
-                        <Users className="w-4.5 h-4.5" />
+                        <Users className="w-5 h-5" />
                         <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>

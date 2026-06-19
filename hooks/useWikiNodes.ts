@@ -146,7 +146,7 @@ export const useWikiNodes = (currentUser?: User) => {
         }
     };
 
-    const generateWikiContentWithAI = async (prompt: string, type: 'OUTLINE' | 'SOP' | 'FULL') => {
+    const generateWikiContentWithAI = async (prompt: string, type: 'OUTLINE' | 'SOP' | 'FULL'): Promise<string | null> => {
         try {
             const apiKey = process.env.GEMINI_API_KEY;
             if (!apiKey) {
@@ -173,7 +173,7 @@ export const useWikiNodes = (currentUser?: User) => {
                 }
             });
 
-            return response.text;
+            return response.text || null;
 
         } catch (err: any) {
             console.error("AI Error:", err);

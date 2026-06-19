@@ -37,14 +37,14 @@ const NexusNavigation: React.FC<NexusNavigationProps> = ({
                         className="p-2.5 bg-white/60 backdrop-blur-md border border-white/80 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm active:scale-95"
                         title="Settings"
                     >
-                        <Settings className="w-4.5 h-4.5" />
+                        <Settings className="w-5 h-5" />
                     </button>
                     <button 
                         onClick={onOpenHelp}
                         className="p-2.5 bg-white/60 backdrop-blur-md border border-white/80 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm active:scale-95"
                         title="Help"
                     >
-                        <HelpCircle className="w-4.5 h-4.5" />
+                        <HelpCircle className="w-5 h-5" />
                     </button>
                 </div>
             </div>

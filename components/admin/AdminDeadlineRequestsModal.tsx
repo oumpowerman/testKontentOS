@@ -4,6 +4,7 @@ import { DeadlineRequest, User, Task } from '../../types';
 import { useDeadlineRequests } from '../../hooks/useDeadlineRequests';
 import { useToast } from '../../context/ToastContext';
 import { useNotificationContext } from '../../context/NotificationContext';
+import { useTaskContext } from '../../context/TaskContext';
 
 // Import our modular sub-components
 import DeadlineRequestsHeader from './deadline/DeadlineRequestsHeader';
@@ -35,7 +36,8 @@ const AdminDeadlineRequestsModal: React.FC<AdminDeadlineRequestsModalProps> = ({
     metrics: initialMetrics
 }) => {
     const { resolveRequest } = useDeadlineRequests(currentUser);
-    const { deadlineRequests: requests, isLoading: isFetching } = useNotificationContext();
+    const { deadlineRequests: requests, isLoading: isFetching, refreshData } = useNotificationContext();
+    const { fetchTasks } = useTaskContext();
     const { showToast } = useToast();
     
     // Command Center Interior States & Optimistic Store
@@ -182,6 +184,11 @@ const AdminDeadlineRequestsModal: React.FC<AdminDeadlineRequestsModalProps> = ({
         
         if (success) {
             showToast(isApproved ? 'อนุมัติการยืดเวลาสำเร็จ' : 'ปฏิเสธคำขอสำเร็จ', 'success');
+            // Parallel execution to sync tasks and notifications without lag
+            Promise.all([
+                fetchTasks(),
+                refreshData()
+            ]).catch(err => console.error("Error syncing after resolve:", err));
         } else {
             // Rollback on rejection/failure from service
             setLocalRequests(previousLocal);
@@ -219,6 +226,11 @@ const AdminDeadlineRequestsModal: React.FC<AdminDeadlineRequestsModalProps> = ({
 
         if (success) {
             showToast(`ปฏิเสธคำขอเดดไลน์พร้อมส่งคำฟีดแบ็ก: ${feedback}`, 'warning');
+            // Parallel execution to sync tasks and notifications without lag
+            Promise.all([
+                fetchTasks(),
+                refreshData()
+            ]).catch(err => console.error("Error syncing after reject:", err));
         } else {
             // Rollback
             setLocalRequests(previousLocal);
@@ -284,6 +296,11 @@ const AdminDeadlineRequestsModal: React.FC<AdminDeadlineRequestsModalProps> = ({
             showToast(isApproved 
                 ? `อนุมัติคำขอเลื่อนเป็นกลุ่มสำเร็จ ${successCount} รายการ` 
                 : `ปฏิเสธคำขอเป็นกลุ่มเสร็จสิ้น ${successCount} รายการ`, 'success');
+            // Parallel execution to sync tasks and notifications without lag
+            Promise.all([
+                fetchTasks(),
+                refreshData()
+            ]).catch(err => console.error("Error syncing after batch resolve:", err));
         }
         if (failCount > 0) {
             setLocalRequests(previousLocal);

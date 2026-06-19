@@ -273,7 +273,7 @@ const RoadmapTaskModal: React.FC<RoadmapTaskModalProps> = ({
                       key={hex}
                       type="button"
                       onClick={() => setSelectedColor(hex)}
-                      className="w-5.5 h-5.5 rounded-full border-2 transition-all hover:scale-110 active:scale-95 flex items-center justify-center relative shadow-sm"
+                      className="w-6 h-6 rounded-full border-2 transition-all hover:scale-110 active:scale-95 flex items-center justify-center relative shadow-sm"
                       style={{ 
                         backgroundColor: hex, 
                         borderColor: selectedColor === hex ? '#4F46E5' : 'transparent' 

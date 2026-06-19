@@ -102,7 +102,7 @@ const TribunalReviewWidget: React.FC<TribunalReviewWidgetProps> = ({ currentUser
                             ? 'bg-red-500 text-white border border-red-400 shadow-lg shadow-red-500/40 animate-bounce' 
                             : 'bg-slate-50 text-slate-400 border border-slate-100/50'
                     }`}>
-                        <Scale className={`w-4.5 h-4.5`} />
+                        <Scale className={`w-5 h-5`} />
                     </span>
                     <div className="text-left">
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -191,11 +191,11 @@ const TribunalReviewWidget: React.FC<TribunalReviewWidgetProps> = ({ currentUser
                                                 <img 
                                                     src={matchedTarget.avatarUrl} 
                                                     alt={matchedTarget.name} 
-                                                    className="w-4.5 h-4.5 rounded-full object-cover ring-2 ring-red-200 shrink-0" 
+                                                    className="w-5 h-5 rounded-full object-cover ring-2 ring-red-200 shrink-0" 
                                                     referrerPolicy="no-referrer"
                                                 />
                                             ) : (
-                                                <div className="w-4.5 h-4.5 rounded-full bg-red-100 text-red-700 font-bold text-[8px] flex items-center justify-center shrink-0 ring-2 ring-red-200">
+                                                <div className="w-5 h-5 rounded-full bg-red-100 text-red-700 font-bold text-[8px] flex items-center justify-center shrink-0 ring-2 ring-red-200">
                                                     {matchedTarget?.name?.slice(0, 1) || 'จ'}
                                                 </div>
                                             )}
@@ -211,9 +211,11 @@ const TribunalReviewWidget: React.FC<TribunalReviewWidgetProps> = ({ currentUser
                                     </div>
 
                                     {/* Reporter & Metadata */}
-                                    <div className="flex items-center justify-between text-[8px] text-slate-500 font-bold pt-0.5">
-                                        <span className="text-red-800">ผู้ยื่นร้อง: {rep.is_anonymous ? '🤫 นิรนามกระซิบข่าว' : '🔍 ยื่นร้องโดยเปิดเผย'}</span>
-                                        <span>
+                                    <div className="flex items-center justify-between text-[8px] text-slate-500 font-bold pt-0.5 gap-2">
+                                        <span className="text-red-800 truncate max-w-[150px]">
+                                            ผู้ยื่นร้อง: {rep.is_anonymous ? '🤫 นิรนามกระซิบข่าว' : `🔍 ${users.find(u => u.id === rep.reporter_id)?.name || 'พนักงาน'}`}
+                                        </span>
+                                        <span className="shrink-0">
                                             {new Date(rep.created_at).toLocaleDateString('th-TH', { 
                                                 day: 'numeric', 
                                                 month: 'short',

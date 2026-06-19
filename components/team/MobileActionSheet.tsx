@@ -75,7 +75,7 @@ export const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
                                 className="p-2.5 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-full transition-colors border border-gray-200/40"
                                 id="mobile-action-sheet-close-btn"
                             >
-                                <X className="w-4.5 h-4.5" />
+                                <X className="w-5 h-5" />
                             </motion.button>
                         </div>
 

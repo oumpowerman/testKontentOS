@@ -221,7 +221,7 @@ export const StockChannelStack: React.FC<StockChannelStackProps> = ({
                   {/* Miniature Physical Filing Tab protruding from the folder */}
                   {displayMode === 'classic' && (
                     <div 
-                      className={`absolute -top-1.5 left-4.5 px-2 py-0.25 rounded-t-md text-[7px] font-bold uppercase tracking-wider text-white shadow-sm flex items-center justify-center h-3 bg-gradient-to-r from-indigo-500 to-indigo-600 ${bgClass}`}
+                      className={`absolute -top-1.5 left-4 px-2 py-0.25 rounded-t-md text-[7px] font-bold uppercase tracking-wider text-white shadow-sm flex items-center justify-center h-3 bg-gradient-to-r from-indigo-500 to-indigo-600 ${bgClass}`}
                       style={{ fontSize: '7px', zIndex: 10 }}
                     >
                       {/* Show checking label if selected, otherwise print dynamic serials */}

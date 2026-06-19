@@ -48,7 +48,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = (props) => {
 
     const isDark = theme === 'dark';
     const isMulti = Array.isArray(value);
-    const isActive = isMulti ? value.length > 0 : value !== 'ALL';
+    const isActive = isMulti ? value.length > 0 : (value !== 'ALL' && value !== '');
 
     const defaultActiveColor = isDark 
         ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.25)] ring-1 ring-indigo-500/30'

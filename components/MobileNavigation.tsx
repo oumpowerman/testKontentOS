@@ -416,7 +416,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                                                             `}
                                                         >
                                                             <div className={`p-1.5 min-[360px]:p-2 rounded-xl mb-1 min-[360px]:mb-1.5 transition-colors ${isActive ? 'bg-white text-indigo-600 shadow-sm' : `${color} bg-opacity-10`}`}>
-                                                                <Icon className={`w-4.5 h-4.5 min-[360px]:w-5 min-[360px]:h-5 ${isActive ? 'text-indigo-600' : color.replace('bg-', 'text-').replace('/10', '')}`} />
+                                                                <Icon className={`w-5 h-5 min-[360px]:w-5 min-[360px]:h-5 ${isActive ? 'text-indigo-600' : color.replace('bg-', 'text-').replace('/10', '')}`} />
                                                             </div>
                                                             <span className={`text-[9px] min-[360px]:text-[10px] font-bold text-center leading-tight truncate w-full ${isActive ? isDarkTheme ? 'text-white' : 'text-indigo-700' : isDarkTheme ? 'text-slate-400' : 'text-gray-500'}`}>{item.label}</span>
                                                             

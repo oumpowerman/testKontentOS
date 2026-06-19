@@ -28,7 +28,7 @@ const DutyRosterWidget: React.FC<DutyRosterWidgetProps> = ({ users }) => {
                         return (
                             <div key={duty.id} className={`flex items-center p-3 rounded-xl border transition-all ${duty.isDone ? 'bg-green-50 border-green-200' : 'bg-white border-gray-100 hover:border-indigo-200'}`}>
                                 <div className="mr-3">
-                                    {assignee?.avatarUrl ? <img src={assignee.avatarUrl} className="w-8 h-8 rounded-full" /> : <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">{assignee?.name?.charAt(0) || '?'}</div>}
+                                    {assignee?.avatarUrl ? <img src={assignee.avatarUrl} className="w-8 h-8 rounded-full object-cover" referrerPolicy="no-referrer" /> : <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">{assignee?.name?.charAt(0) || '?'}</div>}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className={`text-sm font-bold truncate ${duty.isDone ? 'text-green-700 line-through' : 'text-gray-800'}`}>{duty.title}</p>

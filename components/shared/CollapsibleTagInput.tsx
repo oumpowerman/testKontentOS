@@ -99,7 +99,7 @@ const CollapsibleTagInput = forwardRef<CollapsibleTagInputRef, CollapsibleTagInp
             <button
                 type="button"
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between p-4.5 sm:p-5 outline-none hover:bg-bold/[0.01] transition-colors relative"
+                className="w-full flex items-center justify-between p-4 sm:p-5 outline-none hover:bg-bold/[0.01] transition-colors relative"
                 id="tag-input-collapsible-trigger"
             >
                 <div className="flex items-center gap-3 text-slate-700">

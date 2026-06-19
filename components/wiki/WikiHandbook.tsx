@@ -242,13 +242,13 @@ const WikiHandbook: React.FC<WikiHandbookProps> = ({ currentUser }) => {
                                             onClick={() => setViewMode('GRID')}
                                             className={`p-2.5 rounded-xl transition-all duration-300 ${viewMode === 'GRID' ? 'bg-white shadow-[0_4px_12px_-2px_rgba(0,0,0,0.1)] text-indigo-500 scale-105' : 'text-slate-400 hover:text-slate-600'}`}
                                         >
-                                            <LayoutGrid className="w-4.5 h-4.5" />
+                                            <LayoutGrid className="w-5 h-5" />
                                         </button>
                                         <button 
                                             onClick={() => setViewMode('LIST')}
                                             className={`p-2.5 rounded-xl transition-all duration-300 ${viewMode === 'LIST' ? 'bg-white shadow-[0_4px_12px_-2px_rgba(0,0,0,0.1)] text-indigo-500 scale-105' : 'text-slate-400 hover:text-slate-600'}`}
                                         >
-                                            <List className="w-4.5 h-4.5" />
+                                            <List className="w-5 h-5" />
                                         </button>
                                     </div>
 

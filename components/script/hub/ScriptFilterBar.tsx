@@ -221,7 +221,7 @@ const ScriptFilterBar: React.FC<ScriptFilterBarProps> = React.memo(({
             <div className="premium-3d-container p-2.5 rounded-[1.5rem] sticky top-2 z-[50] flex flex-col lg:flex-row gap-3 lg:gap-4 items-center transition-all duration-500 hover:shadow-xl">
                 <div className="flex-1 w-full relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Search className={`w-4.5 h-4.5 text-gray-400 transition-colors ${isStudio ? 'group-focus-within:text-violet-500' : 'group-focus-within:text-indigo-500'}`} />
+                        <Search className={`w-5 h-5 text-gray-400 transition-colors ${isStudio ? 'group-focus-within:text-violet-500' : 'group-focus-within:text-indigo-500'}`} />
                     </div>
                     <input 
                         type="text" 
@@ -287,7 +287,7 @@ const ScriptFilterBar: React.FC<ScriptFilterBarProps> = React.memo(({
                         `}
                         title={sortOrder === 'DESC' ? 'ล่าสุดไปเก่าสุด' : 'เก่าสุดไปล่าสุด'}
                     >
-                         {sortOrder === 'DESC' ? <ArrowDownAZ className="w-4 h-4 sm:w-4.5 h-4.5" /> : <ArrowUpAZ className="w-4 h-4 sm:w-4.5 h-4.5" />}
+                         {sortOrder === 'DESC' ? <ArrowDownAZ className="w-4 h-4 sm:w-5 sm:h-5" /> : <ArrowUpAZ className="w-4 h-4 sm:w-5 sm:h-5" />}
                     </button>
 
                     {/* Status Dropdown */}
@@ -374,13 +374,13 @@ const ScriptFilterBar: React.FC<ScriptFilterBarProps> = React.memo(({
                             onClick={() => setLayoutMode('GRID')} 
                             className={`p-2 rounded-lg transition-all duration-500 ${layoutMode === 'GRID' ? (isStudio ? 'bg-white shadow-md text-violet-600 scale-110 ring-1 ring-black/5' : 'bg-white shadow-md text-indigo-600 scale-110 ring-1 ring-black/5') : 'text-gray-400 hover:text-gray-600 hover:bg-white/50'}`}
                         >
-                            <LayoutGrid className="w-4.5 h-4.5" />
+                            <LayoutGrid className="w-5 h-5" />
                         </button>
                         <button 
                             onClick={() => setLayoutMode('LIST')} 
                             className={`p-2 rounded-lg transition-all duration-500 ${layoutMode === 'LIST' ? (isStudio ? 'bg-white shadow-md text-violet-600 scale-110 ring-1 ring-black/5' : 'bg-white shadow-md text-indigo-600 scale-110 ring-1 ring-black/5') : 'text-gray-400 hover:text-gray-600 hover:bg-white/50'}`}
                         >
-                            <List className="w-4.5 h-4.5" />
+                            <List className="w-5 h-5" />
                         </button>
                     </div>
                 </div>

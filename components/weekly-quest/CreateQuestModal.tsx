@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import FilterDropdown from '../common/FilterDropdown';
 import { Target, X, PlusCircle, Trash2, CheckCircle2, Sparkles, Calendar, ArrowRight, CheckSquare, Square, ChevronDown, Layers } from 'lucide-react';
 import { Channel, MasterOption, WeeklyQuest, Platform } from '../../types';
 import { CONTENT_FORMATS } from '../../constants';
@@ -165,6 +166,28 @@ const CreateQuestModal: React.FC<CreateQuestModalProps> = ({ isOpen, onClose, ch
 
     const selectedChannelObj = channels.find(c => c.id === selectedChannelId);
 
+    const filterDropdownOptions = useMemo(() => {
+        return channels.map(ch => ({
+            key: ch.id,
+            label: ch.name,
+            icon: ch.logoUrl ? (
+                <img 
+                    src={ch.logoUrl} 
+                    alt={ch.name} 
+                    className="w-5 h-5 rounded-full object-cover shrink-0 bg-white/10" 
+                    referrerPolicy="no-referrer"
+                />
+            ) : (
+                <div 
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                    style={{ backgroundColor: ch.color || '#4f46e5' }}
+                >
+                    {ch.name.substring(0, 1).toUpperCase()}
+                </div>
+            )
+        }));
+    }, [channels]);
+
     const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newStart = new Date(e.target.value);
         setCustomStartDate(e.target.value);
@@ -303,11 +326,19 @@ const CreateQuestModal: React.FC<CreateQuestModalProps> = ({ isOpen, onClose, ch
                                             </div>
                                         )}
                                         <div className="flex-1 flex gap-2">
-                                            <select className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 font-bold text-gray-700 outline-none focus:border-indigo-500 bg-white" value={selectedChannelId} onChange={e => setSelectedChannelId(e.target.value)}>
-                                                <option value="" disabled>-- เลือกช่อง (Brand) --</option>
-                                                {channels.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
-                                            <button type="button" onClick={() => setIsCustomChannel(true)} className="px-3 py-2 text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 text-xs font-bold whitespace-nowrap">หรือ พิมพ์ชื่อเอง</button>
+                                            <div className="flex-1">
+                                                <FilterDropdown
+                                                    label="เลือกช่อง (Brand)"
+                                                    options={filterDropdownOptions}
+                                                    value={selectedChannelId}
+                                                    onChange={(val) => setSelectedChannelId(val)}
+                                                    showAllOption={false}
+                                                    clearable={false}
+                                                    placeholder="พิมพ์เพื่อค้นหาช่อง..."
+                                                    theme="light"
+                                                />
+                                            </div>
+                                            <button type="button" onClick={() => setIsCustomChannel(true)} className="px-3 py-2 text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 text-xs font-bold whitespace-nowrap h-[46px] self-center">หรือ พิมพ์ชื่อเอง</button>
                                         </div>
                                     </div>
                                 ) : (

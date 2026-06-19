@@ -1,23 +1,19 @@
 import React from 'react';
 import { TribunalReport, User } from '../../../types';
-import { Scale, Inbox, User as UserIcon, ShieldAlert, Clock, ArrowRight, RefreshCw, Zap } from 'lucide-react';
+import { Scale, Inbox, User as UserIcon, ShieldAlert, Clock, ArrowRight } from 'lucide-react';
 
 interface TribunalRequestsListProps {
     filteredReports: TribunalReport[];
     allUsers: User[];
     selectedReport: TribunalReport | null;
     setSelectedReport: (report: TribunalReport) => void;
-    onSeedMockReports: () => void;
-    isSeeding: boolean;
 }
 
 const TribunalRequestsList: React.FC<TribunalRequestsListProps> = ({
     filteredReports,
     allUsers,
     selectedReport,
-    setSelectedReport,
-    onSeedMockReports,
-    isSeeding
+    setSelectedReport
 }) => {
     
     const getUserName = (uid: string) => {
@@ -54,26 +50,9 @@ const TribunalRequestsList: React.FC<TribunalRequestsListProps> = ({
 
     return (
         <div className="flex flex-col h-full bg-white border-r border-slate-200 overflow-hidden">
-            {/* List Feed header with seeding CTA */}
+            {/* List Feed header */}
             <div className="bg-slate-50/50 hover:bg-slate-50 border-b p-3 flex items-center justify-between text-[11px] h-12 shrink-0">
                 <span className="text-slate-400 font-bold ml-2">บัญชีฟ้องร้องทั้งหมด ({filteredReports.length} คดี)</span>
-                <button
-                    onClick={onSeedMockReports}
-                    disabled={isSeeding}
-                    className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-100 rounded-lg text-[10px] transition-all font-bold active:scale-95 disabled:opacity-50"
-                >
-                    {isSeeding ? (
-                        <>
-                            <RefreshCw className="w-3 h-3 animate-spin" />
-                            กำลังส่งคดี...
-                        </>
-                    ) : (
-                        <>
-                            <Zap className="w-3 h-3 text-indigo-500 fill-indigo-100" />
-                            จำลองและสร้างคดีจำหลัก (Seeding)
-                        </>
-                    )}
-                </button>
             </div>
 
             {/* List Feed core body */}
@@ -83,7 +62,7 @@ const TribunalRequestsList: React.FC<TribunalRequestsListProps> = ({
                         <Inbox className="w-10 h-10 text-slate-300 mb-2" />
                         <h4 className="text-xs text-slate-700 font-bold">ไม่มีรายการคำร้องตามเงื่อนไขที่เลือก</h4>
                         <p className="text-[10px] text-slate-400 mt-1 max-w-xs leading-relaxed">
-                            ระบบรอดผลพฤติกรรมเรียลไทม์ หรือคุณสามารถกดปุ่ม <span className="text-indigo-600 font-bold">จำลองและสร้างคดีจำหลัก</span> ด้านบนเพื่อเติมระบบคดีทดลองขึ้นมาทดสอบทันที!
+                            ระบบพร้อมดำเนินงานและติดตามสรุปข้อขัดแย้งจากแบบร้องเรียนของทีมเรียลไทม์อย่างโปร่งใสตามหลักเกณฑ์
                         </p>
                     </div>
                 ) : (

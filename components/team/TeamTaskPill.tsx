@@ -410,7 +410,7 @@ const TeamTaskPill: React.FC<TeamTaskPillProps> = ({
                                             </div>
                                         )}
                                         {task.shootNotes && (
-                                            <div className="flex items-start gap-1 text-[10px] text-slate-500 leading-normal pl-4.5 bg-slate-50 border border-slate-100/30 py-1 px-1.5 rounded-lg">
+                                            <div className="flex items-start gap-1 text-[10px] text-slate-500 leading-normal pl-4 bg-slate-50 border border-slate-100/30 py-1 px-1.5 rounded-lg">
                                                 <span>{task.shootNotes}</span>
                                             </div>
                                         )}

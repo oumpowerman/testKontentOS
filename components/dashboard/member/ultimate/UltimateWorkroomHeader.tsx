@@ -23,7 +23,7 @@ export const UltimateWorkroomHeader: React.FC<UltimateWorkroomHeaderProps> = ({
         <header id="ultimate-workroom-header" className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 border-b border-white/5 pb-4 mb-4 w-full max-w-7xl mx-auto">
             <div className="flex items-center gap-4">
                 <div className="p-3 bg-gradient-to-tr from-pink-500 via-purple-600 to-indigo-600 rounded-2xl shadow-lg border border-white/10 flex items-center justify-center animate-shine">
-                    <Sparkles className="w-6.5 h-6.5 text-white animate-pulse" />
+                    <Sparkles className="w-6 h-6 text-white animate-pulse" />
                 </div>
                 <div>
                     <div className="flex items-center gap-2.5">

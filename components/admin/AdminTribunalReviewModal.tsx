@@ -30,7 +30,6 @@ const AdminTribunalReviewModal: React.FC<AdminTribunalReviewModalProps> = ({
     const [reports, setReports] = useState<TribunalReport[]>([]);
     const [isLoadingReports, setIsLoadingReports] = useState(false);
     const [selectedReport, setSelectedReport] = useState<TribunalReport | null>(null);
-    const [isSeeding, setIsSeeding] = useState(false);
 
     // Filter and Sort states
     const [searchQuery, setSearchQuery] = useState('');
@@ -182,66 +181,6 @@ const AdminTribunalReviewModal: React.FC<AdminTribunalReviewModalProps> = ({
         }
     };
 
-    // Seeds 3 highly realistic complaints for testing empty environments
-    const handleSeedMockReports = async () => {
-        if (allUsers.length < 2) {
-            showToast('ต้องการทีมงานอย่างน้อย 2 คนเพื่อทำการจำลองเคสความขัดแย้ง', 'warning');
-            return;
-        }
-
-        setIsSeeding(true);
-        try {
-            // Pick a reporter and a target
-            const reporter = allUsers[0];
-            const target = allUsers.length > 1 ? allUsers[1] : allUsers[0];
-            
-            const seedCases = [
-                {
-                    reporter_id: reporter.id,
-                    target_id: target.id,
-                    category: 'toilet',
-                    description: 'ทำทิชชูเปียกหล่นเปรอะรอบห้องส้วมแล้วไม่ช่วยเก็บกวาดทิ้งในที่จัดเตรียมไว้',
-                    is_anonymous: false,
-                    status: 'PENDING' as const,
-                    created_at: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
-                },
-                {
-                    reporter_id: target.id, // reverse roles for fun variety
-                    target_id: reporter.id,
-                    category: 'kitchen',
-                    description: 'ทานมาม่าถ้วยค้างคืนทิ้งไว้บนซิงก์กลางครัวจนน้ำแห้งเกรอะกรังและไม่นำไปล้างทิ้งลงขยะครับ ส่งกลิ่นกวนจมูกทีม',
-                    is_anonymous: true,
-                    status: 'PENDING' as const,
-                    created_at: new Date(Date.now() - 7200000).toISOString() // 2 hours ago
-                },
-                {
-                    reporter_id: reporter.id,
-                    target_id: target.id,
-                    category: 'behavior',
-                    description: 'เปิดคลิปคุยเสียงดังลั่นโซนที่นั่งทำงานกลุ่มโดยไม่สวมหูฟังติดต่อกัน 30 นาทีแล้ว ได้รับการประท้วงจากคนส่วนมากแล้วก็ยังเพิกเฉย',
-                    is_anonymous: false,
-                    status: 'PENDING' as const,
-                    created_at: new Date(Date.now() - 10800000).toISOString() // 3 hours ago
-                }
-            ];
-
-            // Send to DB
-            const { error } = await supabase
-                .from('tribunal_reports')
-                .insert(seedCases);
-
-            if (error) throw error;
-
-            showToast('ระบบได้สร้างกรณีตัวอย่างขึ้นบอร์ดควบคุม 3 เคสเรียบร้อยแล้ว ⚖️', 'success');
-            await loadReportsList();
-        } catch (error: any) {
-            console.error('Error seeding mock reports:', error);
-            showToast('พบลื่นปรึกษาขัดข้อง: ' + error.message, 'error');
-        } finally {
-            setIsSeeding(false);
-        }
-    };
-
     if (!isOpen) return null;
 
     return createPortal(
@@ -272,19 +211,17 @@ const AdminTribunalReviewModal: React.FC<AdminTribunalReviewModalProps> = ({
                 {/* 3. Main Grid layout: left is listed feed, right is detailed inspector */}
                 <div className="flex-1 min-h-0 flex flex-col md:flex-row">
                     {/* Left: list of reports container */}
-                    <div className="w-full md:w-[420px] shrink-0 h-full border-r border-slate-200">
+                    <div className="w-full md:w-[420px] shrink-0 h-[280px] md:h-full border-b md:border-b-0 md:border-r border-slate-200">
                         <TribunalRequestsList 
                             filteredReports={filteredReports}
                             allUsers={allUsers}
                             selectedReport={selectedReport}
                             setSelectedReport={setSelectedReport}
-                            onSeedMockReports={handleSeedMockReports}
-                            isSeeding={isSeeding}
                         />
                     </div>
 
                     {/* Right: details dynamic inspector */}
-                    <div className="flex-1 h-full min-w-0">
+                    <div className="flex-1 min-h-0 md:h-full min-w-0">
                         <TribunalRequestsInspector 
                             selectedReport={selectedReport}
                             allUsers={allUsers}

@@ -143,7 +143,7 @@ const WikiList: React.FC<WikiListProps> = ({
                 </div>
                 
                 <div className="relative group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 group-focus-within:text-indigo-500 transition-all duration-300 group-focus-within:scale-110" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-all duration-300 group-focus-within:scale-110" />
                     <input 
                         type="text" 
                         placeholder="ค้นหาบทความที่คุณต้องการ..." 
@@ -242,7 +242,7 @@ const WikiList: React.FC<WikiListProps> = ({
                                         {/* Sticker Header */}
                                         <div className="flex justify-between items-start relative z-10">
                                             <div className={`
-                                                flex items-center gap-2.5 px-4.5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.1em] border
+                                                flex items-center gap-2.5 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.1em] border
                                                 bg-${colorKey}-100/90 text-${colorKey}-600 border-white/80 shadow-sm backdrop-blur-md group-hover:scale-105 transition-transform
                                             `}>
                                                 <Icon className="w-4 h-4" />

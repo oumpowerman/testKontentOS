@@ -134,7 +134,7 @@ const GoalCard: React.FC<GoalCardProps> = ({
                             w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center border transition-all shadow-xl backdrop-blur-md shrink-0
                             ${isCompleted ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : isOverdue ? 'bg-white/5 border-white/5 text-gray-600' : 'bg-white/5 border-white/10 text-indigo-400 group-hover:border-indigo-500/50 group-hover:text-indigo-300'}
                         `}>
-                            <PlatformIcon className="w-5.5 h-5.5 sm:w-7 sm:h-7" />
+                            <PlatformIcon className="w-6 h-6 sm:w-7 sm:h-7" />
                         </div>
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-1.5 mb-1 sm:mb-2">

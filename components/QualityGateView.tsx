@@ -254,7 +254,7 @@ const QualityGateView: React.FC<QualityGateViewProps> = ({ channels, users, mast
                                 </div>
                             </div>
                             <button onClick={() => setIsInfoOpen(true)} className="p-2 text-indigo-400/40 hover:text-indigo-400 hover:bg-white/5 rounded-full transition-colors shrink-0">
-                                <Info className="w-5.5 h-4.5 sm:w-6 sm:h-6" />
+                                <Info className="w-5 h-5 sm:w-6 sm:h-6" />
                             </button>
                         </div>
                     </div>

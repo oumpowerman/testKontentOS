@@ -94,7 +94,7 @@ const TribunalRequestsInspector: React.FC<TribunalRequestsInspectorProps> = ({
     return (
         <div className="flex-1 flex flex-col h-full bg-slate-50/30 overflow-hidden">
             {/* Header section specifying detail index */}
-            <div className="p-4.5 border-b bg-white flex items-center justify-between shrink-0">
+            <div className="p-5 border-b bg-white flex items-center justify-between shrink-0">
                 <div className="text-left">
                     <span className="text-[9px] uppercase tracking-wider text-indigo-500 font-bold block">CASE RECORD NO: {selectedReport.id.substring(0, 8).toUpperCase()}</span>
                     <h3 className="text-xs text-slate-800 font-bold flex items-center gap-1">
@@ -122,7 +122,7 @@ const TribunalRequestsInspector: React.FC<TribunalRequestsInspectorProps> = ({
                                 🕵️
                             </div>
                         ) : reporter?.avatarUrl ? (
-                            <img src={reporter.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-250" />
+                            <img src={reporter.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-250" referrerPolicy="no-referrer" />
                         ) : (
                             <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 text-xs font-bold">
                                 {reporterName.charAt(0)}
@@ -141,7 +141,7 @@ const TribunalRequestsInspector: React.FC<TribunalRequestsInspectorProps> = ({
                     {/* Target card block */}
                     <div className="flex items-center gap-2 p-2 relative bg-rose-50/50 border border-rose-100 rounded-2xl text-left w-full sm:w-auto">
                         {target?.avatarUrl ? (
-                            <img src={target.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-rose-200" />
+                            <img src={target.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-rose-200" referrerPolicy="no-referrer" />
                         ) : (
                             <div className="w-10 h-10 rounded-full bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-500 text-xs font-bold">
                                 {targetName.charAt(0)}
@@ -186,7 +186,7 @@ const TribunalRequestsInspector: React.FC<TribunalRequestsInspectorProps> = ({
                 )}
 
                 {/* Gamification Simulator logic */}
-                <div className="bg-white border rounded-3xl p-4.5 space-y-3 shadow-3xs text-left">
+                <div className="bg-white border rounded-3xl p-5 space-y-3 shadow-3xs text-left">
                     <h4 className="text-[11px] text-slate-850 flex items-center gap-1.5 font-bold">
                         <AlertCircle className="w-4 h-4 text-indigo-500" />
                         สมดุลระบบคิดคำนวณการลงตรายารรางวัล (Gamification Mechanics)
@@ -223,7 +223,7 @@ const TribunalRequestsInspector: React.FC<TribunalRequestsInspectorProps> = ({
                         value={feedback}
                         onChange={(e) => setFeedback(e.target.value)}
                         placeholder="พิมพ์ส่งเหตุผล หรือให้คำติชมสำหรับกรณีนี้แก่พนักงาน..."
-                        className="w-full p-4.5 bg-white border border-slate-200 rounded-3xl text-xs bg-white text-slate-800 placeholder-slate-400 hover:border-slate-300 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all min-h-[90px] resize-none"
+                        className="w-full p-4 bg-white border border-slate-200 rounded-3xl text-xs bg-white text-slate-800 placeholder-slate-400 hover:border-slate-300 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all min-h-[90px] resize-none"
                     />
 
                     {/* Prebuilt Quick Feedback templates */}

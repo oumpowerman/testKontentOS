@@ -136,7 +136,7 @@ const WikiNodeReaderModal: React.FC<WikiNodeReaderProps> = ({ onClose, node, isA
                                 onClick={onEdit}
                                 className="flex items-center gap-2.5 px-6 py-3 bg-white/80 text-indigo-600 font-bold text-sm rounded-2xl hover:bg-white transition-all border border-indigo-100 shadow-sm"
                             >
-                                <Edit3 className="w-4.5 h-4.5" /> Edit Page
+                                <Edit3 className="w-5 h-5" /> Edit Page
                             </motion.button>
                         )}
                         

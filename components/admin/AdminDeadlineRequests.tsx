@@ -105,7 +105,7 @@ const AdminDeadlineRequests: React.FC<AdminDeadlineRequestsProps> = ({
                             ? 'bg-red-500 text-white border border-red-400 shadow-lg shadow-red-500/40 animate-bounce' 
                             : 'bg-slate-50 text-slate-400 border border-slate-100/50'
                     }`}>
-                        <Calendar className={`w-4.5 h-4.5`} />
+                        <Calendar className={`w-5 h-5`} />
                     </span>
                     <div className="text-left">
                         <div className="flex items-center gap-1.5 flex-wrap">

@@ -238,7 +238,7 @@ export const MemberFilters = React.memo(React.forwardRef<HTMLDivElement, MemberF
                                 )}
 
                                 <span className="relative z-20 flex items-center gap-2">
-                                    <Icon className={`w-4 h-4 sm:w-4.5 sm:h-4.5 ${isActive ? 'animate-bounce' : ''}`} />
+                                    <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isActive ? 'animate-bounce' : ''}`} />
                                     {tab.label}
                                 </span>
                             </button>
