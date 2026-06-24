@@ -31,7 +31,7 @@ const ScriptTextArea: React.FC = () => {
     const [lastSearch, setLastSearch] = useState('');
     const [searchIndices, setSearchIndices] = useState<number[]>([]);
 
-    const handleFind = useCallback((query: string, direction: 'next' | 'prev' = 'next') => {
+    const handleFind = useCallback((query: string, direction: 'next' | 'prev' = 'next', shouldFocusEditor: boolean = true) => {
         if (!editorInstance) return;
 
         // Trigger visual highlighting in the editor
@@ -102,11 +102,18 @@ const ScriptTextArea: React.FC = () => {
             }
 
             const target = occurrences[nextIdx];
-            editorInstance.chain()
-                .focus()
-                .setTextSelection({ from: target.from, to: target.to })
-                .scrollIntoView()
-                .run();
+            if (shouldFocusEditor) {
+                editorInstance.chain()
+                    .focus()
+                    .setTextSelection({ from: target.from, to: target.to })
+                    .scrollIntoView()
+                    .run();
+            } else {
+                editorInstance.chain()
+                    .setTextSelection({ from: target.from, to: target.to })
+                    .scrollIntoView()
+                    .run();
+            }
                 
             setMatchCount({ current: nextIdx + 1, total: occurrences.length });
             setLastSearch(query);

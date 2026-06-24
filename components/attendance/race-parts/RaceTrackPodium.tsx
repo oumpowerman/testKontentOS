@@ -8,13 +8,15 @@ interface RaceTrackPodiumProps {
     allRacersCount?: number;
     isCollapsed?: boolean;
     onToggleCollapse?: () => void;
+    viewMode?: '3d' | '2d' | 'compact';
 }
 
 export const RaceTrackPodium: React.FC<RaceTrackPodiumProps> = ({ 
     checkedInRacers, 
     allRacersCount,
     isCollapsed = false,
-    onToggleCollapse
+    onToggleCollapse,
+    viewMode
 }) => {
     // Translate status nicely to Thai
     const getStatusLabel = (status: string) => {
@@ -58,8 +60,12 @@ export const RaceTrackPodium: React.FC<RaceTrackPodiumProps> = ({
         );
     }
 
+    const minHeightClass = viewMode === '2d' || viewMode === 'compact'
+        ? 'min-h-[145px] lg:h-[145px]'
+        : 'min-h-[230px]';
+
     return (
-        <div className="w-full flex flex-col border-2 border-slate-900 bg-white p-3.5 rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] font-sans transition-all duration-300 h-full min-h-[230px]">
+        <div className={`w-full flex flex-col border-2 border-slate-900 bg-white p-3.5 rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] font-sans transition-all duration-300 h-full ${minHeightClass}`}>
             {/* Panel Header */}
             <div className="flex items-center justify-between border-b-2 border-slate-100 pb-2.5 mb-3">
                 <div className="flex items-center gap-1.5">
@@ -87,7 +93,7 @@ export const RaceTrackPodium: React.FC<RaceTrackPodiumProps> = ({
             </div>
 
                 {/* List Container */}
-                <div className="flex-1 overflow-y-auto max-h-[175px] pr-1 space-y-1.5 scrollbar-thin">
+                <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-1.5 scrollbar-thin">
                     <AnimatePresence initial={false}>
                         {checkedInRacers.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-center py-6">

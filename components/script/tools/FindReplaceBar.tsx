@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface FindReplaceBarProps {
     isOpen: boolean;
     onClose: () => void;
-    onFind: (query: string, direction: 'next' | 'prev') => void;
+    onFind: (query: string, direction: 'next' | 'prev', shouldFocusEditor?: boolean) => void;
     onReplace: (find: string, replace: string) => void;
     onReplaceAll: (find: string, replace: string) => void;
     matchCount: { current: number; total: number };
@@ -29,7 +29,7 @@ const FindReplaceBar: React.FC<FindReplaceBarProps> = ({
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            onFind(findText, e.shiftKey ? 'prev' : 'next');
+            onFind(findText, e.shiftKey ? 'prev' : 'next', false);
         }
         if (e.key === 'Escape') {
             onClose();
@@ -62,7 +62,7 @@ const FindReplaceBar: React.FC<FindReplaceBarProps> = ({
                                 value={findText}
                                 onChange={(e) => {
                                     setFindText(e.target.value);
-                                    onFind(e.target.value, 'next');
+                                    onFind(e.target.value, 'next', false);
                                 }}
                                 onKeyDown={handleKeyDown}
                                 placeholder="ค้นหาคำ..."
@@ -73,14 +73,14 @@ const FindReplaceBar: React.FC<FindReplaceBarProps> = ({
                                     {matchCount.total > 0 ? `${matchCount.current}/${matchCount.total}` : '0/0'}
                                 </span>
                                 <button 
-                                    onClick={() => onFind(findText, 'prev')}
+                                    onClick={() => onFind(findText, 'prev', false)}
                                     className="p-1 hover:bg-gray-200 rounded transition-colors text-gray-500"
                                     title="Previous"
                                 >
                                     <ChevronUp className="w-4 h-4" />
                                 </button>
                                 <button 
-                                    onClick={() => onFind(findText, 'next')}
+                                    onClick={() => onFind(findText, 'next', false)}
                                     className="p-1 hover:bg-gray-200 rounded transition-colors text-gray-500"
                                     title="Next"
                                 >

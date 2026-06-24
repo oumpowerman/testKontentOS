@@ -20,6 +20,7 @@ interface AppShellProps {
     tasks: any[];
     allUsers: User[];
     children: React.ReactNode;
+    onOpenChatAssistant?: () => void;
 }
 
 const AppShell: React.FC<AppShellProps> = ({ 
@@ -36,7 +37,8 @@ const AppShell: React.FC<AppShellProps> = ({
     onToggleNotification,
     tasks,
     allUsers,
-    children 
+    children,
+    onOpenChatAssistant
 }) => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
@@ -86,6 +88,7 @@ const AppShell: React.FC<AppShellProps> = ({
                 unreadChatCount={chatUnreadCount}
                 tasks={tasks}
                 users={allUsers}
+                onOpenChatAssistant={onOpenChatAssistant}
             />
         </div>
     );

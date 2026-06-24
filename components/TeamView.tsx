@@ -409,7 +409,7 @@ const TeamView: React.FC<TeamViewProps> = ({
                 <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 relative z-[150] bg-white/80 backdrop-blur-xl py-3 px-4 rounded-3xl border border-white/40 shadow-lg">
                   
                   {/* Date Navigator */}
-                  <div className="flex items-center bg-white p-1.5 rounded-2xl border border-gray-200 shadow-sm w-fit shrink-0">
+                  <div className="flex items-center bg-white p-1.5 rounded-2xl border border-gray-200 shadow-sm w-fit shrink-0 mx-auto xl:mx-0">
                           <button onClick={prevWeek} className="p-2 hover:bg-gray-100 rounded-xl text-gray-500 transition-colors"><ChevronLeft className="w-5 h-5" /></button>
                           <div className="flex flex-col items-center px-4 min-w-[140px]">
                               <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{isSameWeek(currentDate, new Date(), { weekStartsOn: 1 }) ? 'สัปดาห์นี้' : 'ช่วงวันที่'}</span>

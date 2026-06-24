@@ -118,10 +118,10 @@ const HistoryFilterBar: React.FC<HistoryFilterBarProps> = ({
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden bg-slate-50/30 border-t border-indigo-50"
+                        className="overflow-y-auto max-h-[45vh] md:max-h-none bg-slate-50/30 border-t border-indigo-50 scrollbar-thin"
                     >
                         {/* Quick Presets Row */}
-                        <div className="px-5 sm:px-8 py-4 flex gap-2.5 overflow-x-auto no-scrollbar border-b border-white/50">
+                        <div className="px-4 sm:px-8 py-3 flex gap-2 overflow-x-auto no-scrollbar border-b border-white/50">
                             <span className="flex items-center text-[10px] font-bold text-indigo-300 uppercase tracking-widest mr-2 shrink-0">
                                 Smart Presets:
                             </span>
@@ -137,7 +137,7 @@ const HistoryFilterBar: React.FC<HistoryFilterBarProps> = ({
                             ))}
                         </div>
 
-                        <div className="p-4 sm:p-8 space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+                        <div className="p-3 sm:p-8 space-y-3 sm:space-y-6 animate-in fade-in duration-300">
                             <div className="flex flex-col lg:flex-row flex-wrap items-stretch lg:items-center gap-4 sm:gap-6">
                                 {/* Status Quick Access - Mobile and Tablet helper dropdown */}
                                 <div className="block lg:hidden w-full">

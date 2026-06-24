@@ -34,23 +34,23 @@ interface StatCardProps {
 const StatCard: React.FC<StatCardProps> = React.memo(({ label, count, icon: Icon, color, description, onClick }) => (
     <div 
         onClick={onClick}
-        className={`relative overflow-hidden p-5 rounded-[2rem] border border-white/40 bg-white/60 backdrop-blur-xl shadow-xl shadow-indigo-500/5 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-indigo-500/10 group h-32 flex flex-col justify-between ${onClick ? 'cursor-pointer' : ''}`}
+        className={`relative overflow-hidden p-3.5 md:p-5 rounded-[1.5rem] md:rounded-[2rem] border border-white/40 bg-white/60 backdrop-blur-xl shadow-xl shadow-indigo-500/5 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-indigo-500/10 group min-h-[7rem] md:h-32 flex flex-col justify-between ${onClick ? 'cursor-pointer' : ''}`}
     >
         {/* Decorative Background Glow */}
         <div className={`absolute -right-6 -bottom-6 w-24 h-24 rounded-full opacity-10 blur-2xl transition-transform duration-700 group-hover:scale-150 bg-${color}-500`} />
         
-        <div className="flex justify-between items-start relative z-10">
-            <div className="space-y-0.5">
-                <span className="text-[16px] font-kanit font-bold uppercase tracking-widest text-gray-400">{label}</span>
-                <p className="text-[12px] font-kanit font-medium text-gray-400/80 italic">{description}</p>
+        <div className="flex justify-between items-start relative z-10 gap-2">
+            <div className="space-y-0.5 min-w-0">
+                <span className="text-xs md:text-[16px] font-kanit font-bold uppercase tracking-normal md:tracking-widest text-gray-400 block truncate">{label}</span>
+                <p className="text-[10px] md:text-[12px] font-kanit font-medium text-gray-400/80 italic truncate">{description}</p>
             </div>
-            <div className={`p-2.5 rounded-2xl bg-${color}-50 text-${color}-600 border border-${color}-100 shadow-sm group-hover:rotate-12 transition-transform duration-500`}>
+            <div className={`p-1.5 md:p-2.5 rounded-xl md:rounded-2xl bg-${color}-50 text-${color}-600 border border-${color}-100 shadow-sm group-hover:rotate-12 transition-transform duration-500 shrink-0`}>
                 <Icon className="w-4 h-4" />
             </div>
         </div>
         
-        <div className="relative z-10 flex items-baseline gap-1">
-            <span className="text-4xl font-black text-gray-800 tracking-tighter">
+        <div className="relative z-10 flex items-baseline gap-1 mt-2 md:mt-0">
+            <span className="text-2xl md:text-4xl font-black text-gray-800 tracking-tighter">
                 <Counter value={count} />
             </span>
             <span className="text-[10px] font-black text-gray-400 uppercase ml-1">คน</span>

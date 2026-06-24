@@ -7,11 +7,12 @@ import {
     LogOut, BarChart3, Megaphone, FileText, Presentation, Settings2, 
     Database, Users, Terminal, User as UserIcon, Shield, Trophy, Heart, Crown, Clock,
     Maximize2, Minimize2, Monitor, DollarSign, Briefcase, Clapperboard, Building2, ShieldCheck, Share2,
-    Plus, Hash, ArrowRight, ArrowLeft, Search, ChevronRight
+    Plus, Hash, ArrowRight, ArrowLeft, Search, ChevronRight, Inbox, Sparkles, Bot
 } from 'lucide-react';
 import { User, ViewMode, TaskType, MenuGroup, Task } from '../types';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { useGlobalDialog } from '../context/GlobalDialogContext';
+import { useWorkboxContext } from '../context/WorkboxContext';
 import SidebarBadge from './SidebarBadge';
 import CommandPalette from '../components/ui/CommandPalette'
 
@@ -26,6 +27,7 @@ interface MobileNavigationProps {
     unreadChatCount: number;
     tasks: Task[];
     users: User[];
+    onOpenChatAssistant?: () => void;
 }
 
 // --- Menu Configuration (Synced with Sidebar) ---
@@ -127,9 +129,11 @@ const MobileMenuButton: React.FC<MobileMenuButtonProps> = ({
 };
 
 const MobileNavigation: React.FC<MobileNavigationProps> = ({ 
-    currentUser, currentView, onNavigate, onAddTask, onLogout, onEditProfile, onOpenTask, unreadChatCount, tasks, users 
+    currentUser, currentView, onNavigate, onAddTask, onLogout, onEditProfile, onOpenTask, unreadChatCount, tasks, users, onOpenChatAssistant 
 }) => {
     const { showAlert } = useGlobalDialog();
+    const { isDocked, setIsOpen, items: workboxItems } = useWorkboxContext();
+    const workboxItemsCount = workboxItems.length;
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isIOS, setIsIOS] = useState(false);
@@ -384,6 +388,67 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                         >
                             {/* PANEL 1: MENU GRID */}
                             <div className="w-1/2 h-full overflow-y-auto p-4 min-[375px]:p-5 pb-32 space-y-6 min-[375px]:space-y-8 scrollbar-hide">
+                                {isDocked && (
+                                    <motion.button
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => {
+                                            setIsOpen(true);
+                                            setIsMenuOpen(false); // Close mobile navigation drawer
+                                        }}
+                                        className={`
+                                            w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 shadow-sm relative overflow-hidden group/btn
+                                            ${isDarkTheme 
+                                                ? 'bg-indigo-600/20 border-indigo-500/20 text-indigo-200' 
+                                                : 'bg-indigo-50 border-indigo-100 text-indigo-700'}
+                                        `}
+                                    >
+                                        <div className="flex items-center gap-3 relative z-10">
+                                            <div className={`p-2 rounded-xl transition-colors duration-300 ${isDarkTheme ? 'bg-indigo-500/20 text-indigo-300' : 'bg-white text-indigo-600 shadow-sm'}`}>
+                                                <Inbox className="w-5 h-5" />
+                                            </div>
+                                            <div className="text-left">
+                                                <h5 className="text-sm font-black tracking-tight">กล่องเก็บงาน (WorkBox)</h5>
+                                                <p className={`text-[10px] ${isDarkTheme ? 'text-indigo-400' : 'text-indigo-500'} font-bold`}>สลับสับเปลี่ยนหรือฝากงานได้รวดเร็ว</p>
+                                            </div>
+                                        </div>
+                                        {workboxItemsCount > 0 && (
+                                            <div className="flex items-center gap-1 bg-rose-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-sm relative z-10">
+                                                <span>{workboxItemsCount} รายการ</span>
+                                            </div>
+                                        )}
+                                    </motion.button>
+                                )}
+
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => {
+                                        if (onOpenChatAssistant) {
+                                            onOpenChatAssistant();
+                                        }
+                                        setIsMenuOpen(false); // Close mobile navigation drawer
+                                    }}
+                                    className={`
+                                        w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 shadow-sm relative overflow-hidden group/btn
+                                        ${isDarkTheme 
+                                            ? 'bg-purple-600/20 border-purple-500/20 text-purple-200' 
+                                            : 'bg-purple-50 border-purple-100 text-purple-700'}
+                                    `}
+                                >
+                                    <div className="flex items-center gap-3 relative z-10">
+                                        <div className={`p-2 rounded-xl transition-colors duration-300 ${isDarkTheme ? 'bg-purple-500/20 text-purple-300' : 'bg-white text-purple-600 shadow-sm'}`}>
+                                            <Bot className="w-5 h-5" />
+                                        </div>
+                                        <div className="text-left">
+                                            <h5 className="text-sm font-black tracking-tight flex items-center gap-1">
+                                                ผู้ช่วย Juijui Bot (AI) <Sparkles className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+                                            </h5>
+                                            <p className={`text-[10px] ${isDarkTheme ? 'text-purple-400' : 'text-purple-500'} font-bold`}>สั่งงาน สร้างโปรเจกต์ หรือพูดคุยสอบถาม 🤖</p>
+                                        </div>
+                                    </div>
+                                </motion.button>
+
                                 {MOBILE_MENU_GROUPS.map((group) => {
                                     if (group.adminOnly && currentUser.role !== 'ADMIN') return null;
                                     return (

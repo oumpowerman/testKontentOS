@@ -56,6 +56,13 @@ export const useScriptHubFilters = ({
     const [filterTags, setFilterTags] = useState<string[]>([]);
     const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
 
+    // Automatically clear owner filters in Studio mode (as it represents own workspace)
+    useEffect(() => {
+        if (mode === 'STUDIO') {
+            setFilterOwner([]);
+        }
+    }, [mode]);
+
     // --- SEARCH HANDLERS (useCallback for stability) ---
     const handleSetSearchQuery = useCallback((val: string) => {
         setSearchParams(prev => {

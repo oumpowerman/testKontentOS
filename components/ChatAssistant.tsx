@@ -9,6 +9,8 @@ interface ChatAssistantProps {
   onAddChannel: (channel: Channel, file?: File) => Promise<boolean> | void;
   onDeleteChannel: (id: string) => Promise<boolean> | void;
   onAddTask: (task: Task) => Promise<any> | void;
+  isOpen?: boolean;
+  setIsOpen?: (open: boolean) => void;
 }
 
 interface Message {
@@ -31,9 +33,15 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({
   channels, 
   onAddChannel, 
   onDeleteChannel,
-  onAddTask
+  onAddTask,
+  isOpen: isOpenProp,
+  setIsOpen: setIsOpenProp
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const isControlled = isOpenProp !== undefined && setIsOpenProp !== undefined;
+  const [localIsOpen, setLocalIsOpen] = useState(false);
+  const isOpen = isControlled ? isOpenProp : localIsOpen;
+  const setIsOpen = isControlled ? setIsOpenProp : setLocalIsOpen;
+
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   
@@ -272,8 +280,8 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({
 
   return (
     <>
-      {/* Floating Button with explicit High Z-Index */}
-      <div className="fixed bottom-24 lg:bottom-6 right-4 lg:right-6 z-[100] flex items-center gap-3">
+      {/* Floating Button with explicit High Z-Index - Hidden on Mobile, Shown on Tablet/Desktop */}
+      <div className="hidden md:flex fixed bottom-24 lg:bottom-6 right-4 lg:right-6 z-[100] items-center gap-3">
           <div className={`hidden md:block bg-white px-3 py-1.5 rounded-xl shadow-lg text-xs font-bold text-gray-600 transition-opacity duration-300 ${isOpen ? 'opacity-0' : 'opacity-100'}`}>
               AI Assistant
           </div>

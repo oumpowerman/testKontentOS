@@ -96,7 +96,7 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isNotifSettingsOpen, setIsNotifSettingsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false); 
-  const [isWorkboxOpen, setIsWorkboxOpen] = useState(false);
+  const [isChatAssistantOpen, setIsChatAssistantOpen] = useState(false);
 
   // --- PWA SHARE INTENT RECEIVER ---
   const [pwaSharedData, setPwaSharedData] = useState<any>(null);
@@ -339,7 +339,7 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
   }, [tasks, handleEditTask, fetchTaskById, showToast]);
 
   // --- WORKBOX CONTEXT ---
-  const { items: workboxItems, addItem: addToWorkbox, setIsDragging } = useWorkboxContext();
+  const { items: workboxItems, addItem: addToWorkbox, setIsDragging, isOpen: isWorkboxOpen, setIsOpen: setIsWorkboxOpen } = useWorkboxContext();
 
   // --- SUB-HOOKS ---
   const { notifications, unreadCount: sysUnread, dismissNotification, markNotificationAsRead, markAllAsRead, markAsViewed } = useSystemNotifications(tasks, currentUserProfile, fetchProfile);
@@ -464,6 +464,7 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
                   onToggleNotification={handleToggleNotification}
                   tasks={tasks}
                   allUsers={activeUsers}
+                  onOpenChatAssistant={() => setIsChatAssistantOpen(true)}
               >
                   <ShortcutManager 
                       onNavigate={handleNavigate}
@@ -560,6 +561,8 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
                       onAddChannel={handleAddChannel}
                       onDeleteChannel={handleDeleteChannel}
                       onAddTask={handleSaveTask}
+                      isOpen={isChatAssistantOpen}
+                      setIsOpen={setIsChatAssistantOpen}
                   />
                   
               </AppShell>

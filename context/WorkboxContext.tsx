@@ -15,6 +15,10 @@ interface WorkboxContextType {
     clearCompleted: () => Promise<void>;
     reorderItems: (newItems: WorkboxItem[]) => Promise<void>;
     refresh: () => Promise<void>;
+    isDocked: boolean;
+    setIsDocked: (value: boolean) => void;
+    isOpen: boolean;
+    setIsOpen: (value: boolean) => void;
 }
 
 const WorkboxContext = createContext<WorkboxContextType | undefined>(undefined);
@@ -23,6 +27,16 @@ export const WorkboxProvider: React.FC<{ children: React.ReactNode; currentUser:
     const [items, setItems] = useState<WorkboxItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDragging, setIsDragging] = useState(false);
+    const [isDocked, setIsDockedState] = useState<boolean>(() => {
+        const saved = localStorage.getItem('workbox_docked');
+        return saved ? saved === 'true' : false;
+    });
+    const [isOpen, setIsOpen] = useState<boolean>(false);
+
+    const setIsDocked = (value: boolean) => {
+        setIsDockedState(value);
+        localStorage.setItem('workbox_docked', String(value));
+    };
     const isReorderingRef = useRef(false);
     const reorderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const { showToast } = useToast();
@@ -262,7 +276,11 @@ export const WorkboxProvider: React.FC<{ children: React.ReactNode; currentUser:
             deleteItem, 
             clearCompleted,
             reorderItems,
-            refresh: fetchWorkbox 
+            refresh: fetchWorkbox,
+            isDocked,
+            setIsDocked,
+            isOpen,
+            setIsOpen
         }}>
             {children}
         </WorkboxContext.Provider>

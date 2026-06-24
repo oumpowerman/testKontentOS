@@ -222,7 +222,7 @@ export const UltimateWorkroomView: React.FC<UltimateWorkroomViewProps> = ({
                 CHAT_BALL: 'CHAT',
                 WIKI_PORTAL: 'WIKI',
                 WHITEBOARD: 'CALENDAR',
-                MEETING_TABLE: 'TEAM'
+                MEETING_TABLE: 'MEETINGS'
             };
 
             const targetView = warpRoutes[type];

@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import th from 'date-fns/locale/th';
 import { 
@@ -66,7 +67,7 @@ const DashboardUserDetailModal: React.FC<DashboardUserDetailModalProps> = ({
 
     const totalIssues = lateLogs.length + absentDates.length + leaveLogs.length;
 
-    return (
+    return createPortal(
         <div 
             className="fixed inset-0 z-[100] flex items-center justify-center bg-indigo-900/20 backdrop-blur-md p-4 animate-in fade-in duration-300"
             onClick={onClose}
@@ -312,7 +313,8 @@ const DashboardUserDetailModal: React.FC<DashboardUserDetailModalProps> = ({
                     </button>
                 </div>
             </motion.div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

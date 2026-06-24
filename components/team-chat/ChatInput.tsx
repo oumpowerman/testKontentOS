@@ -1,6 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Paperclip, Loader2, Smile, Send, X, Zap } from 'lucide-react';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
 
 const EMOJIS = ['👍', '👎', '❤️', '😂', '😮', '😢', '🔥', '🎉', '💩', '👻', '🚀', '💸', '👀', '✅', '❌', '✨', '🙏', '🫡'];
 
@@ -11,14 +12,17 @@ interface ChatInputProps {
     uploadStatus: string;
     isBotEnabled: boolean;
     isDriveReady: boolean;
+    isDriveAuthenticated?: boolean;
+    onConnectDrive?: () => void;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({ 
-    onSendMessage, onSendFile, isProcessingFile, uploadStatus, isBotEnabled, isDriveReady 
+    onSendMessage, onSendFile, isProcessingFile, uploadStatus, isBotEnabled, isDriveReady, isDriveAuthenticated, onConnectDrive 
 }) => {
     const [inputValue, setInputValue] = useState('');
     const [showEmoji, setShowEmoji] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { showConfirm } = useGlobalDialog();
 
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,7 +68,19 @@ const ChatInput: React.FC<ChatInputProps> = ({
                     type="button" 
                     disabled={isProcessingFile}
                     className={`p-2 text-gray-400 hover:text-indigo-600 hover:bg-white rounded-xl transition-all relative z-10 ${isProcessingFile ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={async () => {
+                        if (!isDriveAuthenticated) {
+                            const confirmConnect = await showConfirm(
+                                "เพื่อความปลอดภัยและเก็บไฟล์บน Cloud กรุณาเชื่อมต่อ Google Drive ของคุณก่อนส่งไฟล์ คุณต้องการเชื่อมต่อตอนนี้เลยหรือไม่?",
+                                "กรุณาเชื่อมต่อ Google Drive"
+                            );
+                            if (confirmConnect) {
+                                onConnectDrive?.();
+                            }
+                        } else {
+                            fileInputRef.current?.click();
+                        }
+                    }}
                     title={isDriveReady ? "แนบไฟล์ (Auto-Upload to Drive)" : "แนบไฟล์"}
                 >
                     {isProcessingFile ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}

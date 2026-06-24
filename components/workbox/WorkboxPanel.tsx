@@ -16,7 +16,8 @@ import {
     Users2,
     Save,
     ArrowLeft,
-    CheckSquare
+    CheckSquare,
+    Pin
 } from 'lucide-react';
 import { WorkboxItem } from '../../types/features';
 import { User } from '../../types/core';
@@ -114,8 +115,8 @@ const WorkboxItemCard: React.FC<{
 };
 
 const WorkboxPanel: React.FC<WorkboxPanelProps> = ({ isOpen, onClose, currentUser }) => {
-    const { items, isLoading, updateItem, deleteItem, addItem, clearCompleted, reorderItems } = useWorkboxContext();
-    const { showConfirm } = useGlobalDialog();
+    const { items, isLoading, updateItem, deleteItem, addItem, clearCompleted, reorderItems, isDocked, setIsDocked } = useWorkboxContext();
+    const { showConfirm, showAlert } = useGlobalDialog();
     const [newItemTitle, setNewItemTitle] = useState('');
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
@@ -178,12 +179,29 @@ const WorkboxPanel: React.FC<WorkboxPanelProps> = ({ isOpen, onClose, currentUse
                                     </p>
                                 </div>
                             </div>
-                            <button 
-                                onClick={onClose}
-                                className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400 hover:text-gray-600"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
+                            <div className="flex items-center gap-1">
+                                <button 
+                                    onClick={async () => {
+                                        const nextDocked = !isDocked;
+                                        setIsDocked(nextDocked);
+                                        if (nextDocked) {
+                                            await showAlert('ย้ายกล่องเก็บงาน (WorkBox) ไปไว้ที่แถบข้าง (Sidebar) เรียบร้อยแล้ว! 📦', 'ปักหมุดสำเร็จ');
+                                        } else {
+                                            await showAlert('ย้ายกล่องเก็บงาน (WorkBox) ออกมาเป็นปุ่มลอยบนหน้าจอเรียบร้อยแล้ว! 📦', 'ยกเลิกการปักหมุดสำเร็จ');
+                                        }
+                                    }}
+                                    className={`p-2 rounded-xl transition-all ${isDocked ? 'bg-indigo-100 text-indigo-600 shadow-sm' : 'hover:bg-gray-100 text-gray-400 hover:text-indigo-600'}`}
+                                    title={isDocked ? "เลิกปักหมุดแถบข้าง (ลอยบนจอ)" : "ปักหมุดเข้าแถบข้าง (ซ่อนปุ่มลอย)"}
+                                >
+                                    <Pin className="w-5 h-5" />
+                                </button>
+                                <button 
+                                    onClick={onClose}
+                                    className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400 hover:text-gray-600"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Content */}

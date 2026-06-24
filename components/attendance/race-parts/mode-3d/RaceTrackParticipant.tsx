@@ -41,10 +41,10 @@ export const RaceTrackParticipant: React.FC<RaceTrackParticipantProps> = ({
 
         return (
             <div 
-                className="absolute pointer-events-auto group origin-bottom transition-all -translate-x-1/2 -translate-y-full"
+                className="absolute pointer-events-auto group origin-bottom transition-all -translate-x-1/2 -translate-y-[calc(100%-8px)]"
                 style={{
                     left: `${leftPct}%`,
-                    top: `${(startCoords.y / 360) * 105}%`, // slightly offset below line for resting comfort
+                    top: `${(startCoords.y / 360) * 80}%`,
                     zIndex: isHovered ? 20000 : (10 + startCoords.zIndex)
                 }}
                 onMouseEnter={() => setIsHovered(true)}
@@ -133,9 +133,22 @@ export const RaceTrackParticipant: React.FC<RaceTrackParticipantProps> = ({
                 )}
 
                 {/* Floating order number badge */}
-                <span className="absolute -top-[14px] px-1 py-0.2 rounded bg-slate-900 text-white font-mono text-[7px] font-black transform scale-[0.8] leading-none z-30">
-                    #{racer.checkInOrder}
-                </span>
+                {/* ป้ายแสดงชื่อตัวละคร (แสดงเฉพาะคนที่ออกตัว/เข้าเส้นชัยแล้วเท่านั้น) */}
+                {(() => {
+                    let badgeClass = "bg-slate-900/80 border-white/10 text-white shadow-sm";
+                    if (racer.checkInOrder === 1) {
+                        badgeClass = "bg-amber-950/85 border-amber-400 text-amber-200 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-pulse";
+                    } else if (racer.checkInOrder === 2) {
+                        badgeClass = "bg-slate-900/85 border-slate-300 text-blue-100 shadow-[0_0_8px_rgba(203,213,225,0.4)]";
+                    } else if (racer.checkInOrder === 3) {
+                        badgeClass = "bg-orange-950/85 border-orange-600/70 text-orange-100 shadow-[0_0_8px_rgba(234,88,12,0.3)]";
+                    }
+                    return (
+                        <span className={`absolute -top-[28px] px-1.5 py-0.5 rounded-full backdrop-blur-sm font-black text-[12px] border whitespace-nowrap z-30 leading-none tracking-tight transition-all duration-300 ${badgeClass}`}>
+                            {racer.user.name}
+                        </span>
+                    );
+                })()}
 
                 <RacerTooltip 
                     racer={racer}

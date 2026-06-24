@@ -8,6 +8,9 @@ import { th } from 'date-fns/locale';
 import { Clock, Calendar, AlertCircle, CheckCircle2, TrendingUp, X, Image as ImageIcon, LayoutGrid, Table } from 'lucide-react';
 import { AttendanceDetailTable } from './AttendanceDetailTable';
 import { AttendanceDetailCardView } from './AttendanceDetailCardView';
+import { getDirectDriveUrl } from '../../../lib/imageUtils';
+import { useMasterData } from '../../../hooks/useMasterData';
+import { getAttendanceSummary } from '../../../lib/attendanceUtils';
 
 interface Props {
     logs: AttendanceLog[];
@@ -16,6 +19,7 @@ interface Props {
 }
 
 const AttendanceDetailCards: React.FC<Props> = ({ logs, type, onClose }) => {
+    const { masterOptions } = useMasterData();
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
 
@@ -27,9 +31,19 @@ const AttendanceDetailCards: React.FC<Props> = ({ logs, type, onClose }) => {
 
     if (!type) return null;
 
+    const configData = masterOptions.filter(o => o.type === 'WORK_CONFIG');
+    const startTimeStr = configData?.find(c => c.key === 'START_TIME')?.label || '10:00';
+    const buffer = parseInt(configData?.find(c => c.key === 'LATE_BUFFER')?.label || '0');
+
     const filteredLogs = logs.filter(log => {
-        if (type === 'LATE') return log.status === 'LATE';
-        if (type === 'ON_TIME') return log.status === 'ON_TIME' || log.status === 'WORKING' || log.status === 'COMPLETED';
+        const summary = getAttendanceSummary(
+            log.checkInTime,
+            log.checkOutTime,
+            { startTime: startTimeStr, buffer, minHours: 9 }
+        );
+
+        if (type === 'LATE') return summary.isLate;
+        if (type === 'ON_TIME') return !summary.isLate && !!log.checkInTime;
         return true;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -219,7 +233,7 @@ const AttendanceDetailCards: React.FC<Props> = ({ logs, type, onClose }) => {
                             initial={{ scale: 0.9 }}
                             animate={{ scale: 1 }}
                             exit={{ scale: 0.9 }}
-                            src={previewImage} 
+                            src={getDirectDriveUrl(previewImage)} 
                             alt="Full Preview" 
                             className="max-w-full max-h-full rounded-2xl shadow-2xl object-contain"
                             referrerPolicy="no-referrer"

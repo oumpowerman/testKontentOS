@@ -169,12 +169,11 @@ const FocusZone: React.FC<FocusZoneProps> = ({ tasks, channels, users, masterOpt
         return t.type === activeTab;
     });
 
-    const urgentTasks = filteredTasks.filter(t => {
+    const checkIsUrgent = (t: Task) => {
         const isDone = isTaskCompleted(t.status as string);
         if (isDone) return false;
         if (t.isUnscheduled) return false;
 
-        // Exclude tasks that are in a revision state so they do not duplicate in both zones
         const s = t.status as string;
         const isReviseStatus = s === 'FEEDBACK' || s === 'WAITING' || s === 'REVISE' || s.includes('EDIT_DRAFT');
         if (isReviseStatus) return false;
@@ -187,51 +186,74 @@ const FocusZone: React.FC<FocusZoneProps> = ({ tasks, channels, users, masterOpt
         const isDueSoon = diff >= 0 && diff <= 2; 
         
         return isOverdue || isDueSoon || t.priority === 'URGENT';
-    }).sort((a,b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
+    };
 
-    const reviseTasks = filteredTasks.filter(t => {
+    const checkIsRevise = (t: Task) => {
         if (t.isUnscheduled) return false;
         const s = t.status as string;
         if (isTaskCompleted(s)) return false; 
         
         // Include BOTH Content (FEEDBACK) and General Task (WAITING) + explicit Revise statuses
         return s === 'FEEDBACK' || s === 'WAITING' || s === 'REVISE' || s.includes('EDIT_DRAFT');
-    });
+    };
 
-    if (urgentTasks.length === 0 && reviseTasks.length === 0) {
+    const urgentTasks = filteredTasks.filter(checkIsUrgent).sort((a,b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
+    const reviseTasks = filteredTasks.filter(checkIsRevise);
+
+    // Calculate system-wide lists (all tabs)
+    const systemUrgentTasks = tasks.filter(checkIsUrgent);
+    const systemReviseTasks = tasks.filter(checkIsRevise);
+    const hasNoTasksAtAll = systemUrgentTasks.length === 0 && systemReviseTasks.length === 0;
+
+    // SCENARIO 1: No urgent/revise tasks in the system at all (Render full-cover Ambient/Soothing Zen view)
+    if (hasNoTasksAtAll) {
         return (
-            <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 rounded-[2.5rem] p-8 text-center shadow-xl border-4 border-white flex flex-col items-center justify-center h-full min-h-[300px] relative overflow-hidden">
-                {/* Decorative Sparkles */}
+            <div className="bg-gradient-to-tr from-emerald-50/90 via-sky-50/90 to-teal-50/80 rounded-[2.5rem] p-8 text-center shadow-xl border-4 border-white flex flex-col items-center justify-center h-full min-h-[350px] relative overflow-hidden">
+                {/* Decorative Breathing Sparkles */}
                 <motion.div 
                     animate={{ 
-                        scale: [1, 1.2, 1],
-                        rotate: [0, 10, -10, 0],
-                        opacity: [0.3, 0.6, 0.3]
+                        scale: [1, 1.25, 1],
+                        rotate: [0, 12, -12, 0],
+                        y: [0, -10, 0],
+                        opacity: [0.3, 0.65, 0.3]
                     }}
-                    transition={{ duration: 3, repeat: Infinity }}
-                    className="absolute top-10 left-10 text-emerald-300"
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute top-10 left-10 text-emerald-400/80 pointer-events-none"
                 >
                     <Sparkles className="w-8 h-8" />
                 </motion.div>
                 <motion.div 
                     animate={{ 
-                        scale: [1, 1.5, 1],
-                        opacity: [0.2, 0.5, 0.2]
+                        scale: [1, 1.4, 1],
+                        y: [0, 12, 0],
+                        opacity: [0.2, 0.55, 0.2]
                     }}
-                    transition={{ duration: 4, repeat: Infinity, delay: 1 }}
-                    className="absolute bottom-12 right-12 text-teal-300"
+                    transition={{ duration: 5, repeat: Infinity, delay: 1, ease: "easeInOut" }}
+                    className="absolute bottom-12 right-12 text-teal-400/80 pointer-events-none"
                 >
-                    <Star className="w-6 h-6 fill-current" />
+                    <Star className="w-6 h-6 fill-current text-teal-300" />
                 </motion.div>
                 <motion.div 
                     animate={{ 
-                        y: [0, -10, 0],
-                        opacity: [0.2, 0.4, 0.2]
+                        scale: [0.9, 1.15, 0.9],
+                        x: [0, -8, 0],
+                        opacity: [0.25, 0.5, 0.25]
                     }}
-                    transition={{ duration: 5, repeat: Infinity, delay: 0.5 }}
-                    className="absolute top-20 right-16 text-emerald-200"
+                    transition={{ duration: 4.5, repeat: Infinity, delay: 0.5, ease: "easeInOut" }}
+                    className="absolute top-20 right-16 text-emerald-300 pointer-events-none"
                 >
                     <Sparkles className="w-5 h-5" />
+                </motion.div>
+                <motion.div 
+                    animate={{ 
+                        scale: [1, 1.2, 1],
+                        x: [0, 10, 0],
+                        opacity: [0.15, 0.4, 0.15]
+                    }}
+                    transition={{ duration: 6, repeat: Infinity, delay: 2, ease: "easeInOut" }}
+                    className="absolute bottom-16 left-16 text-sky-300 pointer-events-none"
+                >
+                    <Star className="w-4 h-4 fill-current text-sky-300" />
                 </motion.div>
 
                 {/* Main Icon with Glow */}
@@ -240,27 +262,18 @@ const FocusZone: React.FC<FocusZoneProps> = ({ tasks, channels, users, masterOpt
                     animate={{ 
                         scale: 1, 
                         opacity: 1,
-                        rotate: [0, -5, 5, -5, 0]
+                        rotate: [0, -4, 4, -4, 0]
                     }}
                     transition={{ 
-                        scale: { type: "spring", stiffness: 200, damping: 10 },
-                        rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+                        scale: { type: "spring", stiffness: 180, damping: 12 },
+                        rotate: { duration: 5, repeat: Infinity, ease: "easeInOut" }
                     }}
                     className="relative mb-6"
                 >
                     <div className="absolute inset-0 bg-emerald-400 blur-2xl opacity-20 rounded-full animate-pulse"></div>
                     <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-lg relative z-10 border-4 border-emerald-50">
-                        <CheckCircle2 className="w-12 h-12 text-emerald-500" />
+                        <CheckCircle2 className="w-12 h-12 text-emerald-500 animate-pulse" />
                     </div>
-                    
-                    {/* Floating mini stars around icon */}
-                    <motion.div 
-                        animate={{ y: [-5, 5, -5], x: [-2, 2, -2] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="absolute -top-2 -right-2 text-yellow-400"
-                    >
-                        <Star className="w-5 h-5 fill-current" />
-                    </motion.div>
                 </motion.div>
 
                 <motion.div
@@ -270,28 +283,17 @@ const FocusZone: React.FC<FocusZoneProps> = ({ tasks, channels, users, masterOpt
                 >
                     <h2 className="text-xl font-bold text-emerald-800 mb-2 relative inline-block">
                         <span className="relative z-10">ว่างจัง... ฮูเล่! ✨</span>
-                        <motion.div 
-                            animate={{ 
-                                opacity: [0, 1, 0],
-                                scale: [0.8, 1.2, 0.8],
-                                x: [-20, 120, -20]
-                            }}
-                            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-12 pointer-events-none"
-                        />
                     </h2>
-                    <p className="text-emerald-600/80 text-sm font-medium max-w-[200px] mx-auto leading-relaxed">
+                    <p className="text-emerald-700/80 text-sm font-medium max-w-[220px] mx-auto leading-relaxed">
                         ไม่มีงานด่วนหรือแก้ไขให้กวนใจ<br/>
                         <span className="text-emerald-500 font-black">พักผ่อนให้เต็มที่เลยนะ! 🌈</span>
                     </p>
                 </motion.div>
-
-                {/* Bottom decorative wave or dots */}
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-200 to-transparent opacity-50"></div>
             </div>
         );
     }
 
+    // BASE LAYOUT: Show tabs and layout because there are some tasks somewhere, even if the current tab is empty
     return (
         <div className="bg-gradient-to-br from-rose-50/80 to-orange-50/80 backdrop-blur-md rounded-[2.5rem] border-4 border-white shadow-xl shadow-orange-100/50 p-5 h-full flex flex-col gap-5 relative overflow-hidden">
             
@@ -345,53 +347,72 @@ const FocusZone: React.FC<FocusZoneProps> = ({ tasks, channels, users, masterOpt
             </div>
 
             <div className="flex flex-col gap-4 relative z-10 overflow-y-auto pr-1 flex-1">
-                {/* 1. REVISE ZONE (Top Priority) */}
-                {reviseTasks.length > 0 && (
-                    <div className="flex flex-col gap-2">
-                        <div className="flex justify-between items-center px-2">
-                            <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider flex items-center">
-                                <Wrench className="w-3 h-3 mr-1" /> ต้องแก้ / รอตรวจ (Revise/Wait)
-                            </span>
-                        </div>
-                        <div className="space-y-2">
-                            {reviseTasks.slice(0, 3).map(task => (
-                                <CardItem 
-                                    key={task.id} 
-                                    task={task} 
-                                    isRevise={true} 
-                                    channels={channels} 
-                                    users={users}
-                                    masterOptions={masterOptions}
-                                    onOpenTask={onOpenTask} 
-                                    today={today}
-                                />
-                            ))}
-                        </div>
+                {/* SCENARIO 2: No tasks for the *currently selected tab*, but some tasks exist in other tabs */}
+                {urgentTasks.length === 0 && reviseTasks.length === 0 ? (
+                    <div className="bg-white/50 backdrop-blur-xs rounded-[2rem] p-6 text-center shadow-xs border border-white/60 flex flex-col items-center justify-center flex-1 min-h-[180px] my-auto">
+                        <motion.div 
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="text-slate-400 flex flex-col items-center flex-1 justify-center"
+                        >
+                            <span className="text-3xl mb-3 animate-bounce">💫</span>
+                            <p className="text-[13px] font-bold text-slate-600 mb-1">ไม่มีงานในหมวดหมู่นี้</p>
+                            <p className="text-[11px] text-slate-500 bg-white/60 px-3 py-1.5 rounded-full border border-white/80 shadow-2xs">
+                                ลองสลับตรวจสอบที่แท็บอื่นดูนะ! 🌈
+                            </p>
+                        </motion.div>
                     </div>
-                )}
+                ) : (
+                    <>
+                        {/* 1. REVISE ZONE (Top Priority) */}
+                        {reviseTasks.length > 0 && (
+                            <div className="flex flex-col gap-2">
+                                <div className="flex justify-between items-center px-2">
+                                    <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider flex items-center">
+                                        <Wrench className="w-3 h-3 mr-1" /> ต้องแก้ / รอตรวจ (Revise/Wait)
+                                    </span>
+                                </div>
+                                <div className="space-y-2">
+                                    {reviseTasks.slice(0, 3).map(task => (
+                                        <CardItem 
+                                            key={task.id} 
+                                            task={task} 
+                                            isRevise={true} 
+                                            channels={channels} 
+                                            users={users}
+                                            masterOptions={masterOptions}
+                                            onOpenTask={onOpenTask} 
+                                            today={today}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
-                {/* 2. URGENT ZONE */}
-                {urgentTasks.length > 0 && (
-                    <div className="flex flex-col gap-2">
-                        <div className="flex justify-between items-center px-2 mt-2">
-                             <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider flex items-center">
-                                <Flame className="w-3 h-3 mr-1" /> ไฟลุก (Urgent)
-                            </span>
-                        </div>
-                        <div className="space-y-2">
-                            {urgentTasks.slice(0, reviseTasks.length > 0 ? 2 : 4).map(task => (
-                                <CardItem 
-                                    key={task.id} 
-                                    task={task} 
-                                    channels={channels} 
-                                    users={users}
-                                    masterOptions={masterOptions}
-                                    onOpenTask={onOpenTask} 
-                                    today={today}
-                                />
-                            ))}
-                        </div>
-                    </div>
+                        {/* 2. URGENT ZONE */}
+                        {urgentTasks.length > 0 && (
+                            <div className="flex flex-col gap-2">
+                                <div className="flex justify-between items-center px-2 mt-2">
+                                     <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider flex items-center">
+                                        <Flame className="w-3 h-3 mr-1" /> ไฟลุก (Urgent)
+                                     </span>
+                                </div>
+                                <div className="space-y-2">
+                                    {urgentTasks.slice(0, reviseTasks.length > 0 ? 2 : 4).map(task => (
+                                        <CardItem 
+                                            key={task.id} 
+                                            task={task} 
+                                            channels={channels} 
+                                            users={users}
+                                            masterOptions={masterOptions}
+                                            onOpenTask={onOpenTask} 
+                                            today={today}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 

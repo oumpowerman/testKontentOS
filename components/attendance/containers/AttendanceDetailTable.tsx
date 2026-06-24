@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { Clock, Calendar, Image as ImageIcon } from 'lucide-react';
 import { AttendanceLog } from '../../../types/attendance';
+import { getDirectDriveUrl } from '../../../lib/imageUtils';
 
 interface AttendanceDetailTableProps {
     logs: AttendanceLog[];
@@ -123,11 +124,11 @@ export const AttendanceDetailTable: React.FC<AttendanceDetailTableProps> = ({
                                                 title="คลิกเพื่อขยายดูรูปภาพ"
                                             >
                                                 <img
-                                                    src={proofUrl}
+                                                    src={getDirectDriveUrl(proofUrl)}
                                                     alt="Proof thumbnail"
                                                     className="w-full h-full object-cover"
                                                     referrerPolicy="no-referrer"
-                               				/>
+                                                />
                                                 <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
                                                     <ImageIcon className="w-3.5 h-3.5 text-white" />
                                                 </div>

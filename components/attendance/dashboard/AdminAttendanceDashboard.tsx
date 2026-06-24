@@ -40,6 +40,8 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
     const [logs, setLogs] = useState<AttendanceLog[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedEmploymentType, setSelectedEmploymentType] = useState('ALL');
+    const [selectedPosition, setSelectedPosition] = useState('ALL');
     
     // Modal State
     const [selectedUser, setSelectedUser] = useState<{ user: User, stat: UserStat } | null>(null);
@@ -199,10 +201,22 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
         return Object.values(statsMap);
     }, [users, logs, startTime, lateBuffer, workingDaysInMonth]);
 
+    // Compute unique positions from active users
+    const positions = useMemo(() => {
+        const unique = new Set(users.filter(u => u.isActive && u.position).map(u => u.position));
+        return Array.from(unique).sort();
+    }, [users]);
+
     // Filtering
     const filteredStats = userStats.filter(stat => {
         const user = users.find(u => u.id === stat.userId);
-        return user?.name.toLowerCase().includes(searchTerm.toLowerCase());
+        if (!user) return false;
+
+        const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesEmploymentType = selectedEmploymentType === 'ALL' || user.employmentType === selectedEmploymentType;
+        const matchesPosition = selectedPosition === 'ALL' || user.position === selectedPosition;
+
+        return matchesSearch && matchesEmploymentType && matchesPosition;
     }).sort((a, b) => b.present - a.present); // Sort by most present
 
     // Aggregates
@@ -277,6 +291,11 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
                 setCurrentMonth={setCurrentMonth}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
+                selectedEmploymentType={selectedEmploymentType}
+                setSelectedEmploymentType={setSelectedEmploymentType}
+                selectedPosition={selectedPosition}
+                setSelectedPosition={setSelectedPosition}
+                positions={positions}
             />
 
             <DashboardStats 

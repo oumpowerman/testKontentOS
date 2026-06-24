@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Inbox } from 'lucide-react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { useWorkboxContext } from '../../context/WorkboxContext';
@@ -10,9 +10,10 @@ interface WorkboxTriggerProps {
 }
 
 const WorkboxTrigger: React.FC<WorkboxTriggerProps> = ({ onClick, itemCount, onDrop }) => {
-    const { isDragging } = useWorkboxContext();
+    const { isDragging, isDocked } = useWorkboxContext();
     const [isOver, setIsOver] = useState(false);
     const [dragged, setDragged] = useState(false);
+    const constraintsRef = useRef<HTMLDivElement>(null);
     
     // Motion values for free movement
     const x = useMotionValue(0);
@@ -47,16 +48,22 @@ const WorkboxTrigger: React.FC<WorkboxTriggerProps> = ({ onClick, itemCount, onD
         }
     };
 
+    if (isDocked) return null;
+
     return (
-        <motion.div
-            drag
-            dragMomentum={false}
-            onDragStart={() => setDragged(true)}
-            onDragEnd={() => setTimeout(() => setDragged(false), 100)}
-            style={{ x, y }}
-            className="fixed right-6 bottom-24 z-50"
-            whileDrag={{ scale: 1.1, cursor: 'grabbing' }}
-        >
+        <>
+            <div ref={constraintsRef} className="fixed inset-0 pointer-events-none z-50 overflow-hidden" />
+            <motion.div
+                drag
+                dragConstraints={constraintsRef}
+                dragElastic={0.1}
+                dragMomentum={false}
+                onDragStart={() => setDragged(true)}
+                onDragEnd={() => setTimeout(() => setDragged(false), 100)}
+                style={{ x, y }}
+                className="fixed right-6 bottom-24 z-50"
+                whileDrag={{ scale: 1.1, cursor: 'grabbing' }}
+            >
             <motion.button
                 animate={{ 
                     scale: isOver ? 1.3 : globalDragScale,
@@ -106,7 +113,8 @@ const WorkboxTrigger: React.FC<WorkboxTriggerProps> = ({ onClick, itemCount, onD
                     {isOver ? 'วางเพื่อเก็บ! ✨' : isDragging ? 'ลากมาที่นี่! 📦' : 'WorkBox (ลากย้ายได้) 📦'}
                 </div>
             </motion.button>
-        </motion.div>
+            </motion.div>
+        </>
     );
 };
 

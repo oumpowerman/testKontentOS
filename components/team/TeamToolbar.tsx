@@ -41,11 +41,11 @@ const TeamToolbar: React.FC<TeamToolbarProps> = ({
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-50/50 via-purple-50/50 to-pink-50/50 opacity-50 pointer-events-none" />
             
             {/* Left: Scope & Position */}
-            <div className="flex flex-wrap gap-3 w-full lg:w-auto relative z-10">
-                <div className="flex bg-gray-100/50 p-1.5 rounded-2xl backdrop-blur-md border border-white/20 shadow-inner">
+            <div className={`flex flex-col sm:flex-row gap-3 w-full lg:w-auto relative ${isDropdownOpen ? 'z-40' : 'z-30'}`}>
+                <div className="flex bg-gray-100/50 p-1.5 rounded-2xl backdrop-blur-md border border-white/20 shadow-inner w-full sm:w-auto justify-between sm:justify-start">
                     <button 
                         onClick={() => setViewScope('MY_SQUAD')}
-                        className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${viewScope === 'MY_SQUAD' ? 'text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`relative flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${viewScope === 'MY_SQUAD' ? 'text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         {viewScope === 'MY_SQUAD' && (
                             <motion.div 
@@ -62,7 +62,7 @@ const TeamToolbar: React.FC<TeamToolbarProps> = ({
 
                     <button 
                         onClick={() => setViewScope('ALL')}
-                        className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${viewScope === 'ALL' ? 'text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`relative flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${viewScope === 'ALL' ? 'text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         {viewScope === 'ALL' && (
                             <motion.div 
@@ -79,7 +79,7 @@ const TeamToolbar: React.FC<TeamToolbarProps> = ({
 
                     <button 
                         onClick={() => setViewScope('ONLY_ME')}
-                        className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${viewScope === 'ONLY_ME' ? 'text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`relative flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${viewScope === 'ONLY_ME' ? 'text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         {viewScope === 'ONLY_ME' && (
                             <motion.div 
@@ -96,7 +96,7 @@ const TeamToolbar: React.FC<TeamToolbarProps> = ({
                 </div>
 
                 {/* Custom Position Dropdown */}
-                <div className="relative min-w-[180px]" ref={dropdownRef}>
+                <div className={`relative w-full sm:min-w-[180px] sm:w-auto ${isDropdownOpen ? 'z-50' : 'z-10'}`} ref={dropdownRef}>
                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-2xl blur-md opacity-0 group-hover:opacity-100 transition-all duration-500" />
                     <button 
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -121,7 +121,7 @@ const TeamToolbar: React.FC<TeamToolbarProps> = ({
                                 animate={{ opacity: 1, y: 5, scale: 1 }}
                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                 transition={{ duration: 0.2, ease: "easeOut" }}
-                                className="absolute top-full left-0 w-full mt-2 bg-white/90 backdrop-blur-2xl border border-white/60 rounded-2xl shadow-2xl shadow-indigo-500/20 overflow-hidden z-[200]"
+                                className="absolute top-full left-0 w-full mt-2 bg-white/95 backdrop-blur-2xl border border-white/60 rounded-2xl shadow-2xl shadow-indigo-500/20 overflow-hidden z-[210]"
                             >
                                 <div className="max-h-[280px] overflow-y-auto p-1.5 custom-scrollbar">
                                     <button 

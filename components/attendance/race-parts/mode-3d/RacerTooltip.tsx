@@ -22,7 +22,7 @@ const getLeaveLabel = (type: string) => {
 };
 
 export const RacerTooltip: React.FC<RacerTooltipProps> = ({ racer, safeIndex, pctPosition, bottomY }) => {
-    const isNearTop = bottomY > 95;
+    const isNearTop = racer.isCheckedIn ? false : (bottomY > 95);
     
     // Horizontal shifting to prevent clipping on the left/right screen edges
     const horizontalStyle = pctPosition < 30 

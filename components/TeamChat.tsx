@@ -6,6 +6,7 @@ import { useTeamChat } from '../hooks/useTeamChat';
 import { useGoogleDrive } from '../hooks/useGoogleDrive';
 import { compressImage } from '../lib/imageUtils';
 import { useGlobalDialog } from '../context/GlobalDialogContext';
+import { Loader2 } from 'lucide-react';
 
 // Import Refactored Sub-Components
 import ChatHeader from './team-chat/ChatHeader';
@@ -20,7 +21,7 @@ interface TeamChatProps {
 }
 
 const TeamChat: React.FC<TeamChatProps> = ({ currentUser, allUsers, onAddTask }) => {
-    const { showAlert } = useGlobalDialog();
+    const { showAlert, showConfirm } = useGlobalDialog();
     // --- State ---
     const [isBotEnabled, setIsBotEnabled] = useState(true);
     const [isProcessingFile, setIsProcessingFile] = useState(false);
@@ -29,7 +30,7 @@ const TeamChat: React.FC<TeamChatProps> = ({ currentUser, allUsers, onAddTask })
     
     // --- Hooks ---
     const { messages, isLoading, isLoadingMore, hasMore, loadMore, sendMessage, sendFile, markAsRead } = useTeamChat(currentUser, allUsers, onAddTask, isBotEnabled);
-    const { uploadFileToDrive, isReady: isDriveReady } = useGoogleDrive();
+    const { uploadFileToDrive, isReady: isDriveReady, isAuthenticated: isDriveAuthenticated, login: connectDrive } = useGoogleDrive();
     
     // Mark as read on mount
     useEffect(() => {
@@ -40,6 +41,18 @@ const TeamChat: React.FC<TeamChatProps> = ({ currentUser, allUsers, onAddTask })
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
+
+            if (!isDriveAuthenticated) {
+                const confirmConnect = await showConfirm(
+                    "เพื่อความปลอดภัยและเก็บไฟล์บน Cloud กรุณาเชื่อมต่อ Google Drive ของคุณก่อนส่งไฟล์ คุณต้องการเชื่อมต่อตอนนี้เลยหรือไม่?",
+                    "กรุณาเชื่อมต่อ Google Drive"
+                );
+                if (confirmConnect) {
+                    connectDrive();
+                }
+                return;
+            }
+
             setIsProcessingFile(true);
             setUploadStatus('กำลังประมวลผลรูป...');
 
@@ -64,9 +77,14 @@ const TeamChat: React.FC<TeamChatProps> = ({ currentUser, allUsers, onAddTask })
                 // 3. Send
                 await sendFile(fileToSend, isDriveReady ? driveUploader : undefined);
 
-            } catch (error) {
+            } catch (error: any) {
                 console.error("File processing error:", error);
-                showAlert("เกิดข้อผิดพลาดในการส่งไฟล์", "ข้อผิดพลาด");
+                const errorStr = error?.message || '';
+                if (errorStr.includes('unauthorized') || errorStr.includes('auth') || errorStr.includes('401') || errorStr.includes('token') || errorStr.includes('expire')) {
+                    showAlert("การเชื่อมต่อ Google Drive หมดอายุหรือยังไม่ได้รับสิทธิ์ กรุณาเชื่อมต่อใหม่อีกครั้ง", "การเชื่อมต่อผิดพลาด");
+                } else {
+                    showAlert("เกิดข้อผิดพลาดในการส่งไฟล์: " + errorStr, "ข้อผิดพลาด");
+                }
             } finally {
                 setIsProcessingFile(false);
                 setUploadStatus('');
@@ -92,6 +110,22 @@ const TeamChat: React.FC<TeamChatProps> = ({ currentUser, allUsers, onAddTask })
                         setIsSidebarOpen={setIsSidebarOpen}
                     />
 
+                    {/* Google Drive Warning Banner */}
+                    {!isDriveAuthenticated && (
+                        <div className="bg-amber-50 border-b border-amber-100 px-4 py-2.5 flex items-center justify-between gap-3 text-amber-800 text-xs shrink-0 animate-in slide-in-from-top duration-300">
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm">⚠️</span>
+                                <span><b>กรุณาเชื่อมต่อ Google Drive:</b> ระบบจำเป็นต้องใช้ Google Drive ของคุณในการเก็บและแสดงรูปภาพในแชต</span>
+                            </div>
+                            <button 
+                                onClick={connectDrive} 
+                                className="bg-amber-600 hover:bg-amber-700 text-white font-medium px-3 py-1 rounded-lg transition-colors shrink-0"
+                            >
+                                เชื่อมต่อ Google Drive
+                            </button>
+                        </div>
+                    )}
+
                     <MessageList 
                         messages={messages}
                         currentUser={currentUser}
@@ -108,7 +142,20 @@ const TeamChat: React.FC<TeamChatProps> = ({ currentUser, allUsers, onAddTask })
                         uploadStatus={uploadStatus}
                         isBotEnabled={isBotEnabled}
                         isDriveReady={isDriveReady}
+                        isDriveAuthenticated={isDriveAuthenticated}
+                        onConnectDrive={connectDrive}
                     />
+
+                    {/* Visual Reloading Blur Overlay */}
+                    {isProcessingFile && (
+                        <div className="absolute inset-0 bg-white/75 backdrop-blur-sm z-50 flex flex-col items-center justify-center gap-3 animate-in fade-in duration-200">
+                            <div className="p-5 bg-white rounded-2xl shadow-xl border border-gray-100 flex flex-col items-center gap-3 max-w-xs text-center">
+                                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                                <div className="text-sm font-semibold text-gray-800">กำลังอัปโหลดรูปภาพ</div>
+                                <div className="text-xs text-gray-500 animate-pulse">{uploadStatus || 'กรุณารอสักครู่...'}</div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Sidebar (Responsive: Inline on desktop, Drawer on mobile/tablet) */}

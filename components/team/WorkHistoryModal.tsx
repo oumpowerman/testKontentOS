@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Inbox, History as HistoryIcon } from 'lucide-react';
@@ -47,6 +47,17 @@ const WorkHistoryModal: React.FC<WorkHistoryModalProps> = ({
 
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
     const [tempSearch, setTempSearch] = useState('');
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth < 640) {
+                setIsHeaderCollapsed(true);
+            }
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // --- Calculation Logic ---
     const calculateStats = () => {

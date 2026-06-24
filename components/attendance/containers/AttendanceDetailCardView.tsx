@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { Clock, Calendar, Image as ImageIcon, Eye } from 'lucide-react';
 import { AttendanceLog } from '../../../types/attendance';
+import { getDirectDriveUrl } from '../../../lib/imageUtils';
 
 interface AttendanceDetailCardViewProps {
     logs: AttendanceLog[];
@@ -75,7 +76,7 @@ export const AttendanceDetailCardView: React.FC<AttendanceDetailCardViewProps> =
                                     className="w-full h-24 sm:h-32 rounded-xl sm:rounded-2xl overflow-hidden border border-slate-100 cursor-pointer relative"
                                 >
                                     <img
-                                        src={proofUrl}
+                                        src={getDirectDriveUrl(proofUrl)}
                                         alt="Proof attachment"
                                         className="w-full h-full object-cover group-hover/img:scale-105 transition-all duration-500"
                                         referrerPolicy="no-referrer"

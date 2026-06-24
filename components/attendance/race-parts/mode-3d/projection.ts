@@ -7,11 +7,11 @@ export const get3DCoordinates = (laneIndex: number, progress: number, totalLanes
 
     // Start gate (far top - progress = 0)
     const startX = 500 + laneOffset * 0.55; // Symmetrical narrow width at the far end
-    const startY = 80; // Start line at the top
+    const startY = 70; // Start line at the top
 
     // Finish gate (close bottom - progress = 1)
     const endX = 500 + laneOffset * 1.25; // Symmetrical outward flare at the bottom end
-    const endY = 320; // Finish line at the bottom
+    const endY = 295; // Finish line at the bottom
 
     // Linear Interpolation
     const x = startX + (endX - startX) * progress;

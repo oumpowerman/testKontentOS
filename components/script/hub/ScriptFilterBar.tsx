@@ -180,13 +180,15 @@ const ScriptFilterBar: React.FC<ScriptFilterBarProps> = React.memo(({
                             />
 
                             {/* 2. Writer Filter Row (New Component) */}
-                            <CreatorFilter 
-                                users={users}
-                                channels={channels}
-                                selectedIds={filterOwner}
-                                onToggle={(id) => toggleFilter(id, filterOwner, setFilterOwner)}
-                                onClear={clearOwner}
-                            />
+                            {!isStudio && (
+                                <CreatorFilter 
+                                    users={users}
+                                    channels={channels}
+                                    selectedIds={filterOwner}
+                                    onToggle={(id) => toggleFilter(id, filterOwner, setFilterOwner)}
+                                    onClear={clearOwner}
+                                />
+                            )}
 
                             {/* 3. Category Filter Row */}
                             <div className="flex flex-col gap-1.5">
@@ -263,12 +265,12 @@ const ScriptFilterBar: React.FC<ScriptFilterBarProps> = React.memo(({
                     >
                         <Filter className={`w-3.5 h-3.5 sm:w-4 h-4 ${isFilterExpanded ? 'animate-pulse' : ''}`} />
                         <span className="inline">FILTERS</span>
-                        {(filterOwner.length > 0 || filterChannel.length > 0 || filterTags.length > 0 || (filterCategory && filterCategory !== 'ALL')) && (
+                        {((!isStudio && filterOwner.length > 0) || filterChannel.length > 0 || filterTags.length > 0 || (filterCategory && filterCategory !== 'ALL')) && (
                             <span className={`
                                 flex items-center justify-center w-4 h-4 sm:w-5 h-5 rounded-full text-[9px] sm:text-[10px] font-black
                                 ${isFilterExpanded ? 'bg-white text-indigo-600' : (isStudio ? 'bg-violet-600 text-white' : 'bg-indigo-600 text-white')}
                             `}>
-                                {filterOwner.length + filterChannel.length + filterTags.length + (filterCategory !== 'ALL' ? 1 : 0)}
+                                {(!isStudio ? filterOwner.length : 0) + filterChannel.length + filterTags.length + (filterCategory !== 'ALL' ? 1 : 0)}
                             </span>
                         )}
                     </button>

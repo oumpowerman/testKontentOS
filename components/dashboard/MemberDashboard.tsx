@@ -359,7 +359,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({
                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-500 focus:outline-none cursor-pointer ${
                                     localUser.waveBgEnabled !== false 
                                         ? 'bg-gradient-to-r from-pink-400 to-indigo-500' 
-                                        : 'bg-slate-350/85 hover:bg-slate-350'
+                                        : 'bg-slate-300 dark:bg-slate-600 hover:bg-slate-400/90 transition-all shadow-inner'
                                 }`}
                             >
                                 <span

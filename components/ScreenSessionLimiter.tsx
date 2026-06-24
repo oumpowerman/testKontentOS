@@ -5,6 +5,7 @@ import { Monitor, ShieldAlert, LogOut, Zap, RefreshCw } from 'lucide-react';
 export const ScreenSessionLimiter: React.FC<{ user: any }> = ({ user }) => {
   const [isKicked, setIsKicked] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
   const [countdown, setCountdown] = useState(10);
   const [tableExists, setTableExists] = useState(true);
   const [isSyncing, setIsSyncing] = useState(true);
@@ -25,7 +26,7 @@ export const ScreenSessionLimiter: React.FC<{ user: any }> = ({ user }) => {
   const tabId = getTabId();
 
   const verifySessionStillActive = async () => {
-    if (!user?.id || !tableExists || isKicked || isBlocked) return;
+    if (!user?.id || !tableExists || isKicked || isBlocked || !isRegistered) return;
     try {
       const { data, error } = await supabase
         .from('user_screens')
@@ -104,6 +105,7 @@ export const ScreenSessionLimiter: React.FC<{ user: any }> = ({ user }) => {
             last_seen_at: new Date().toISOString()
           });
         setIsBlocked(false);
+        setIsRegistered(true);
       }
     } catch (err) {
       console.error("Failed to perform screen activity checks:", err);
@@ -113,6 +115,8 @@ export const ScreenSessionLimiter: React.FC<{ user: any }> = ({ user }) => {
   };
 
   useEffect(() => {
+    setIsRegistered(false);
+    setIsSyncing(true);
     if (!user?.id || !tableExists) {
       setIsSyncing(false);
       return;
@@ -219,6 +223,7 @@ export const ScreenSessionLimiter: React.FC<{ user: any }> = ({ user }) => {
         });
 
       setIsBlocked(false);
+      setIsRegistered(true);
       // Wait a moment then refresh state to ensure everything conforms
       setTimeout(() => {
         cleanUpAndCheck();

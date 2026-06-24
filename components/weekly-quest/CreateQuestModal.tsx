@@ -385,7 +385,7 @@ const CreateQuestModal: React.FC<CreateQuestModalProps> = ({ isOpen, onClose, ch
                             </div>
                             
                             <div className="bg-gray-50 rounded-2xl p-4 space-y-3 border border-gray-100 overflow-visible">
-                                <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2 px-2">
+                                <div className="hidden md:grid grid-cols-12 gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2 px-2">
                                     <div className="col-span-1">Type</div>
                                     <div className="col-span-3">ชื่องาน</div>
                                     <div className="col-span-2">Platform</div>
@@ -396,83 +396,213 @@ const CreateQuestModal: React.FC<CreateQuestModalProps> = ({ isOpen, onClose, ch
                                 </div>
 
                                 {questItems.map((item, index) => (
-                                    <div key={item.id} className="grid grid-cols-12 gap-2 items-center relative">
-                                        
-                                        {/* Type Toggle */}
-                                        <div className="col-span-1">
-                                            <button
-                                                type="button"
-                                                onClick={() => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, questType: i.questType === 'AUTO' ? 'MANUAL' : 'AUTO' } : i))}
-                                                className={`w-full py-1.5 rounded text-[10px] font-bold border flex items-center justify-center ${
-                                                    item.questType === 'AUTO' 
-                                                    ? 'bg-blue-50 text-blue-600 border-blue-200' 
-                                                    : 'bg-orange-50 text-orange-600 border-orange-200'
-                                                }`}
-                                                title={item.questType === 'AUTO' ? 'นับยอดอัตโนมัติจาก DB' : 'นับยอดเองด้วยมือ'}
-                                            >
-                                                {item.questType === 'AUTO' ? 'Auto' : 'Manual'}
-                                            </button>
-                                        </div>
-
-                                        {/* Title */}
-                                        <div className="col-span-3 flex items-center gap-2">
-                                            <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-500 shrink-0">{index + 1}</div>
-                                            <input type="text" className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-indigo-500 outline-none" placeholder="เช่น ลง Story" value={item.title} onChange={e => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, title: e.target.value } : i))} />
-                                        </div>
-                                        
-                                        {item.questType === 'AUTO' ? (
-                                            <>
-                                                {/* Platform */}
-                                                <div className="col-span-2">
-                                                    <select className="w-full border border-gray-200 rounded-lg px-2 py-2 text-xs font-bold text-gray-600 focus:border-indigo-500 outline-none bg-white" value={item.platform || ''} onChange={e => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, platform: e.target.value as Platform | 'ALL' || undefined } : i))}>
-                                                        <option value="">(ไม่ระบุ)</option>
-                                                        <option value="ALL">🌐 ทุกช่องทาง</option>
-                                                        <option value="INSTAGRAM">IG/Story</option>
-                                                        <option value="FACEBOOK">Facebook</option>
-                                                        <option value="TIKTOK">TikTok</option>
-                                                        <option value="YOUTUBE">YouTube</option>
-                                                    </select>
-                                                </div>
-
-                                                {/* Format (Multi Select) */}
-                                                <div className="col-span-2">
-                                                    <FormatMultiSelect 
-                                                        options={availableFormats}
-                                                        selectedKeys={item.formatKeys || []}
-                                                        onChange={(keys) => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, formatKeys: keys } : i))}
-                                                    />
-                                                </div>
-
-                                                {/* Status */}
-                                                <div className="col-span-2">
-                                                    <select className="w-full border border-gray-200 rounded-lg px-2 py-2 text-xs font-bold text-green-700 bg-green-50 focus:border-green-500 outline-none" value={item.statusKey || defaultStatusKey} onChange={e => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, statusKey: e.target.value || undefined } : i))}>
-                                                        {statusOptions.length > 0 ? (
-                                                            statusOptions.map(opt => <option key={opt.key} value={opt.key}>{opt.label}</option>)
-                                                        ) : (
-                                                            <>
-                                                                <option value="DONE">Done ✅</option>
-                                                                <option value="APPROVE">Approve 👍</option>
-                                                            </>
-                                                        )}
-                                                    </select>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="col-span-6 flex items-center justify-center">
-                                                <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full w-full text-center">
-                                                    -- Manual Tracking (นับเอง) --
-                                                </span>
+                                    <div key={item.id} className="space-y-3">
+                                        {/* Desktop Table Row View */}
+                                        <div className="hidden md:grid grid-cols-12 gap-2 items-center relative">
+                                            {/* Type Toggle */}
+                                            <div className="col-span-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, questType: i.questType === 'AUTO' ? 'MANUAL' : 'AUTO' } : i))}
+                                                    className={`w-full py-1.5 rounded text-[10px] font-bold border flex items-center justify-center ${
+                                                        item.questType === 'AUTO' 
+                                                        ? 'bg-blue-50 text-blue-600 border-blue-200' 
+                                                        : 'bg-orange-50 text-orange-600 border-orange-200'
+                                                    }`}
+                                                    title={item.questType === 'AUTO' ? 'นับยอดอัตโนมัติจาก DB' : 'นับยอดเองด้วยมือ'}
+                                                >
+                                                    {item.questType === 'AUTO' ? 'Auto' : 'Manual'}
+                                                </button>
                                             </div>
-                                        )}
 
-                                        {/* Count */}
-                                        <div className="col-span-1">
-                                            <input type="number" min={1} className="w-full border border-gray-200 rounded-lg px-1 py-1 text-sm text-center focus:border-indigo-500 outline-none" value={item.targetCount} onChange={e => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, targetCount: Number(e.target.value) } : i))} />
+                                            {/* Title */}
+                                            <div className="col-span-3 flex items-center gap-2">
+                                                <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-500 shrink-0">{index + 1}</div>
+                                                <input type="text" className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-indigo-500 outline-none" placeholder="เช่น ลง Story" value={item.title} onChange={e => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, title: e.target.value } : i))} />
+                                            </div>
+                                            
+                                            {item.questType === 'AUTO' ? (
+                                                <>
+                                                    {/* Platform */}
+                                                    <div className="col-span-2">
+                                                        <select className="w-full border border-gray-200 rounded-lg px-2 py-2 text-xs font-bold text-gray-600 focus:border-indigo-500 outline-none bg-white" value={item.platform || ''} onChange={e => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, platform: e.target.value as Platform | 'ALL' || undefined } : i))}>
+                                                            <option value="">(ไม่ระบุ)</option>
+                                                            <option value="ALL">🌐 ทุกช่องทาง</option>
+                                                            <option value="INSTAGRAM">IG/Story</option>
+                                                            <option value="FACEBOOK">Facebook</option>
+                                                            <option value="TIKTOK">TikTok</option>
+                                                            <option value="YOUTUBE">YouTube</option>
+                                                        </select>
+                                                    </div>
+
+                                                    {/* Format (Multi Select) */}
+                                                    <div className="col-span-2">
+                                                        <FormatMultiSelect 
+                                                            options={availableFormats}
+                                                            selectedKeys={item.formatKeys || []}
+                                                            onChange={(keys) => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, formatKeys: keys } : i))}
+                                                        />
+                                                    </div>
+
+                                                    {/* Status */}
+                                                    <div className="col-span-2">
+                                                        <select className="w-full border border-gray-200 rounded-lg px-2 py-2 text-xs font-bold text-green-700 bg-green-50 focus:border-green-500 outline-none" value={item.statusKey || defaultStatusKey} onChange={e => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, statusKey: e.target.value || undefined } : i))}>
+                                                            {statusOptions.length > 0 ? (
+                                                                statusOptions.map(opt => <option key={opt.key} value={opt.key}>{opt.label}</option>)
+                                                            ) : (
+                                                                <>
+                                                                    <option value="DONE">Done ✅</option>
+                                                                    <option value="APPROVE">Approve 👍</option>
+                                                                </>
+                                                            )}
+                                                        </select>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="col-span-6 flex items-center justify-center">
+                                                    <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full w-full text-center">
+                                                        -- Manual Tracking (นับเอง) --
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {/* Count */}
+                                            <div className="col-span-1">
+                                                <input type="number" min={1} className="w-full border border-gray-200 rounded-lg px-1 py-1 text-sm text-center focus:border-indigo-500 outline-none" value={item.targetCount} onChange={e => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, targetCount: Number(e.target.value) } : i))} />
+                                            </div>
+                                            
+                                            {/* Delete */}
+                                            <div className="col-span-1 text-center">
+                                                <button type="button" onClick={() => setQuestItems(prev => prev.filter(i => i.id !== item.id))} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                            </div>
                                         </div>
-                                        
-                                        {/* Delete */}
-                                        <div className="col-span-1 text-center">
-                                            <button type="button" onClick={() => setQuestItems(prev => prev.filter(i => i.id !== item.id))} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+
+                                        {/* Mobile Card View */}
+                                        <div className="block md:hidden bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3 relative">
+                                            {/* Card Header */}
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-black">#{index + 1}</div>
+                                                    <span className="text-xs font-bold text-gray-400 uppercase">QUEST</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {/* Type Toggle */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, questType: i.questType === 'AUTO' ? 'MANUAL' : 'AUTO' } : i))}
+                                                        className={`px-3 py-1 rounded-lg text-xs font-extrabold border flex items-center justify-center transition-colors ${
+                                                            item.questType === 'AUTO' 
+                                                            ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100' 
+                                                            : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'
+                                                        }`}
+                                                    >
+                                                        {item.questType === 'AUTO' ? '⚡ Auto' : '✋ Manual'}
+                                                    </button>
+                                                    {/* Trash Delete button on top right */}
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => setQuestItems(prev => prev.filter(i => i.id !== item.id))} 
+                                                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Quest Title input (w-full) */}
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold text-gray-400">ชื่องาน (Quest Title)</label>
+                                                <input 
+                                                    type="text" 
+                                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-semibold focus:border-indigo-500 outline-none" 
+                                                    placeholder="เช่น ลง Story..." 
+                                                    value={item.title} 
+                                                    onChange={e => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, title: e.target.value } : i))} 
+                                                />
+                                            </div>
+
+                                            {/* Auto options or Manual note */}
+                                            {item.questType === 'AUTO' ? (
+                                                <div className="space-y-2">
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {/* Platform */}
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-bold text-gray-400">Platform</label>
+                                                            <select className="w-full border border-gray-200 rounded-lg px-2 py-2 text-xs font-bold text-gray-600 focus:border-indigo-500 outline-none bg-white animate-none" value={item.platform || ''} onChange={e => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, platform: e.target.value as Platform | 'ALL' || undefined } : i))}>
+                                                                <option value="">(ไม่ระบุ)</option>
+                                                                <option value="ALL">🌐 ทุกช่องทาง</option>
+                                                                <option value="INSTAGRAM">IG/Story</option>
+                                                                <option value="FACEBOOK">Facebook</option>
+                                                                <option value="TIKTOK">TikTok</option>
+                                                                <option value="YOUTUBE">YouTube</option>
+                                                            </select>
+                                                        </div>
+
+                                                        {/* Status */}
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-bold text-gray-400">Status</label>
+                                                            <select className="w-full border border-gray-200 rounded-lg px-2 py-2 text-xs font-bold text-green-700 bg-green-50 focus:border-green-500 outline-none animate-none" value={item.statusKey || defaultStatusKey} onChange={e => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, statusKey: e.target.value || undefined } : i))}>
+                                                                {statusOptions.length > 0 ? (
+                                                                    statusOptions.map(opt => <option key={opt.key} value={opt.key}>{opt.label}</option>)
+                                                                ) : (
+                                                                    <>
+                                                                        <option value="DONE">Done ✅</option>
+                                                                        <option value="APPROVE">Approve 👍</option>
+                                                                    </>
+                                                                )}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Format (span full width) */}
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-bold text-gray-400">Format (รูปแบบคอนเทนต์)</label>
+                                                        <FormatMultiSelect 
+                                                            options={availableFormats}
+                                                            selectedKeys={item.formatKeys || []}
+                                                            onChange={(keys) => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, formatKeys: keys } : i))}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center gap-1.5 text-center transition-all">
+                                                    <CheckCircle2 className="w-3.5 h-3.5 text-orange-400 shrink-0 animate-pulse" />
+                                                    <span className="text-[11px] font-bold text-gray-500">
+                                                        Manual Tracking: นับยอดสะสมในสัปดาห์ด้วยตัวเอง
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {/* Stepper Count (with - and + buttons) */}
+                                            <div className="flex items-center justify-between pt-1.5 border-t border-gray-100">
+                                                <span className="text-xs font-bold text-gray-500 flex items-center gap-1">
+                                                    <Target className="w-3.5 h-3.5 text-indigo-500" />
+                                                    เป้าหมาย (Target):
+                                                </span>
+                                                <div className="flex items-center gap-1">
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, targetCount: Math.max(1, i.targetCount - 1) } : i))}
+                                                        className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 font-extrabold text-gray-700 flex items-center justify-center text-sm transition-colors active:bg-gray-300 select-none"
+                                                    >
+                                                        -
+                                                    </button>
+                                                    <input 
+                                                        type="number" 
+                                                        min={1} 
+                                                        className="w-12 h-8 border border-gray-200 rounded-lg text-sm font-bold text-center focus:border-indigo-500 outline-none" 
+                                                        value={item.targetCount} 
+                                                        onChange={e => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, targetCount: Math.max(1, Number(e.target.value)) } : i))} 
+                                                    />
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => setQuestItems(prev => prev.map(i => i.id === item.id ? { ...i, targetCount: i.targetCount + 1 } : i))}
+                                                        className="w-8 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 font-extrabold text-indigo-600 flex items-center justify-center text-sm transition-colors active:bg-indigo-200 select-none"
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}

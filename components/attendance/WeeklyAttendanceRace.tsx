@@ -369,6 +369,7 @@ export const WeeklyAttendanceRace: React.FC = () => {
                         allRacersCount={racers.length}
                         isCollapsed={isPodiumCollapsed}
                         onToggleCollapse={togglePodiumCollapsed}
+                        viewMode={viewMode}
                     />
                 </div>
             </div>
