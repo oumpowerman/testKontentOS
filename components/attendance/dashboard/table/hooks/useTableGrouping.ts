@@ -8,6 +8,7 @@ interface UseTableGroupingParams {
   groupMode: GroupMode;
   sortDirection: "ASC" | "DESC";
   activeStatFilter?: string;
+  lateViewMode?: "DAYS" | "HOURS";
 }
 
 export const useTableGrouping = ({
@@ -16,10 +17,13 @@ export const useTableGrouping = ({
   groupMode,
   sortDirection,
   activeStatFilter,
+  lateViewMode = "DAYS",
 }: UseTableGroupingParams) => {
   return useMemo(() => {
     const getSortValue = (stat: UserStat) => {
-      if (activeStatFilter === "LATE") return stat.late;
+      if (activeStatFilter === "LATE") {
+        return lateViewMode === "HOURS" ? (stat.totalLateMinutes || 0) : stat.late;
+      }
       if (activeStatFilter === "ABSENT") return stat.absent;
       if (activeStatFilter === "LEAVE") return stat.leaves;
       return stat.present;
@@ -108,5 +112,5 @@ export const useTableGrouping = ({
     });
 
     return { groups: computedGroups, groupedData: sortedGroupedData };
-  }, [filteredStats, users, groupMode, sortDirection, activeStatFilter]);
+  }, [filteredStats, users, groupMode, sortDirection, activeStatFilter, lateViewMode]);
 };

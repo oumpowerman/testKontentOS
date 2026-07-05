@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Save, Check, Loader2, Gift, Tag, Type, Palette, AlignLeft, Hash, Percent, ShieldCheck } from 'lucide-react';
+import { X, Save, Check, Loader2, Gift, Tag, Type, Palette, AlignLeft, Hash, Percent, ShieldCheck, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChannels } from '../../../hooks/useChannels';
 import FilterDropdown from '../../common/FilterDropdown';
@@ -53,6 +53,58 @@ const MasterFormModal: React.FC<MasterFormModalProps> = ({
     const positionOptions = masterOptions
         .filter(o => o.type === 'POSITION' && o.key !== formData.key)
         .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    // Parse default quota and advance days from description if it's LEAVE_TYPE
+    let defaultQuotaValue = 0;
+    let advanceDaysValue = 0;
+    const isLeaveType = activeTab === 'LEAVE_TYPE' || formData.type === 'LEAVE_TYPE';
+    if (isLeaveType) {
+        try {
+            const meta = formData.description ? JSON.parse(formData.description) : {};
+            defaultQuotaValue = typeof meta.defaultQuota === 'number' ? meta.defaultQuota : parseInt(meta.defaultQuota) || 0;
+            advanceDaysValue = typeof meta.advanceDays === 'number' ? meta.advanceDays : parseInt(meta.advanceDays) || 0;
+        } catch (e) {
+            // Description might not be valid JSON yet if it's empty or custom text
+        }
+    }
+
+    const handleLeaveQuotaChange = (newQuotaVal: string) => {
+        const val = parseInt(newQuotaVal) || 0;
+        let currentMeta: any = {};
+        try {
+            currentMeta = formData.description ? JSON.parse(formData.description) : {};
+        } catch (e) {
+            currentMeta = {};
+        }
+        if (!currentMeta.icon) currentMeta.icon = "FileText";
+        if (!currentMeta.category) currentMeta.category = "STANDARD";
+        if (!currentMeta.placeholder) currentMeta.placeholder = "ระบุเหตุผลการลา...";
+        
+        currentMeta.defaultQuota = val;
+        setFormData({
+            ...formData,
+            description: JSON.stringify(currentMeta)
+        });
+    };
+
+    const handleLeaveAdvanceDaysChange = (newAdvanceVal: string) => {
+        const val = parseInt(newAdvanceVal) || 0;
+        let currentMeta: any = {};
+        try {
+            currentMeta = formData.description ? JSON.parse(formData.description) : {};
+        } catch (e) {
+            currentMeta = {};
+        }
+        if (!currentMeta.icon) currentMeta.icon = "FileText";
+        if (!currentMeta.category) currentMeta.category = "STANDARD";
+        if (!currentMeta.placeholder) currentMeta.placeholder = "ระบุเหตุผลการลา...";
+        
+        currentMeta.advanceDays = val;
+        setFormData({
+            ...formData,
+            description: JSON.stringify(currentMeta)
+        });
+    };
 
     return createPortal(
         <AnimatePresence>
@@ -235,18 +287,56 @@ const MasterFormModal: React.FC<MasterFormModalProps> = ({
                                         </div>
                                     )}
                                     
-                                    <div className="space-y-2">
-                                        <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                            <AlignLeft className="w-3 h-3" /> Description
-                                        </label>
-                                        <textarea 
-                                            rows={2}
-                                            value={formData.description || ''} 
-                                            onChange={e => setFormData({...formData, description: e.target.value})} 
-                                            className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm resize-none placeholder:text-slate-300" 
-                                            placeholder="Optional description..."
-                                        />
-                                    </div>
+                                    {isLeaveType && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                    <Hash className="w-3 h-3 text-indigo-500" /> โควตาวันลา (วัน) / Quota (Days)
+                                                </label>
+                                                <input 
+                                                    type="number" 
+                                                    min="0"
+                                                    max="999"
+                                                    value={defaultQuotaValue} 
+                                                    onChange={e => handleLeaveQuotaChange(e.target.value)} 
+                                                    className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700 placeholder:text-slate-300 text-sm"
+                                                    placeholder="ระบุวันลาสูงสุดต่อปี..."
+                                                    required
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                    <Calendar className="w-3 h-3 text-emerald-500" /> ต้องแจ้งล่วงหน้า (วัน)
+                                                </label>
+                                                <input 
+                                                    type="number" 
+                                                    min="0"
+                                                    max="365"
+                                                    value={advanceDaysValue} 
+                                                    onChange={e => handleLeaveAdvanceDaysChange(e.target.value)} 
+                                                    className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700 placeholder:text-slate-300 text-sm"
+                                                    placeholder="ต้องแจ้งล่วงหน้า (วัน)..."
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {!isLeaveType && (
+                                        <div className="space-y-2">
+                                            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                <AlignLeft className="w-3 h-3" /> Description
+                                            </label>
+                                            <textarea 
+                                                rows={2}
+                                                value={formData.description || ''} 
+                                                onChange={e => setFormData({...formData, description: e.target.value})} 
+                                                className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm resize-none placeholder:text-slate-300" 
+                                                placeholder="Optional description..."
+                                            />
+                                        </div>
+                                    )}
                                     
                                     <div className="space-y-2">
                                         <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">

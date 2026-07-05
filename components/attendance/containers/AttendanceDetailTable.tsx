@@ -8,6 +8,7 @@ import { getDirectDriveUrl } from '../../../lib/imageUtils';
 
 interface AttendanceDetailTableProps {
     logs: AttendanceLog[];
+    leaveRequests?: any[];
     getStatusDetails: (status: string) => { label: string; className: string };
     extractProofUrl: (note?: string) => string | null;
     cleanNote: (note?: string) => string;
@@ -17,12 +18,72 @@ interface AttendanceDetailTableProps {
 
 export const AttendanceDetailTable: React.FC<AttendanceDetailTableProps> = ({
     logs,
+    leaveRequests,
     getStatusDetails,
     extractProofUrl,
     cleanNote,
     formatTime,
     setPreviewImage,
 }) => {
+    const getOtDetailsForDate = (dateStr: string, userId: string) => {
+        if (!leaveRequests) return null;
+        const req = leaveRequests.find(r => {
+            if (r.userId !== userId) return false;
+            if (r.type !== 'OVERTIME') return false;
+            const s = format(new Date(r.startDate), 'yyyy-MM-dd');
+            return s === dateStr;
+        });
+
+        if (!req) return null;
+
+        const match = req.reason ? req.reason.match(/\[OT:(.*?)\]/) : null;
+        const hours = match ? match[1] : null;
+        const cleanReason = req.reason ? req.reason.replace(/\[OT:.*?\]/, '').trim() : '';
+
+        return {
+            hours: hours || 'ไม่ระบุ',
+            status: req.status,
+            reason: cleanReason
+        };
+    };
+
+    const renderOtBadge = (ot: { hours: string; status: string; reason: string }) => {
+        let bgClass = '';
+        let borderClass = '';
+        let textClass = '';
+        let dotClass = '';
+        let statusText = '';
+
+        if (ot.status === 'APPROVED') {
+            bgClass = 'bg-amber-50';
+            borderClass = 'border-amber-200/50';
+            textClass = 'text-amber-700';
+            dotClass = 'bg-amber-500';
+            statusText = 'อนุมัติแล้ว';
+        } else if (ot.status === 'PENDING') {
+            bgClass = 'bg-indigo-50 animate-pulse';
+            borderClass = 'border-indigo-200/50';
+            textClass = 'text-indigo-600';
+            dotClass = 'bg-indigo-500';
+            statusText = 'รออนุมัติ';
+        } else {
+            bgClass = 'bg-slate-50';
+            borderClass = 'border-slate-200';
+            textClass = 'text-slate-500';
+            dotClass = 'bg-slate-400';
+            statusText = 'ปฏิเสธ';
+        }
+
+        return (
+            <div 
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border transition-all ${bgClass} ${borderClass} ${textClass}`}
+                title={`ชั่วโมง: ${ot.hours} | เหตุผล: ${ot.reason || 'ไม่ได้ระบุ'}`}
+            >
+                <span className={`w-1 h-1 rounded-full shrink-0 ${dotClass}`} />
+                <span>OT {ot.hours} ({statusText})</span>
+            </div>
+        );
+    };
     return (
         <div className="w-full overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.03)] selection:bg-indigo-50">
             <table className="w-full min-w-[540px] sm:min-w-[700px] text-left border-collapse table-auto">
@@ -90,9 +151,15 @@ export const AttendanceDetailTable: React.FC<AttendanceDetailTableProps> = ({
 
                                 {/* Status Badge */}
                                 <td className="px-3 sm:px-6 py-3.5 text-center">
-                                    <span className={`inline-flex items-center px-2 py-0.5 sm:px-3.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wide border whitespace-nowrap ${statusDetails.className}`}>
-                                        {statusDetails.label}
-                                    </span>
+                                    <div className="flex flex-col items-center gap-1.5 justify-center">
+                                        <span className={`inline-flex items-center px-2 py-0.5 sm:px-3.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wide border whitespace-nowrap ${statusDetails.className}`}>
+                                            {statusDetails.label}
+                                        </span>
+                                        {(() => {
+                                            const ot = getOtDetailsForDate(log.date, log.userId);
+                                            return ot ? renderOtBadge(ot) : null;
+                                        })()}
+                                    </div>
                                 </td>
 
                                 {/* Check In */}

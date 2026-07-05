@@ -17,6 +17,7 @@ export const useMasterData = () => {
         addMasterOption,
         updateMasterOption,
         deleteMasterOption,
+        saveMasterOptionsBulk,
         seedDefaults
     } = useMasterDataContext();
 
@@ -30,6 +31,7 @@ export const useMasterData = () => {
         addMasterOption,
         updateMasterOption,
         deleteMasterOption,
+        saveMasterOptionsBulk,
         seedDefaults
     };
 };

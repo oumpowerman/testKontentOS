@@ -39,6 +39,7 @@ export interface AttendanceStats {
     absentDays: number;
     totalHours: number;
     currentStreak: number; // NEW: Track consecutive on-time days
+    hasPendingStreakRequest?: boolean; // NEW: Track if the user has a pending leave/attendance correction on broken days
     monthlyLogs?: AttendanceLog[]; // NEW: For detailed view
 }
 
@@ -64,3 +65,27 @@ export interface LeaveRequest {
 
 // NEW: Helper type for Quota
 export type LeaveUsage = Record<LeaveType, number>;
+
+// --- NEW: Overtime Types ---
+export type OtType = 'NORMAL_DAY' | 'HOLIDAY' | 'HOLIDAY_OVERTIME';
+export type OtStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface OtRequest {
+    id: string;
+    userId: string;
+    date: string; // YYYY-MM-DD
+    startTime: string; // HH:MM
+    endTime: string; // HH:MM
+    durationHours: number;
+    reason: string;
+    type: OtType;
+    status: OtStatus;
+    approvedBy?: string;
+    approvedAt?: Date;
+    rejectionReason?: string;
+    baseSalaryAtTime?: number;
+    computedPayout: number;
+    createdAt: Date;
+    user?: Partial<User>;
+}
+

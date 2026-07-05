@@ -10,7 +10,7 @@ import {
     LeaveApprovalList, 
     LeaveQuotaModal, 
     AttendanceInfoCard, 
-    WeeklyAttendanceRace 
+    WeeklyAttendanceRace
 } from '../components/attendance';
 import { useAttendanceStats } from '../hooks/attendance/useAttendanceStats'; 
 import { useLeaveRequests } from '../hooks/useLeaveRequests';
@@ -39,10 +39,10 @@ const AttendanceRouter: React.FC<AttendanceRouterProps> = ({ currentUser, users 
         currentUser, 
         { all: currentUser.role === 'ADMIN' }
     );
-    
+
     // Admin pending count (for approval list badge)
     const adminPendingCount = useMemo(() => requests.filter(r => r.status === 'PENDING').length, [requests]);
-    
+
     // My personal pending count (for history badge)
     const myPendingCount = useMemo(() => 
         requests.filter(r => r.userId === currentUser.id && r.status === 'PENDING').length, 

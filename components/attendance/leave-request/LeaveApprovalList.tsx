@@ -24,6 +24,7 @@ interface ParsedReason {
     isLocationMismatch: boolean;
     forgotCheckoutPenalty: boolean;
     time: string | null;
+    otHours: string | null;
 }
 
 const parseReason = (reason: string): ParsedReason => {
@@ -51,13 +52,22 @@ const parseReason = (reason: string): ParsedReason => {
         text = text.replace(/\[TIME:\d{2}:\d{2}\]/g, '');
     }
 
+    // Extract [OT:Xhr]
+    const otMatch = text.match(/\[OT:([\d\.]+)hr\]/);
+    let otHours: string | null = null;
+    if (otMatch) {
+        otHours = otMatch[1];
+        text = text.replace(/\[OT:[\d\.]+hr\]/g, '');
+    }
+
     text = text.trim();
     return {
         cleanReason: text,
         isLateSubmission,
         isLocationMismatch,
         forgotCheckoutPenalty,
-        time
+        time,
+        otHours
     };
 };
 
@@ -349,6 +359,12 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
                                                         {parsed.time && (
                                                             <span className="text-[10px] px-2 py-0.5 rounded-lg font-bold border bg-indigo-100 text-indigo-700 border-indigo-200/60 flex items-center gap-1">
                                                                 <Clock className="w-3 h-3" /> เวลา: {parsed.time} น.
+                                                            </span>
+                                                        )}
+
+                                                        {parsed.otHours && (
+                                                            <span className="text-[10px] px-2 py-0.5 rounded-lg font-bold border bg-indigo-100 text-indigo-700 border-indigo-200/60 flex items-center gap-1 animate-pulse">
+                                                                <Moon className="w-3 h-3 text-indigo-500" /> จำนวน: {parsed.otHours} ชม.
                                                             </span>
                                                         )}
 

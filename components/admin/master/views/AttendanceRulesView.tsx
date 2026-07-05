@@ -18,6 +18,7 @@ interface AttendanceRulesViewProps {
     onCreate: (type: string) => void;
     onEdit: (option: MasterOption) => void;
     onDelete: (id: string) => void;
+    saveMasterOptionsBulk?: (options: MasterOption[]) => Promise<boolean>;
 }
 
 type TabType = 'time' | 'location' | 'selfie' | 'types';

@@ -10,6 +10,9 @@ export interface UserStat {
   totalHours: number;
   avgCheckIn: string;
   logs: AttendanceLog[];
+  totalLateMinutes?: number;
+  totalOtHours?: number;
+  totalOtPayout?: number;
 }
 
 export type GroupMode = "POSITION" | "EMPLOYMENT_TYPE" | "NONE";
@@ -29,4 +32,10 @@ export interface DashboardTableProps {
   activeStatFilter?: string;
   sortDirection: "ASC" | "DESC";
   onSortDirectionChange: (dir: "ASC" | "DESC") => void;
+  currentMonth?: Date;
+  workingDaysCount?: number;
+  lateViewMode?: "DAYS" | "HOURS";
+  onLateViewModeChange?: (mode: "DAYS" | "HOURS") => void;
+  otViewMode?: "HOURS" | "PAYOUT";
+  onOtViewModeChange?: (mode: "HOURS" | "PAYOUT") => void;
 }

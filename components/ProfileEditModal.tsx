@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Save, Loader2 } from 'lucide-react';
+import { X, Save, Loader2, Send, CheckCircle, Trash2, AlertTriangle } from 'lucide-react';
 import { User as UserType } from '../types';
 import ImageCropper from './ImageCropper';
 import { useGlobalDialog } from '../context/GlobalDialogContext';
@@ -13,6 +13,7 @@ import ProfileBasicInfo from './profile/ProfileBasicInfo';
 import ProfileBioSection from './profile/ProfileBioSection';
 import ProfileSocialSection from './profile/ProfileSocialSection';
 import ProfileLineNotificationGuide from './profile/ProfileLineNotificationGuide';
+import { supabase } from '../lib/supabase';
 
 interface ProfileEditModalProps {
   isOpen: boolean;
@@ -24,6 +25,11 @@ interface ProfileEditModalProps {
 const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, user, onSave }) => {
   const { showAlert } = useGlobalDialog();
   const [showFullImage, setShowFullImage] = useState(false);
+
+  // LINE Connection Test States
+  const [testState, setTestState] = useState<'IDLE' | 'TESTING' | 'SENT' | 'ERROR'>('IDLE');
+  const [testError, setTestError] = useState<string | null>(null);
+  const [createdNotifId, setCreatedNotifId] = useState<string | null>(null);
 
   const {
     formState,
@@ -52,6 +58,71 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, us
     emoji, setEmoji,
     takenEmojis
   } = formState;
+
+  const handleTestLineConnection = async () => {
+    if (!lineUserId.trim()) {
+      showAlert('กรุณากรอก LINE User ID', 'กรุณากรอก LINE User ID ก่อนทดสอบเชื่อมต่อครับ');
+      return;
+    }
+    
+    setTestState('TESTING');
+    setTestError(null);
+    
+    try {
+      // 1. Temporarily save LINE ID in profile so edge function reads it correctly
+      const { error: updateErr } = await supabase
+        .from('profiles')
+        .update({ line_user_id: lineUserId.trim() })
+        .eq('id', user.id);
+        
+      if (updateErr) throw updateErr;
+      
+      // 2. Insert test notification
+      const { data: notifData, error: notifErr } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: user.id,
+          type: 'INFO',
+          title: '🔔 ทดสอบเชื่อมต่อ LINE สำเร็จ!',
+          message: 'นี่คือข้อความทดสอบจากระบบ Juijui App เพื่อยืนยันว่า LINE User ID ของคุณใช้งานได้ถูกต้องเป็นปกติ',
+          is_read: false,
+          link_path: 'ATTENDANCE'
+        })
+        .select('*')
+        .single();
+        
+      if (notifErr) throw notifErr;
+      
+      if (notifData) {
+        setCreatedNotifId(notifData.id);
+      }
+      
+      setTestState('SENT');
+      
+      // Auto-delete the test notification after 15 seconds to keep the database and user's notifications list clean
+      setTimeout(async () => {
+        if (notifData?.id) {
+          await supabase.from('notifications').delete().eq('id', notifData.id);
+        }
+      }, 15000);
+      
+    } catch (err: any) {
+      console.error('Test LINE error:', err);
+      setTestState('ERROR');
+      setTestError(err.message || 'เกิดข้อผิดพลาดในการส่งข้อความทดสอบ');
+    }
+  };
+
+  const handleManualDeleteTest = async () => {
+    if (!createdNotifId) return;
+    try {
+      await supabase.from('notifications').delete().eq('id', createdNotifId);
+      setCreatedNotifId(null);
+      setTestState('IDLE');
+    } catch (err) {
+      console.error('Failed to delete test notification:', err);
+    }
+  };
 
   return (
         <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 font-sans overflow-hidden">
@@ -194,6 +265,70 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, us
                         lineUserId={lineUserId}
                         onLineUserIdChange={setLineUserId}
                     />
+                    
+                    {/* Test LINE Connection Section */}
+                    {lineUserId && (
+                      <div className="px-1 mt-1">
+                        {testState === 'IDLE' && (
+                          <button
+                            type="button"
+                            onClick={handleTestLineConnection}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-bold rounded-xl transition-all active:scale-95 shadow-sm"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            ทดสอบส่งแจ้งเตือน (Test Line Connection)
+                          </button>
+                        )}
+
+                        {testState === 'TESTING' && (
+                          <div className="flex items-center gap-2 text-xs font-medium text-emerald-600 bg-emerald-50/50 p-2.5 rounded-xl border border-emerald-100/50">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>กำลังสร้างรายการแจ้งเตือนและเตรียมส่งไปยัง LINE บอทของคุณ...</span>
+                          </div>
+                        )}
+
+                        {testState === 'SENT' && (
+                          <div className="space-y-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                              <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
+                                <CheckCircle className="w-4 h-4 text-emerald-600 fill-white" />
+                                <span>สร้างข้อความทดสอบลงตารางเรียบร้อย! ระบบจะประมวลผลภายใน 6-10 วินาที</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleManualDeleteTest}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold rounded-lg border border-rose-100 transition-all"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                ลบประวัติออกทันที
+                              </button>
+                            </div>
+                            <p className="text-[9px] text-slate-400 ml-1">
+                              * ระบบจะลบประวัติแจ้งเตือนนี้ออกจากฐานข้อมูลโดยอัตโนมัติภายใน 15 วินาทีเพื่อไม่ให้รกหน้าจอประวัติของคุณ
+                            </p>
+                          </div>
+                        )}
+
+                        {testState === 'ERROR' && (
+                          <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl space-y-2">
+                            <div className="flex items-start gap-2 text-xs font-bold text-rose-800">
+                              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                              <div className="flex-1">
+                                <p>ไม่สามารถสร้างข้อความทดสอบได้</p>
+                                <p className="text-[10px] font-medium text-rose-600 mt-1">{testError}</p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setTestState('IDLE')}
+                              className="px-3 py-1.5 bg-white hover:bg-rose-100 text-rose-800 text-[10px] font-bold rounded-lg border border-rose-200 transition-all"
+                            >
+                              ลองใหม่อีกครั้ง
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     
                     {/* Notification Guide */}
                     <ProfileLineNotificationGuide />

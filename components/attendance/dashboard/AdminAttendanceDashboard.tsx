@@ -6,8 +6,9 @@ import { supabase } from '../../../lib/supabase';
 import { format } from 'date-fns';
 import { Download } from 'lucide-react';
 import { AttendanceLog } from '../../../types/attendance';
-import { checkIsLate, getAttendanceSummary } from '../../../lib/attendanceUtils';
+import { checkIsLate, getAttendanceSummary, getLateMinutes } from '../../../lib/attendanceUtils';
 import { useGameConfig } from '../../../context/GameConfigContext';
+import { useUserSession } from '../../../context/UserSessionContext';
 import { useAnnualHolidays } from '../../../hooks/useAnnualHolidays';
 import { useCalendarExceptions } from '../../../hooks/useCalendarExceptions';
 import { eachDayOfInterval, startOfMonth, endOfMonth, isWeekend } from 'date-fns';
@@ -47,12 +48,16 @@ interface UserStat {
     totalHours: number;
     avgCheckIn: string;
     logs: AttendanceLog[];
+    totalLateMinutes?: number;
+    totalOtHours?: number;
+    totalOtPayout?: number;
 }
 
 import { useMasterData } from '../../../hooks/useMasterData';
 
 const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ users }) => {
     const { masterOptions } = useMasterData();
+    const { otRequests } = useUserSession();
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [dateFilterMode, setDateFilterMode] = useState<'MONTH' | 'CUSTOM'>('MONTH');
     const [customStartDate, setCustomStartDate] = useState<Date>(startOfMonth(new Date()));
@@ -63,6 +68,8 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
     const [selectedEmploymentType, setSelectedEmploymentType] = useState('ALL');
     const [selectedPosition, setSelectedPosition] = useState('ALL');
     const [viewMode, setViewMode] = useState<'TABLE' | 'ANALYTICS'>('TABLE');
+    const [lateViewMode, setLateViewMode] = useState<'DAYS' | 'HOURS'>('DAYS');
+    const [otViewMode, setOtViewMode] = useState<'HOURS' | 'PAYOUT'>('HOURS');
     const [activeStatFilter, setActiveStatFilter] = useState<'ALL' | 'PRESENT' | 'LATE' | 'ABSENT' | 'LEAVE'>('ALL');
     const [sortDirection, setSortDirection] = useState<'ASC' | 'DESC'>('DESC');
     const [isToolsExpanded, setIsToolsExpanded] = useState(false);
@@ -186,7 +193,8 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
                 absent: 0,
                 totalHours: 0,
                 avgCheckIn: '-',
-                logs: []
+                logs: [],
+                totalLateMinutes: 0
             };
         });
 
@@ -210,6 +218,8 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
                     if (summary.isLate) {
                         stat.late++;
                     }
+                    const lateMins = getLateMinutes(log.checkInTime, startTime, lateBuffer);
+                    stat.totalLateMinutes = (stat.totalLateMinutes || 0) + lateMins;
                     stat.totalHours += summary.workHours;
                 }
             }
@@ -255,8 +265,23 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
             });
         });
 
+        // Calculate approved Overtime for each user in the selected month/range
+        const activeOtRequests = otRequests.filter(req => {
+            if (req.status !== 'APPROVED') return false;
+            const reqDate = new Date(req.date);
+            const start = dateFilterMode === 'MONTH' ? startOfMonth(currentMonth) : customStartDate;
+            const end = dateFilterMode === 'MONTH' ? endOfMonth(currentMonth) : customEndDate;
+            return reqDate >= start && reqDate <= end;
+        });
+
+        Object.values(statsMap).forEach(stat => {
+            const userOt = activeOtRequests.filter(req => req.userId === stat.userId);
+            stat.totalOtHours = userOt.reduce((sum, req) => sum + req.durationHours, 0);
+            stat.totalOtPayout = userOt.reduce((sum, req) => sum + req.computedPayout, 0);
+        });
+
         return Object.values(statsMap);
-    }, [users, logs, startTime, lateBuffer, workingDaysInMonth]);
+    }, [users, logs, startTime, lateBuffer, workingDaysInMonth, otRequests, currentMonth, dateFilterMode, customStartDate, customEndDate]);
 
     // Compute unique positions from active users
     const positions = useMemo(() => {
@@ -283,7 +308,9 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
         if (activeStatFilter !== 'ALL') {
             const getVal = (s: typeof userStats[0]) => {
                 if (activeStatFilter === 'PRESENT') return s.present;
-                if (activeStatFilter === 'LATE') return s.late;
+                if (activeStatFilter === 'LATE') {
+                    return lateViewMode === 'HOURS' ? (s.totalLateMinutes || 0) : s.late;
+                }
                 if (activeStatFilter === 'ABSENT') return s.absent;
                 if (activeStatFilter === 'LEAVE') return s.leaves;
                 return s.present;
@@ -305,8 +332,8 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
             let valA = 0;
             let valB = 0;
             if (activeStatFilter === 'LATE') {
-                valA = a.late;
-                valB = b.late;
+                valA = lateViewMode === 'HOURS' ? (a.totalLateMinutes || 0) : a.late;
+                valB = lateViewMode === 'HOURS' ? (b.totalLateMinutes || 0) : b.late;
             } else if (activeStatFilter === 'ABSENT') {
                 valA = a.absent;
                 valB = b.absent;
@@ -325,7 +352,7 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
                 return valB - valA;
             }
         });
-    }, [userStats, users, searchTerm, selectedEmploymentType, selectedPosition, activeStatFilter, sortDirection]);
+    }, [userStats, users, searchTerm, selectedEmploymentType, selectedPosition, activeStatFilter, sortDirection, lateViewMode]);
 
     // Aggregates
     const totalCheckins = logs.filter(l => l.status !== 'LEAVE').length;
@@ -361,17 +388,34 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
     // --- CSV Export Logic ---
     const handleExportCSV = () => {
         // 1. Header
-        const headers = ["Employee Name", "Position", "Days Present", "Late Count", "Leave Days", "Total Hours", "Performance Grade"];
+        const headers = [
+            "Employee Name", 
+            "Position", 
+            "Days Present", 
+            lateViewMode === 'HOURS' ? "Late Duration" : "Late Count", 
+            "Leave Days", 
+            "Total Hours", 
+            "Performance Grade"
+        ];
         
         // 2. Rows
         const rows = filteredStats.map(stat => {
             const user = users.find(u => u.id === stat.userId);
             const gradeInfo = getGrade(stat);
+            
+            let lateValue: string | number = stat.late;
+            if (lateViewMode === 'HOURS') {
+                const totalMins = stat.totalLateMinutes || 0;
+                const hrs = Math.floor(totalMins / 60);
+                const mins = totalMins % 60;
+                lateValue = hrs > 0 ? `"${hrs}h ${mins}m"` : `"${mins}m"`;
+            }
+
             return [
                 `"${user?.name || 'Unknown'}"`,
                 `"${user?.position || '-'}"`,
                 stat.present,
-                stat.late,
+                lateValue,
                 stat.leaves,
                 stat.totalHours.toFixed(2),
                 `"${gradeInfo.grade}"`
@@ -449,6 +493,10 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
                             activeStatFilter={activeStatFilter}
                             sortDirection={sortDirection}
                             onSortDirectionChange={setSortDirection}
+                            lateViewMode={lateViewMode}
+                            onLateViewModeChange={setLateViewMode}
+                            otViewMode={otViewMode}
+                            onOtViewModeChange={setOtViewMode}
                         />
 
                         <div className="flex justify-end">

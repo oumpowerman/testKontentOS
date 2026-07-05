@@ -14,6 +14,7 @@ interface UserSessionContextType {
     activeUsers: User[];
     attendanceLogs: any[];
     leaveRequests: any[];
+    otRequests: any[];
     
     // Auth Actions
     fetchProfile: () => Promise<User | null>;
@@ -22,6 +23,7 @@ interface UserSessionContextType {
     // Data Actions
     refreshAttendance: () => Promise<void>;
     refreshLeaves: () => Promise<void>;
+    refreshOTRequests: () => Promise<void>;
     
     // Team Actions
     fetchTeamMembers: () => Promise<void>;
@@ -135,6 +137,24 @@ const mapLeaveRequest = (data: any) => ({
     rejectionReason: data.rejection_reason
 });
 
+const mapOtRequest = (data: any) => ({
+    id: data.id,
+    userId: data.user_id,
+    date: data.date,
+    startTime: data.start_time,
+    endTime: data.end_time,
+    durationHours: Number(data.duration_hours || 0),
+    reason: data.reason,
+    type: data.type,
+    status: data.status,
+    approvedBy: data.approved_by,
+    approvedAt: data.approved_at ? new Date(data.approved_at) : undefined,
+    rejectionReason: data.rejection_reason,
+    baseSalaryAtTime: data.base_salary_at_time ? Number(data.base_salary_at_time) : undefined,
+    computedPayout: Number(data.computed_payout || 0),
+    createdAt: new Date(data.created_at)
+});
+
 export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.ReactNode }> = ({ sessionUser, children }) => {
     const [isReady, setIsReady] = useState(false);
     const [currentUserProfile, setCurrentUserProfile] = useState<User | null>(null);
@@ -142,6 +162,7 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
     const activeUsers = React.useMemo(() => allUsers.filter(u => u.isActive), [allUsers]);
     const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
     const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
+    const [otRequests, setOtRequests] = useState<any[]>([]);
     
     const { showToast } = useToast();
     const { showConfirm, showAlert } = useGlobalDialog();
@@ -196,19 +217,26 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
                     
                     let attendanceQuery = supabase.from('attendance_logs').select('*').gte('date', thirtyDaysAgo);
                     let leavesQuery = supabase.from('leave_requests').select('*').gte('end_date', sixtyDaysAgo);
+                    let otQuery = supabase.from('ot_requests').select('*').gte('date', sixtyDaysAgo);
 
                     if (!isAdmin) {
                         attendanceQuery = attendanceQuery.eq('user_id', sessionUser.id);
                         leavesQuery = leavesQuery.eq('user_id', sessionUser.id);
+                        otQuery = otQuery.eq('user_id', sessionUser.id);
                     }
 
-                    const [attendanceRes, leavesRes] = await Promise.all([
+                    const [attendanceRes, leavesRes, otRes] = await Promise.all([
                         attendanceQuery,
-                        leavesQuery
+                        leavesQuery,
+                        Promise.resolve(otQuery).catch(err => {
+                            console.warn("ot_requests table might not exist yet:", err);
+                            return { data: [] } as any;
+                        })
                     ]);
 
                     if (attendanceRes.data) setAttendanceLogs(attendanceRes.data.map(mapAttendanceLog));
                     if (leavesRes.data) setLeaveRequests(leavesRes.data.map(mapLeaveRequest));
+                    if (otRes.data) setOtRequests(otRes.data.map(mapOtRequest));
                 }
             }
 
@@ -288,6 +316,24 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
                     setLeaveRequests(prev => prev.map(req => req.id === payload.new.id ? mapLeaveRequest(payload.new) : req));
                 } else if (payload.eventType === 'DELETE') {
                     setLeaveRequests(prev => prev.filter(req => req.id !== payload.old.id));
+                }
+            })
+            // 4. Overtime Requests (Scope based on Role)
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'ot_requests', 
+                filter: isAdmin ? undefined : `user_id=eq.${sessionUser.id}` 
+            }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    setOtRequests(prev => {
+                        if (prev.some(req => req.id === payload.new.id)) return prev;
+                        return [mapOtRequest(payload.new), ...prev];
+                    });
+                } else if (payload.eventType === 'UPDATE') {
+                    setOtRequests(prev => prev.map(req => req.id === payload.new.id ? mapOtRequest(payload.new) : req));
+                } else if (payload.eventType === 'DELETE') {
+                    setOtRequests(prev => prev.filter(req => req.id !== payload.old.id));
                 }
             });
 
@@ -393,6 +439,27 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
             if (data) setLeaveRequests(data.map(mapLeaveRequest));
         } catch (error) {
             console.error("Error refreshing leaves:", error);
+        }
+    };
+
+    const refreshOTRequests = async () => {
+        if (!sessionUser?.id || !currentUserProfile) return;
+        try {
+            const today = new Date();
+            const sixtyDaysAgo = format(subDays(today, 60), 'yyyy-MM-dd');
+            const isAdmin = currentUserProfile.role === 'ADMIN';
+
+            let query = supabase.from('ot_requests').select('*').gte('date', sixtyDaysAgo);
+            if (!isAdmin) query = query.eq('user_id', sessionUser.id);
+
+            const { data, error } = await Promise.resolve(query).catch(err => {
+                console.warn("ot_requests table might not exist:", err);
+                return { data: null, error: null } as any;
+            });
+            if (error) throw error;
+            if (data) setOtRequests(data.map(mapOtRequest));
+        } catch (error) {
+            console.error("Error refreshing OT requests:", error);
         }
     };
 
@@ -532,10 +599,12 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
         activeUsers,
         attendanceLogs,
         leaveRequests,
+        otRequests,
         fetchProfile,
         updateProfile,
         refreshAttendance,
         refreshLeaves,
+        refreshOTRequests,
         fetchTeamMembers,
         approveMember,
         removeMember,
@@ -544,7 +613,7 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
         adjustStatsLocally,
         setAllUsers
     }), [
-        isReady, currentUserProfile, allUsers, attendanceLogs, leaveRequests,
+        isReady, currentUserProfile, allUsers, attendanceLogs, leaveRequests, otRequests,
         fetchProfile, updateProfile, fetchTeamMembers, approveMember,
         removeMember, toggleUserStatus, updateMember, adjustStatsLocally
     ]);

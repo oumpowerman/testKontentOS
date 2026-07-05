@@ -323,17 +323,6 @@ export const NotificationProvider: React.FC<{ currentUser: User | null, children
         };
     }, [currentUser?.id, currentUser?.role, fetchAllData]);
 
-    // Polling Fallback specifically for Admins to sync deadline & leave requests from database silently in background
-    useEffect(() => {
-        if (!currentUser?.id || currentUser.role !== 'ADMIN') return;
-        
-        const interval = setInterval(() => {
-            fetchAllData(true); // Silent re-sync without displaying the blocking loading spinner
-        }, 15000); 
-        
-        return () => clearInterval(interval);
-    }, [currentUser?.id, currentUser?.role, fetchAllData]);
-
     // 3. Actions
     const markAsRead = async () => {
         if (!currentUser) return;

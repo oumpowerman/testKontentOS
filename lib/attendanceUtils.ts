@@ -157,6 +157,34 @@ export const checkIsLate = (checkInTime: Date | string | null, startTimeStr: str
 };
 
 /**
+ * Calculates exact late minutes relative to the official start time.
+ * If actual check-in exceeds the late buffer time, late duration is calculated 
+ * from the official start time.
+ */
+export const getLateMinutes = (
+    checkInTime: Date | string | null, 
+    startTimeStr: string, 
+    bufferMinutes: number = 0
+): number => {
+    if (!checkInTime) return 0;
+    try {
+        const checkIn = typeof checkInTime === 'string' ? new Date(checkInTime) : checkInTime;
+        const [targetHour, targetMinute] = startTimeStr.split(':').map(Number);
+        
+        const officialStartTime = setMinutes(setHours(checkIn, targetHour), targetMinute);
+        const lateLimitTime = setMinutes(setHours(checkIn, targetHour), targetMinute + bufferMinutes);
+        
+        // If check-in time is AFTER late limit, compute exact late minutes from official starting time
+        if (isBefore(lateLimitTime, checkIn)) {
+            return Math.max(0, differenceInMinutes(checkIn, officialStartTime));
+        }
+        return 0; // Not late
+    } catch (e) {
+        return 0;
+    }
+};
+
+/**
  * Calculates work hours between check-in and check-out.
  */
 export const calculateWorkHours = (checkIn: Date | string | null, checkOut: Date | string | null): number => {

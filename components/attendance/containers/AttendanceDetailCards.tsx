@@ -11,6 +11,7 @@ import { AttendanceDetailCardView } from './AttendanceDetailCardView';
 import { getDirectDriveUrl } from '../../../lib/imageUtils';
 import { useMasterData } from '../../../hooks/useMasterData';
 import { getAttendanceSummary } from '../../../lib/attendanceUtils';
+import { useUserSession } from '../../../context/UserSessionContext';
 
 interface Props {
     logs: AttendanceLog[];
@@ -20,6 +21,7 @@ interface Props {
 
 const AttendanceDetailCards: React.FC<Props> = ({ logs, type, onClose }) => {
     const { masterOptions } = useMasterData();
+    const { leaveRequests } = useUserSession();
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
 
@@ -187,6 +189,7 @@ const AttendanceDetailCards: React.FC<Props> = ({ logs, type, onClose }) => {
                         viewMode === 'table' ? (
                             <AttendanceDetailTable 
                                 logs={filteredLogs}
+                                leaveRequests={leaveRequests}
                                 getStatusDetails={getStatusDetails}
                                 extractProofUrl={extractProofUrl}
                                 cleanNote={cleanNote}
@@ -196,6 +199,7 @@ const AttendanceDetailCards: React.FC<Props> = ({ logs, type, onClose }) => {
                         ) : (
                             <AttendanceDetailCardView 
                                 logs={filteredLogs}
+                                leaveRequests={leaveRequests}
                                 getStatusDetails={getStatusDetails}
                                 extractProofUrl={extractProofUrl}
                                 cleanNote={cleanNote}

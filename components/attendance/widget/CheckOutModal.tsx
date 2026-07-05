@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { calculateCheckOutStatus } from '../../../lib/attendanceUtils';
 import { useMasterData } from '../../../hooks/useMasterData';
 import { useGlobalDialog } from '../../../context/GlobalDialogContext';
+import { useGameConfig } from '../../../context/GameConfigContext';
 import TimePickerModal from '../../ui/TimePickerModal';
 
 interface CheckOutModalProps {
@@ -24,6 +25,19 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
 }) => {
     const { showAlert } = useGlobalDialog();
     const { masterOptions } = useMasterData(); // Fetch latest config
+    const { config } = useGameConfig(); // Fetch game tuner configs
+
+    // Dynamically retrieve early leave interval and rate from Game Config (LawTuner), Master Options (DB), or safe fallbacks
+    const earlyLeaveInterval = parseFloat(
+        config?.PENALTY_RATES?.HP_PENALTY_EARLY_LEAVE_INTERVAL?.toString() || 
+        masterOptions.find(o => o.key === 'HP_PENALTY_EARLY_LEAVE_INTERVAL')?.label || 
+        '10'
+    );
+    const earlyLeaveRate = parseFloat(
+        config?.PENALTY_RATES?.HP_PENALTY_EARLY_LEAVE_RATE?.toString() || 
+        masterOptions.find(o => o.key === 'HP_PENALTY_EARLY_LEAVE_RATE')?.label || 
+        '1'
+    );
     
     const [status, setStatus] = useState<'LOADING' | 'SUCCESS' | 'OUT_OF_RANGE' | 'ERROR'>('LOADING');
     const [distance, setDistance] = useState(0);
@@ -45,6 +59,7 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
     const [earlyReason, setEarlyReason] = useState(''); // New state for early leave reason when GPS is OK
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
+    const [showEarlyConfirmation, setShowEarlyConfirmation] = useState(false);
 
     // Calculate real-time projected OT hours and JP rewards
     const otDetails = React.useMemo(() => {
@@ -64,6 +79,7 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
             setOtFlowStep('NONE');
             setOtReason('');
             setStatus('LOADING');
+            setShowEarlyConfirmation(false);
             
             // Calculate Status Logic (Strict Duration)
             const minHours = parseFloat(masterOptions.find(o => o.key === 'MIN_HOURS')?.label || '9');
@@ -114,9 +130,15 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
     };
 
     const handleNormalSubmit = async () => {
-        if (checkOutStatus === 'EARLY_LEAVE' && !earlyReason.trim()) {
-            showAlert('กรุณาระบุเหตุผลที่กลับก่อนเวลาด้วยครับ', 'ข้อมูลไม่ครบ');
-            return;
+        if (checkOutStatus === 'EARLY_LEAVE') {
+            if (!earlyReason.trim()) {
+                showAlert('กรุณาระบุเหตุผลที่กลับก่อนเวลาด้วยครับ', 'ข้อมูลไม่ครบ');
+                return;
+            }
+            if (!showEarlyConfirmation) {
+                setShowEarlyConfirmation(true);
+                return;
+            }
         }
 
         // Overtime check logic
@@ -142,6 +164,7 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
             earlyReason
         );
         setIsSubmitting(false);
+        setShowEarlyConfirmation(false);
         onClose();
     };
 
@@ -328,154 +351,218 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
                     )}
 
                     {otFlowStep === 'NONE' && (
-                        <>
-                            {statusDetails && (
-                        <div className={`mb-6 p-4 rounded-xl border flex items-start gap-3 ${checkOutStatus === 'EARLY_LEAVE' ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'}`}>
-                            <div className={`p-2 rounded-full shrink-0 ${checkOutStatus === 'EARLY_LEAVE' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
-                                {checkOutStatus === 'EARLY_LEAVE' ? <Clock className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
-                            </div>
-                            <div>
-                                <h4 className={`font-bold text-sm ${checkOutStatus === 'EARLY_LEAVE' ? 'text-orange-800' : 'text-green-800'}`}>
-                                    {checkOutStatus === 'EARLY_LEAVE' ? 'ยังไม่ครบชั่วโมงงาน' : 'เวลาครบตามเกณฑ์'}
-                                </h4>
-                                <p className="text-xs mt-1 text-gray-600">
-                                    เวลาที่ต้องออก: <span className="font-bold">{format(statusDetails.requiredEndTime, 'HH:mm')}</span> <br/>
-                                    {checkOutStatus === 'EARLY_LEAVE' 
-                                        ? `(ขาดอีก ${statusDetails.missingMinutes.toFixed(0)} นาที)` 
-                                        : `(ทำไปแล้ว ${statusDetails.hoursWorked.toFixed(1)} ชม.)`
-                                    }
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {status === 'LOADING' && (
-                        <div className="py-10 text-center">
-                            <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mx-auto mb-3"/>
-                            <p className="text-gray-500 font-bold">กำลังตรวจสอบพิกัด...</p>
-                        </div>
-                    )}
-
-                    {status === 'ERROR' && (
-                         <div className="text-center">
-                            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-3"/>
-                            <p className="text-red-600 font-bold">ไม่สามารถระบุตำแหน่งได้</p>
-                            <p className="text-sm text-gray-500 mt-1">กรุณาลองใหม่ หรือส่งคำขอแบบ Manual</p>
-                            <button onClick={checkLocation} className="mt-4 text-indigo-600 font-bold text-sm underline">ลองใหม่</button>
-                            
-                            {/* Fallback to Request Form if GPS fails */}
-                             <form onSubmit={handleRequestSubmit} className="mt-6 text-left space-y-3 pt-4 border-t border-gray-100">
-                                <p className="text-xs font-bold text-gray-400 uppercase">ส่งคำขอ Check-out</p>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-700">เวลาออกจริง</label>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setIsTimePickerOpen(true)}
-                                        className="w-full p-3 bg-white border-2 border-indigo-100 rounded-xl font-bold text-center text-xl text-indigo-600 shadow-sm hover:border-indigo-400 transition-all"
-                                    >
-                                        {time || '--:--'}
-                                    </button>
+                        showEarlyConfirmation ? (
+                            <div className="space-y-6 text-center animate-in fade-in slide-in-from-bottom-4">
+                                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2 animate-pulse shadow-lg shadow-red-100">
+                                    <AlertTriangle className="w-8 h-8 text-red-600" />
                                 </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-700">เหตุผล / หมายเหตุ</label>
-                                    <textarea value={reason} onChange={e => setReason(e.target.value)} className="w-full p-2 border rounded-xl text-sm" placeholder="เช่น GPS มีปัญหา, แบตหมด..." required rows={2} />
+                                <div className="space-y-1">
+                                    <h3 className="text-xl font-black text-red-800">⚠️ ยืนยันการกลับก่อนเวลา</h3>
+                                    <p className="text-xs text-gray-500">การลงเวลาก่อนเวลาปฏิบัติงานมาตรฐานจะส่งผลต่อสถานะของคุณ</p>
                                 </div>
-                                <button type="submit" disabled={isSubmitting} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all flex justify-center">
-                                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin"/> : 'ส่งคำขออนุมัติ'}
-                                </button>
-                            </form>
-                         </div>
-                    )}
 
-                    {status === 'SUCCESS' && (
-                        <div className="text-center">
-                            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-slow">
-                                <MapPin className="w-10 h-10 text-green-600" />
-                            </div>
-                            <h3 className="text-xl font-black text-green-700">อยู่ในพื้นที่ Check-out</h3>
-                            <p className="text-sm text-gray-500 mt-1">
-                                {matchedLocation?.name} (ระยะ {distance.toFixed(0)}m)
-                            </p>
-                            
-                            {/* Early Leave Reason Input */}
-                            {checkOutStatus === 'EARLY_LEAVE' && (
-                                <div className="mt-4 text-left bg-orange-50 p-3 rounded-xl border border-orange-100">
-                                    <label className="text-xs font-bold text-orange-700 mb-1 flex items-center">
-                                        <MessageSquare className="w-3 h-3 mr-1"/> ระบุเหตุผลที่กลับก่อน (Required)
-                                    </label>
-                                    <input 
-                                        type="text" 
-                                        className="w-full p-2 border border-orange-200 rounded-lg text-sm bg-white" 
-                                        placeholder="เช่น ป่วย, ธุระด่วน..."
-                                        value={earlyReason}
-                                        onChange={e => setEarlyReason(e.target.value)}
-                                    />
-                                </div>
-                            )}
-                            
-                            <div className="mt-6">
-                                <button 
-                                    onClick={handleNormalSubmit}
-                                    disabled={isSubmitting}
-                                    className={`w-full py-4 text-white rounded-2xl font-bold text-lg shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${checkOutStatus === 'EARLY_LEAVE' ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-200' : 'bg-green-600 hover:bg-green-700 shadow-green-200'}`}
-                                >
-                                    {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin"/> : <LogOut className="w-6 h-6"/>}
-                                    {checkOutStatus === 'EARLY_LEAVE' ? 'ยืนยันกลับก่อน (Early)' : 'ยืนยันการเลิกงาน'}
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {status === 'OUT_OF_RANGE' && (
-                        <div>
-                             <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 flex items-start gap-3 mb-4">
-                                <AlertTriangle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
-                                <div>
-                                    <h4 className="font-bold text-orange-800 text-sm">อยู่นอกพื้นที่ ({distance.toFixed(0)}m)</h4>
-                                    <p className="text-xs text-orange-700 mt-0.5">
-                                        คุณอยู่ห่างจาก {matchedLocation?.name || 'Office'} เกินกำหนด
+                                <div className="bg-orange-50/60 p-4 rounded-2xl border border-orange-100 text-left space-y-2">
+                                    <p className="text-xs font-bold text-orange-700">รายละเอียดชั่วโมงงาน:</p>
+                                    <p className="text-xs text-gray-600 flex justify-between">
+                                        <span>เวลาเลิกงานเกณฑ์ปกติ:</span>
+                                        <span className="font-bold text-gray-800">{statusDetails ? format(statusDetails.requiredEndTime, 'HH:mm') : '--:--'} น.</span>
                                     </p>
-                                    <button onClick={checkLocation} className="text-[10px] font-bold text-orange-600 underline mt-1 flex items-center gap-1">
-                                        <RefreshCw className="w-3 h-3"/> ลองใหม่
-                                    </button>
+                                    <p className="text-xs text-gray-600 flex justify-between">
+                                        <span>เวลาปัจจุบัน:</span>
+                                        <span className="font-bold text-gray-800">{format(new Date(), 'HH:mm')} น.</span>
+                                    </p>
+                                    <p className="text-xs text-gray-600 flex justify-between border-t border-orange-100/50 pt-2">
+                                        <span>เวลาปฏิบัติงานขาดไป:</span>
+                                        <span className="font-bold text-orange-600">ขาดอีก {statusDetails ? statusDetails.missingMinutes.toFixed(0) : 0} นาที</span>
+                                    </p>
                                 </div>
-                             </div>
 
-                             <form onSubmit={handleRequestSubmit} className="space-y-4">
-                                <p className="text-sm font-bold text-gray-700">กรุณาส่งคำขอ Check-out นอกสถานที่</p>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 mb-1">เวลาเลิกงานจริง (Actual Time)</label>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setIsTimePickerOpen(true)}
-                                        className="w-full p-3 bg-white border-2 border-indigo-100 rounded-xl font-bold text-gray-800 text-center text-xl focus:ring-2 focus:ring-indigo-100 outline-none hover:border-indigo-400 transition-all"
+                                {statusDetails && (
+                                    <div className="bg-red-50/50 border border-red-100 p-4 rounded-2xl text-left space-y-1.5">
+                                        <p className="text-[11px] font-bold text-red-700 flex items-center gap-1">
+                                            <AlertTriangle className="w-3.5 h-3.5 text-red-500" /> ผลกระทบด้านคะแนน (HP Penalty)
+                                        </p>
+                                        <p className="text-xs text-red-800 font-bold">
+                                            🚨 คุณจะถูกหักคะแนนชีวิต (HP) ทันที: -{Math.ceil(statusDetails.missingMinutes / earlyLeaveInterval) * earlyLeaveRate} HP
+                                        </p>
+                                        <p className="text-[11px] text-gray-500">
+                                            (เกณฑ์หักคะแนน: หัก {earlyLeaveRate} HP ทุก ๆ {earlyLeaveInterval} นาทีที่กลับก่อนเวลา)
+                                        </p>
+                                    </div>
+                                )}
+
+                                <p className="text-xs text-gray-600 px-2 leading-relaxed">
+                                    การกลับก่อนเวลาจะส่งผลต่อคะแนนสุขภาพในระบบเกมของคุณ คุณยังยืนยันที่จะตอกบัตรกลับ ณ เวลานี้หรือไม่?
+                                </p>
+
+                                <div className="space-y-2 pt-2">
+                                    <button
+                                        onClick={handleNormalSubmit}
+                                        disabled={isSubmitting}
+                                        className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-bold text-lg shadow-lg shadow-orange-100 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
                                     >
-                                        {time || '--:--'}
+                                        {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <LogOut className="w-6 h-6" />}
+                                        ใช่, ฉันยืนยันต้องการกลับตอนนี้
+                                    </button>
+
+                                    <button
+                                        onClick={() => setShowEarlyConfirmation(false)}
+                                        className="w-full py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-colors"
+                                    >
+                                        ไม่, ย้อนกลับไปทำงานต่อ
                                     </button>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 mb-1">เหตุผล (Reason)</label>
-                                    <textarea 
-                                        value={reason} 
-                                        onChange={e => setReason(e.target.value)} 
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none resize-none" 
-                                        placeholder="เช่น ออกมาหาลูกค้าแล้วกลับบ้านเลย..." 
-                                        rows={3}
-                                        required 
-                                    />
-                                </div>
-                                <button 
-                                    type="submit" 
-                                    disabled={isSubmitting}
-                                    className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-                                >
-                                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin"/> : <Send className="w-5 h-5"/>}
-                                    ส่งคำขออนุมัติ
-                                </button>
-                             </form>
-                        </div>
-                    )}
-                        </>
+                            </div>
+                        ) : (
+                            <>
+                                {statusDetails && (
+                                    <div className={`mb-6 p-4 rounded-xl border flex items-start gap-3 ${checkOutStatus === 'EARLY_LEAVE' ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'}`}>
+                                        <div className={`p-2 rounded-full shrink-0 ${checkOutStatus === 'EARLY_LEAVE' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
+                                            {checkOutStatus === 'EARLY_LEAVE' ? <Clock className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+                                        </div>
+                                        <div>
+                                            <h4 className={`font-bold text-sm ${checkOutStatus === 'EARLY_LEAVE' ? 'text-orange-800' : 'text-green-800'}`}>
+                                                {checkOutStatus === 'EARLY_LEAVE' ? 'ยังไม่ครบชั่วโมงงาน' : 'เวลาครบตามเกณฑ์'}
+                                            </h4>
+                                            <p className="text-xs mt-1 text-gray-600">
+                                                เวลาที่ต้องออก: <span className="font-bold">{format(statusDetails.requiredEndTime, 'HH:mm')}</span> <br/>
+                                                {checkOutStatus === 'EARLY_LEAVE' 
+                                                    ? `(ขาดอีก ${statusDetails.missingMinutes.toFixed(0)} นาที)` 
+                                                    : `(ทำไปแล้ว ${statusDetails.hoursWorked.toFixed(1)} ชม.)`
+                                                }
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {status === 'LOADING' && (
+                                    <div className="py-10 text-center">
+                                        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mx-auto mb-3"/>
+                                        <p className="text-gray-500 font-bold">กำลังตรวจสอบพิกัด...</p>
+                                    </div>
+                                )}
+
+                                {status === 'ERROR' && (
+                                    <div className="text-center">
+                                        <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-3"/>
+                                        <p className="text-red-600 font-bold">ไม่สามารถระบุตำแหน่งได้</p>
+                                        <p className="text-sm text-gray-500 mt-1">กรุณาลองใหม่ หรือส่งคำขอแบบ Manual</p>
+                                        <button onClick={checkLocation} className="mt-4 text-indigo-600 font-bold text-sm underline">ลองใหม่</button>
+                                        
+                                        {/* Fallback to Request Form if GPS fails */}
+                                        <form onSubmit={handleRequestSubmit} className="mt-6 text-left space-y-3 pt-4 border-t border-gray-100">
+                                            <p className="text-xs font-bold text-gray-400 uppercase">ส่งคำขอ Check-out</p>
+                                            <div>
+                                                <label className="text-xs font-bold text-gray-700">เวลาออกจริง</label>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setIsTimePickerOpen(true)}
+                                                    className="w-full p-3 bg-white border-2 border-indigo-100 rounded-xl font-bold text-center text-xl text-indigo-600 shadow-sm hover:border-indigo-400 transition-all"
+                                                >
+                                                    {time || '--:--'}
+                                                </button>
+                                            </div>
+                                            <div>
+                                                <label className="text-xs font-bold text-gray-700">เหตุผล / หมายเหตุ</label>
+                                                <textarea value={reason} onChange={e => setReason(e.target.value)} className="w-full p-2 border rounded-xl text-sm" placeholder="เช่น GPS มีปัญหา, แบตหมด..." required rows={2} />
+                                            </div>
+                                            <button type="submit" disabled={isSubmitting} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all flex justify-center">
+                                                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin"/> : 'ส่งคำขออนุมัติ'}
+                                            </button>
+                                        </form>
+                                    </div>
+                                )}
+
+                                {status === 'SUCCESS' && (
+                                    <div className="text-center">
+                                        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-slow">
+                                            <MapPin className="w-10 h-10 text-green-600" />
+                                        </div>
+                                        <h3 className="text-xl font-black text-green-700">อยู่ในพื้นที่ Check-out</h3>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            {matchedLocation?.name} (ระยะ {distance.toFixed(0)}m)
+                                        </p>
+                                        
+                                        {/* Early Leave Reason Input */}
+                                        {checkOutStatus === 'EARLY_LEAVE' && (
+                                            <div className="mt-4 text-left bg-orange-50 p-3 rounded-xl border border-orange-100">
+                                                <label className="text-xs font-bold text-orange-700 mb-1 flex items-center">
+                                                    <MessageSquare className="w-3 h-3 mr-1"/> ระบุเหตุผลที่กลับก่อน (Required)
+                                                </label>
+                                                <input 
+                                                    type="text" 
+                                                    className="w-full p-2 border border-orange-200 rounded-lg text-sm bg-white" 
+                                                    placeholder="เช่น ป่วย, ธุระด่วน..."
+                                                    value={earlyReason}
+                                                    onChange={e => setEarlyReason(e.target.value)}
+                                                />
+                                            </div>
+                                        )}
+                                        
+                                        <div className="mt-6">
+                                            <button 
+                                                onClick={handleNormalSubmit}
+                                                disabled={isSubmitting}
+                                                className={`w-full py-4 text-white rounded-2xl font-bold text-lg shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${checkOutStatus === 'EARLY_LEAVE' ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-200' : 'bg-green-600 hover:bg-green-700 shadow-green-200'}`}
+                                            >
+                                                {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin"/> : <LogOut className="w-6 h-6"/>}
+                                                {checkOutStatus === 'EARLY_LEAVE' ? 'ยืนยันกลับก่อน (Early)' : 'ยืนยันการเลิกงาน'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {status === 'OUT_OF_RANGE' && (
+                                    <div>
+                                        <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 flex items-start gap-3 mb-4">
+                                            <AlertTriangle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                                            <div>
+                                                <h4 className="font-bold text-orange-800 text-sm">อยู่นอกพื้นที่ ({distance.toFixed(0)}m)</h4>
+                                                <p className="text-xs text-orange-700 mt-0.5">
+                                                    คุณอยู่ห่างจาก {matchedLocation?.name || 'Office'} เกินกำหนด
+                                                </p>
+                                                <button onClick={checkLocation} className="text-[10px] font-bold text-orange-600 underline mt-1 flex items-center gap-1">
+                                                    <RefreshCw className="w-3 h-3"/> ลองใหม่
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <form onSubmit={handleRequestSubmit} className="space-y-4">
+                                            <p className="text-sm font-bold text-gray-700">กรุณาส่งคำขอ Check-out นอกสถานที่</p>
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-500 mb-1">เวลาเลิกงานจริง (Actual Time)</label>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setIsTimePickerOpen(true)}
+                                                    className="w-full p-3 bg-white border-2 border-indigo-100 rounded-xl font-bold text-gray-800 text-center text-xl focus:ring-2 focus:ring-indigo-100 outline-none hover:border-indigo-400 transition-all"
+                                                >
+                                                    {time || '--:--'}
+                                                </button>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-500 mb-1">เหตุผล (Reason)</label>
+                                                <textarea 
+                                                    value={reason} 
+                                                    onChange={e => setReason(e.target.value)} 
+                                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none resize-none" 
+                                                    placeholder="เช่น ออกมาหาลูกค้าแล้วกลับบ้านเลย..." 
+                                                    rows={3}
+                                                    required 
+                                                />
+                                            </div>
+                                            <button 
+                                                type="submit" 
+                                                disabled={isSubmitting}
+                                                className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                            >
+                                                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin"/> : <Send className="w-5 h-5"/>}
+                                                ส่งคำขออนุมัติ
+                                            </button>
+                                        </form>
+                                    </div>
+                                )}
+                            </>
+                        )
                     )}
                 </div>
             </div>

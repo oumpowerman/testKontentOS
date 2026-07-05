@@ -11,9 +11,10 @@ interface Props {
     setStartDate: (val: string) => void;
     endDate: string;
     setEndDate: (val: string) => void;
+    minDate?: Date;
 }
 
-const StandardLeaveInputs: React.FC<Props> = ({ startDate, setStartDate, endDate, setEndDate }) => {
+const StandardLeaveInputs: React.FC<Props> = ({ startDate, setStartDate, endDate, setEndDate, minDate }) => {
     const [isStartOpen, setIsStartOpen] = useState(false);
     const [isMultiOpen, setIsMultiOpen] = useState(false);
     
@@ -144,6 +145,7 @@ const StandardLeaveInputs: React.FC<Props> = ({ startDate, setStartDate, endDate
                     setStartDate(dateStr);
                     setEndDate(dateStr); // For single day, start = end
                 }}
+                minDate={minDate}
             />
 
             <MultiDatePickerModal
@@ -155,6 +157,7 @@ const StandardLeaveInputs: React.FC<Props> = ({ startDate, setStartDate, endDate
                     setStartDate(start.toISOString().split('T')[0]);
                     setEndDate(end.toISOString().split('T')[0]);
                 }}
+                minDate={minDate}
             />
         </div>
     );

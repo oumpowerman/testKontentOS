@@ -16,6 +16,12 @@ const DashboardTable: React.FC<DashboardTableProps> = ({
   activeStatFilter,
   sortDirection,
   onSortDirectionChange,
+  currentMonth,
+  workingDaysCount,
+  lateViewMode = "DAYS",
+  onLateViewModeChange,
+  otViewMode = "HOURS",
+  onOtViewModeChange,
 }) => {
   const [groupMode, setGroupMode] = useState<GroupMode>("POSITION");
   // Collapsible states: initially all expanded
@@ -46,6 +52,7 @@ const DashboardTable: React.FC<DashboardTableProps> = ({
     groupMode,
     sortDirection,
     activeStatFilter,
+    lateViewMode,
   });
 
   return (
@@ -131,8 +138,36 @@ const DashboardTable: React.FC<DashboardTableProps> = ({
                   }
                 }}
               >
-                <div className="flex items-center justify-center gap-1">
-                  <span>Late Count</span>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="whitespace-nowrap">LATE</span>
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onLateViewModeChange?.(lateViewMode === "DAYS" ? "HOURS" : "DAYS");
+                    }}
+                    className={`inline-flex items-center h-6 px-2 py-0.5 text-[11px] font-semibold rounded-full border transition-colors duration-200 cursor-pointer ${
+                      lateViewMode === "DAYS"
+                        ? "bg-red-50 border-red-200 text-red-600 hover:bg-red-100"
+                        : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
+                    }`}
+                  >
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={lateViewMode}
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 4 }}
+                        transition={{ duration: 0.12 }}
+                        className="inline-flex items-center gap-1"
+                      >
+                        <span>{lateViewMode === "DAYS" ? "Days" : "Hrs"}</span>
+                        <span className="text-[10px] opacity-70">⇄</span>
+                      </motion.span>
+                    </AnimatePresence>
+                  </motion.button>
                   {activeStatFilter === "LATE" &&
                     (sortDirection === "ASC" ? (
                       <span className="text-red-500">▲</span>
@@ -194,6 +229,41 @@ const DashboardTable: React.FC<DashboardTableProps> = ({
                 </div>
               </th>
 
+              {/* Overtime (OT) Header */}
+              <th className="px-6 py-4 font-bold text-center select-none transition-colors">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="whitespace-nowrap">OT</span>
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOtViewModeChange?.(otViewMode === "HOURS" ? "PAYOUT" : "HOURS");
+                    }}
+                    className={`inline-flex items-center h-6 px-2 py-0.5 text-[11px] font-semibold rounded-full border transition-colors duration-200 cursor-pointer ${
+                      otViewMode === "HOURS"
+                        ? "bg-purple-50 border-purple-200 text-purple-600 hover:bg-purple-100"
+                        : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                    }`}
+                  >
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={otViewMode}
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 4 }}
+                        transition={{ duration: 0.12 }}
+                        className="inline-flex items-center gap-1"
+                      >
+                        <span>{otViewMode === "HOURS" ? "Hrs" : "Payout ฿"}</span>
+                        <span className="text-[10px] opacity-70">⇄</span>
+                      </motion.span>
+                    </AnimatePresence>
+                  </motion.button>
+                </div>
+              </th>
+
               <th className="px-6 py-4 font-bold text-center">Total Hours</th>
               <th className="px-6 py-4 font-bold text-center">Grade</th>
             </tr>
@@ -201,13 +271,13 @@ const DashboardTable: React.FC<DashboardTableProps> = ({
           <tbody className="divide-y divide-gray-100">
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="py-20 text-center text-gray-400">
+                <td colSpan={8} className="py-20 text-center text-gray-400">
                   Loading Report...
                 </td>
               </tr>
             ) : filteredStats.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-20 text-center text-gray-400">
+                <td colSpan={8} className="py-20 text-center text-gray-400">
                   ไม่พบข้อมูลพนักงาน
                 </td>
               </tr>
@@ -246,6 +316,10 @@ const DashboardTable: React.FC<DashboardTableProps> = ({
                             sortDirection={sortDirection}
                             getGrade={getGrade}
                             onUserClick={onUserClick}
+                            currentMonth={currentMonth}
+                            workingDaysCount={workingDaysCount}
+                            lateViewMode={lateViewMode}
+                            otViewMode={otViewMode}
                           />
                         );
                       })}

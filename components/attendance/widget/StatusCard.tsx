@@ -24,7 +24,7 @@ interface StatusCardProps {
     todayActiveLeave: LeaveRequest | null;
     onCheckOut: (location?: { lat: number, lng: number }, locationName?: string, reason?: string) => Promise<void>; 
     onCheckOutRequest: (type: LeaveType, start: Date, end: Date, reason: string, file?: File) => Promise<boolean>; 
-    onOpenCheckIn: () => void;
+    onOpenCheckIn: (isHoliday?: boolean) => void;
     onOpenLeave: () => void;
     isDriveReady: boolean;
     isAuthenticated?: boolean;
@@ -474,7 +474,7 @@ const StatusCard: React.FC<StatusCardProps> = ({
                         </p>
                         <div className="flex flex-col gap-3">
                             <button 
-                                onClick={onOpenCheckIn}
+                                onClick={() => onOpenCheckIn(dayStatus.mode === 'HOLIDAY')}
                                 className={`w-full py-3.5 rounded-xl font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2
                                     ${dayStatus.mode === 'HOLIDAY' 
                                         ? 'bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white shadow-pink-200' 
@@ -482,7 +482,7 @@ const StatusCard: React.FC<StatusCardProps> = ({
                                     }
                                 `}
                             >
-                                <LogIn className="w-5 h-5" /> {dayStatus.mode === 'HOLIDAY' ? 'ยืนยันลงเวลา (วันหยุด)' : 'กดเพื่อลงเวลา (Check-in)'}
+                                <LogIn className="w-5 h-5" /> {dayStatus.mode === 'HOLIDAY' ? 'ลงเวลาปฏิบัติงานพิเศษในวันหยุด (OT)' : 'กดเพื่อลงเวลา (Check-in)'}
                             </button>
                             
                             {/* NEW: Forgot Check-in Component (Auto Logic) */}

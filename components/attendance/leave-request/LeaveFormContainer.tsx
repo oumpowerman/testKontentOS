@@ -1,6 +1,6 @@
 
-import React, { useRef, useMemo } from 'react';
-import { ChevronLeft, Upload, CheckCircle2, Send, Loader2, AlertCircle, CalendarClock, Clock, FileText, Image as ImageIcon, ArrowRight, Edit3 } from 'lucide-react';
+import React, { useRef, useMemo, useState, useEffect } from 'react';
+import { ChevronLeft, Upload, CheckCircle2, Send, Loader2, AlertCircle, CalendarClock, Clock, FileText, Image as ImageIcon, ArrowRight, Edit3, Eye, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LeaveUsage, LeaveType } from '../../../types/attendance';
 import { MasterOption } from '../../../types';
@@ -31,16 +31,6 @@ interface Props {
 const LeaveFormContainer: React.FC<Props> = ({ 
     selectedType, onBack, onSubmit, onClose, masterOptions, leaveUsage, initialDate, initialReason, fixedType
 }) => {
-    const { 
-        startDate, setStartDate, endDate, setEndDate, 
-        reason, setReason, file, setFile, 
-        targetTime, setTargetTime, endTime, setEndTime, otHours, setOtHours, 
-        isSubmitting, isReviewing, setIsReviewing, handleReview, handleSubmit 
-    } = useLeaveFormLogic({ onSubmit, onClose, initialDate, initialReason, selectedType });
-
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const theme = LEAVE_THEMES[selectedType] || LEAVE_THEMES['DEFAULT'];
-    
     const selectedOption = useMemo(() => masterOptions.find(o => o.key === selectedType), [masterOptions, selectedType]);
     const metadata = useMemo(() => {
         try {
@@ -49,6 +39,62 @@ const LeaveFormContainer: React.FC<Props> = ({
             return {};
         }
     }, [selectedOption]);
+
+    const minDate = useMemo(() => {
+        if (metadata.advanceDays && metadata.advanceDays > 0) {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const allowed = new Date(today);
+            allowed.setDate(today.getDate() + metadata.advanceDays);
+            return allowed;
+        }
+        return undefined;
+    }, [metadata.advanceDays]);
+    
+    const { 
+        startDate, setStartDate, endDate, setEndDate, 
+        reason, setReason, file, setFile, 
+        targetTime, setTargetTime, endTime, setEndTime, otHours, setOtHours, 
+        isSubmitting, isReviewing, setIsReviewing, handleReview, handleSubmit 
+    } = useLeaveFormLogic({ 
+        onSubmit, 
+        onClose, 
+        initialDate, 
+        initialReason, 
+        selectedType, 
+        advanceDays: metadata.advanceDays 
+    });
+
+    const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+    useEffect(() => {
+        if (!file) {
+            setFilePreviewUrl(null);
+            return;
+        }
+        if (file.type && file.type.startsWith('image/')) {
+            const url = URL.createObjectURL(file);
+            setFilePreviewUrl(url);
+            return () => {
+                URL.revokeObjectURL(url);
+            };
+        } else {
+            setFilePreviewUrl(null);
+        }
+    }, [file]);
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const bodyRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (isReviewing && bodyRef.current) {
+            bodyRef.current.scrollTo({ top: 0, behavior: 'auto' });
+        }
+    }, [isReviewing]);
+
+    const theme = LEAVE_THEMES[selectedType] || LEAVE_THEMES['DEFAULT'];
+    
 
     const fallbackLabels: Record<string, string> = {
         LATE_ENTRY: 'สาย',
@@ -147,12 +193,14 @@ const LeaveFormContainer: React.FC<Props> = ({
             </div>
 
             {/* Scrollable Body */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-6 sm:pb-8 space-y-5 sm:space-y-8 
-                scroll-smooth 
-                scrollbar-thin scrollbar-thumb-slate-300/60 scrollbar-track-transparent
-                hover:scrollbar-thumb-slate-400/80"
+            <div 
+                ref={bodyRef}
+                className="flex-1 overflow-y-auto p-4 sm:p-6 pb-6 sm:pb-8 space-y-5 sm:space-y-8 
+                    scroll-smooth 
+                    scrollbar-thin scrollbar-thumb-slate-300/60 scrollbar-track-transparent
+                    hover:scrollbar-thumb-slate-400/80"
             >
-                
+
                 <AnimatePresence mode="wait">
                     {isReviewing ? (
                         /* --- REVIEW STEP --- */
@@ -189,9 +237,38 @@ const LeaveFormContainer: React.FC<Props> = ({
                                 </div>
 
                                 {!isTimeSpecific && daysRequested > 0 && (
-                                    <div className="bg-indigo-600 text-white p-3 sm:p-4 rounded-[1.25rem] sm:rounded-[1.5rem] text-center shadow-xl shadow-indigo-200 relative">
-                                        <p className="text-xs sm:text-sm font-bold tracking-wide">รวมระยะเวลา: {daysRequested} วัน</p>
-                                    </div>
+                                    selectedType === 'OVERTIME' ? (
+                                        <div className="bg-gradient-to-r from-sky-400 via-indigo-500 to-purple-600 text-white p-4 rounded-[1.5rem] shadow-xl shadow-indigo-500/20 border border-white/20 relative flex items-center justify-between overflow-hidden">
+                                            {/* Glow overlay */}
+                                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_50%)]" />
+                                            
+                                            {/* Left side: OT Hours */}
+                                            <div className="flex items-center gap-3 relative z-10 flex-1">
+                                                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md shadow-inner text-sky-100 animate-pulse">
+                                                    <Clock className="w-5 h-5" />
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-[8px] text-sky-100 font-prompt uppercase tracking-widest font-semibold">ชั่วโมงที่ขอปฏิบัติงาน</p>
+                                                    <p className="text-sm sm:text-lg font-semibold font-prompt text-white">ทำโอที {otHours} ชั่วโมง</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Vertical Glass Divider */}
+                                            <div className="h-10 w-px bg-white/20 mx-4 relative z-10" />
+
+                                            {/* Right side: Days count */}
+                                            <div className="text-right relative z-10 shrink-0">
+                                                <div className="bg-white/10 hover:bg-white/20 transition-colors px-3 py-1.5 rounded-xl border border-white/10 backdrop-blur-md">
+                                                    <p className="text-[10px] text-purple-100 font-prompt font-semibold">รวมระยะเวลา</p>
+                                                    <p className="text-sm font-bold font-pro text-white">{daysRequested} วัน</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-indigo-600 text-white p-3 sm:p-4 rounded-[1.25rem] sm:rounded-[1.5rem] text-center shadow-xl shadow-indigo-200 relative">
+                                            <p className="text-xs sm:text-sm font-bold tracking-wide">รวมระยะเวลา: {daysRequested} วัน</p>
+                                        </div>
+                                    )
                                 )}
                             </div>
 
@@ -209,7 +286,7 @@ const LeaveFormContainer: React.FC<Props> = ({
                                 </div>
                             </div>
 
-                            {file && (
+                             {file && (
                                 <div className="bg-gradient-to-br from-amber-50/80 to-orange-50/80 backdrop-blur-xl border border-white/60 p-5 sm:p-8 rounded-[2rem] sm:rounded-[3rem] space-y-4 sm:space-y-5 shadow-xl shadow-amber-100/20">
                                     <div className="flex items-center gap-2.5 sm:gap-3 text-amber-600 mb-2">
                                         <div className="p-2 bg-white rounded-xl shadow-sm">
@@ -217,11 +294,35 @@ const LeaveFormContainer: React.FC<Props> = ({
                                         </div>
                                         <span className="text-xs sm:text-sm font-medium font-kanit uppercase tracking-[0.2em]">เอกสารแนบ</span>
                                     </div>
-                                    <div className="bg-white/70 backdrop-blur-md p-3 sm:p-4 rounded-[1.25rem] sm:rounded-[1.5rem] border border-white shadow-sm flex items-center gap-3 sm:gap-4">
-                                        <div className="bg-amber-100 p-2 sm:p-3 rounded-xl sm:rounded-2xl text-amber-600">
-                                            <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
+                                    <div className="space-y-3 sm:space-y-4">
+                                        <div className="bg-white/70 backdrop-blur-md p-3 sm:p-4 rounded-[1.25rem] sm:rounded-[1.5rem] border border-white shadow-sm flex items-center gap-3 sm:gap-4">
+                                            <div className="bg-amber-100 p-2 sm:p-3 rounded-xl sm:rounded-2xl text-amber-600">
+                                                <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
+                                            </div>
+                                            <p className="text-xs sm:text-sm font-bold text-amber-900 truncate flex-1">{file.name}</p>
                                         </div>
-                                        <p className="text-xs sm:text-sm font-bold text-amber-900 truncate flex-1">{file.name}</p>
+
+                                        {filePreviewUrl && (
+                                            <div className="flex justify-center pt-2">
+                                                <div 
+                                                    onClick={() => setIsPreviewOpen(true)}
+                                                    className="w-full max-w-md h-48 sm:h-56 rounded-2xl border-2 border-white shadow-lg overflow-hidden relative group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
+                                                >
+                                                    <img 
+                                                        src={filePreviewUrl} 
+                                                        alt="Attachment preview" 
+                                                        className="w-full h-full object-cover"
+                                                        referrerPolicy="no-referrer"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2 text-white">
+                                                        <div className="bg-white/20 p-2 rounded-full backdrop-blur-md">
+                                                            <Eye className="w-5 h-5 text-white" />
+                                                        </div>
+                                                        <span className="text-xs font-bold font-kanit tracking-wide">คลิกเพื่อดูรูปภาพขนาดเต็ม</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -285,7 +386,7 @@ const LeaveFormContainer: React.FC<Props> = ({
                                     </div>
                                     <div className="space-y-1 sm:space-y-1.5">
                                         <h4 className="font-bold text-amber-800 text-sm sm:text-base font-kanit">⚠️ กำชับเรื่องการขออนุมัติแก้ไขเวลา</h4>
-                                        <p className="text-[11px] sm:text-xs text-amber-700/90 leading-relaxed font-Sarabun font-medium">
+                                        <p className="text-[11px] sm:text-xs text-amber-700/90 leading-relaxed font-sarabun font-medium">
                                             การขอแก้ไขเวลาเข้า-ออกงานจะต้องเป็นกรณีสุดวิสัยจริงๆ เท่านั้น <span className="text-amber-800 underline">ไม่ใช่เพียงเพราะความประมาทเลินเล่อหรือ "ลืมกดเพราะรีบ"</span> โดยคุณต้องระบุรายละเอียดเหตุผลและชี้แจงงานที่ปฏิบัติในช่วงเวลานั้นให้ชัดเจนที่สุด หากมีเอกสาร/รูปภาพ เช่น พิกัดหน้างาน หรือประวัติแชทกลุ่ม โปรดแนบไฟล์ที่ "แนบเอกสารประกอบ" ด้านล่างเพื่อให้ Admin ใช้ประกอบการพิจารณาอนุมัติ
                                         </p>
                                     </div>
@@ -305,12 +406,15 @@ const LeaveFormContainer: React.FC<Props> = ({
                                 ) : selectedType === 'OVERTIME' ? (
                                     <OvertimeInputs 
                                         date={startDate} setDate={setStartDate} 
+                                        startTime={targetTime} setStartTime={setTargetTime}
+                                        endTime={endTime} setEndTime={setEndTime}
                                         hours={otHours} setHours={setOtHours} 
                                     />
                                 ) : (
                                     <StandardLeaveInputs 
                                         startDate={startDate} setStartDate={setStartDate} 
                                         endDate={endDate} setEndDate={setEndDate} 
+                                        minDate={minDate}
                                     />
                                 )}
                             </div>
@@ -399,6 +503,50 @@ const LeaveFormContainer: React.FC<Props> = ({
                     </motion.button>
                 )}
             </div>
+
+            {/* Fullscreen Image Preview Modal */}
+            <AnimatePresence>
+                {isPreviewOpen && filePreviewUrl && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setIsPreviewOpen(false)}
+                        className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out"
+                    >
+                        {/* Close Button */}
+                        <motion.button
+                            initial={{ y: -10, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: -10, opacity: 0 }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsPreviewOpen(false);
+                            }}
+                            className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white/80 hover:text-white transition-all backdrop-blur-md shadow-lg z-50 border border-white/10 cursor-pointer"
+                        >
+                            <X className="w-6 h-6" />
+                        </motion.button>
+
+                        {/* Image Container */}
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="relative max-w-full max-h-[85vh] flex items-center justify-center cursor-default"
+                        >
+                            <img
+                                src={filePreviewUrl}
+                                alt="Fullscreen Preview"
+                                className="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-2xl border border-white/10 select-none"
+                                referrerPolicy="no-referrer"
+                            />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 };

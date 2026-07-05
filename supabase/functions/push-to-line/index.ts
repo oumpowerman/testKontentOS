@@ -68,7 +68,10 @@ Deno.serve(async (req: any) => {
       return new Response(JSON.stringify({ message: 'Processed by sibling handler thread' }), { status: 200 });
     }
 
-    // Extract claimed notification IDs for updating status    // 1. Get Target LINE ID / Destination
+    // Extract claimed notification IDs for updating status
+    claimedIds = claimedRecords.map((r: any) => r.id);
+
+    // 1. Get Target LINE ID / Destination
     let targetDestination: string | null = null;
     let targetName = '';
 

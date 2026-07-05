@@ -15,6 +15,7 @@ interface MasterDataContextType {
     addMasterOption: (option: Omit<MasterOption, 'id'>) => Promise<boolean>;
     updateMasterOption: (option: MasterOption) => Promise<boolean>;
     deleteMasterOption: (id: string) => Promise<boolean>;
+    saveMasterOptionsBulk: (options: any[]) => Promise<boolean>;
     // Inventory Mutations
     addInventoryItem: (item: any) => Promise<boolean>;
     updateInventoryItem: (item: any) => Promise<boolean>;
@@ -75,6 +76,8 @@ const DEFAULT_OPTIONS = [
     { type: 'WORK_CONFIG', key: 'CHECKOUT_PENALTY_TIME', label: '06:00', color: '', sort_order: 6 },
     { type: 'WORK_CONFIG', key: 'DAILY_SUMMARY_DELAY_HOURS', label: '1', color: '', sort_order: 7 },
     { type: 'WORK_CONFIG', key: 'LINE_SUMMARY_DESTINATION', label: '', color: '', sort_order: 8 },
+    { type: 'WORK_CONFIG', key: 'HP_PENALTY_EARLY_LEAVE_INTERVAL', label: '10', color: '', sort_order: 9 },
+    { type: 'WORK_CONFIG', key: 'HP_PENALTY_EARLY_LEAVE_RATE', label: '1', color: '', sort_order: 10 },
     { type: 'ATTENDANCE_TYPE', key: 'OFFICE', label: 'เข้าออฟฟิศ', color: 'bg-indigo-600', sort_order: 10 },
     { type: 'ATTENDANCE_TYPE', key: 'ON_TIME', label: 'มาตรงเวลา (On Time)', color: 'bg-emerald-600', sort_order: 15, description: '{"icon": "CheckCircle", "category": "STANDARD"}' },
     { type: 'ATTENDANCE_TYPE', key: 'WFH', label: 'ทำงานที่บ้าน (WFH)', color: 'bg-blue-600', sort_order: 10, description: '{"icon": "Home", "category": "STANDARD"}' },
@@ -486,6 +489,78 @@ export const MasterDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
     };
 
+    const saveMasterOptionsBulk = async (optionsToSave: any[]) => {
+        try {
+            const payloads = optionsToSave.map(option => {
+                const p: any = {
+                    type: option.type,
+                    key: option.key,
+                    label: option.label,
+                    color: option.color || '',
+                    sort_order: option.sortOrder !== undefined ? option.sortOrder : (option.sort_order || 0),
+                    is_active: option.isActive !== undefined ? option.isActive : (option.is_active ?? true),
+                    is_default: option.isDefault !== undefined ? option.isDefault : (option.is_default ?? false),
+                    parent_key: option.parentKey || option.parent_key || null,
+                    description: option.description || null,
+                    progress_value: option.progressValue !== undefined ? option.progressValue : (option.progress_value || 0)
+                };
+                if (option.id) {
+                    p.id = option.id;
+                }
+                return p;
+            });
+
+            const { data: savedRows, error } = await supabase
+                .from('master_options')
+                .upsert(payloads, { onConflict: 'type,key' })
+                .select();
+
+            if (error) throw error;
+            if (!savedRows) throw new Error('ไม่ได้รับข้อมูลที่บันทึกกลับมาจากฐานข้อมูล');
+
+            const cachedOptions = localStorage.getItem(CACHE_KEY_OPTIONS);
+            let rawOptions = cachedOptions ? JSON.parse(cachedOptions) : [];
+
+            savedRows.forEach((data) => {
+                const index = rawOptions.findIndex((o: any) => o.id === data.id);
+                if (index > -1) {
+                    rawOptions[index] = { ...rawOptions[index], ...data };
+                } else {
+                    rawOptions.push(data);
+                }
+            });
+
+            rawOptions.sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0));
+            localStorage.setItem(CACHE_KEY_OPTIONS, JSON.stringify(rawOptions));
+
+            setOptions(rawOptions.map((item: any) => ({
+                id: item.id,
+                type: (item.type || '').trim().toUpperCase(),
+                key: (item.key || '').trim(),
+                label: item.label,
+                color: item.color,
+                sortOrder: item.sort_order,
+                isActive: item.is_active,
+                isDefault: item.is_default,
+                parentKey: item.parent_key,
+                description: item.description,
+                progressValue: item.progress_value
+            })));
+
+            const newVersion = await updateSystemVersion('master_options_version');
+            if (newVersion) {
+                localStorage.setItem(CACHE_KEY_VERSION, newVersion);
+            }
+
+            showToast('บันทึกข้อมูลเรียบร้อย ✨', 'success');
+            return true;
+        } catch (err: any) {
+            console.error(err);
+            showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error');
+            return false;
+        }
+    };
+
     const addInventoryItem = async (item: any) => {
         try {
             const { data, error } = await supabase.from('inventory_items').insert(item).select();
@@ -695,6 +770,7 @@ export const MasterDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         addMasterOption,
         updateMasterOption,
         deleteMasterOption,
+        saveMasterOptionsBulk,
         addInventoryItem,
         updateInventoryItem,
         deleteInventoryItem,
@@ -703,7 +779,7 @@ export const MasterDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         seedDefaults
     }), [
         options, annualHolidays, calendarExceptions, inventoryItems, isLoading, 
-        fetchOptions, addMasterOption, updateMasterOption, deleteMasterOption,
+        fetchOptions, addMasterOption, updateMasterOption, deleteMasterOption, saveMasterOptionsBulk,
         addInventoryItem, updateInventoryItem, deleteInventoryItem, 
         batchUpdateInventoryItems, updateInventoryStock, seedDefaults
     ]);

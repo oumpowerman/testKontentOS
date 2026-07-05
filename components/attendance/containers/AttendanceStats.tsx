@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useAttendanceStats } from '../../../hooks/attendance/useAttendanceStats';
 import { AttendanceStats as StatsType } from '../../../types/attendance';
-import { TrendingUp, Clock, Calendar, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { TrendingUp, Clock, Calendar, AlertCircle, ChevronDown, ChevronUp, Hourglass } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AttendanceDetailCards from './AttendanceDetailCards';
 
@@ -53,9 +53,20 @@ const AttendanceStats: React.FC<AttendanceStatsProps> = ({ userId }) => {
                         <div className={`p-3 rounded-2xl ${item.bg} shadow-sm group-hover:scale-110 transition-transform`}>
                             <item.icon className={`w-5 h-5 ${item.color}`} />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                             <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">{item.label}</p>
-                            <p className="text-xl font-black text-slate-800 tracking-tight">{item.value}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="text-xl font-black text-slate-800 tracking-tight">{item.value}</p>
+                                {item.key === 'STREAK' && stats.hasPendingStreakRequest && (
+                                    <div 
+                                        className="inline-flex items-center gap-1 bg-amber-50 text-amber-600 border border-amber-200/60 px-1.5 py-0.5 rounded-full text-[9px] font-bold animate-pulse"
+                                        title="อยู่ระหว่างรอพิจารณาคำร้องเพื่อรักษา Streak"
+                                    >
+                                        <Hourglass className="w-2.5 h-2.5 shrink-0" />
+                                        <span>Pending</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <div className={`absolute top-4 right-4 transition-transform duration-300 ${activeDetail === item.key ? 'rotate-180' : ''}`}>
                             <ChevronDown className={`w-4 h-4 ${activeDetail === item.key ? 'text-indigo-500' : 'text-gray-300 opacity-0 group-hover:opacity-100'}`} />

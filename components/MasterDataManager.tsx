@@ -42,7 +42,7 @@ const MasterDataManager: React.FC = () => {
         filteredOptions
     } = useMasterDataView();
 
-    const { seedDefaults } = useMasterData(); // Hook specifically for seeding
+    const { seedDefaults, saveMasterOptionsBulk } = useMasterData(); // Hook specifically for seeding and bulk updates
 
     // Hook for Greetings (Used only when tab is active really)
     const { greetings, isLoading: greetingLoading, addGreeting, deleteGreeting, toggleGreeting } = useGreetings();
@@ -170,6 +170,7 @@ const MasterDataManager: React.FC = () => {
                                 onCreate={handleCreate}
                                 onEdit={handleEdit}
                                 onDelete={deleteMasterOption}
+                                saveMasterOptionsBulk={saveMasterOptionsBulk}
                             />
                         ) : activeTab === 'TRIBUNAL_SETTINGS' ? (
                             <TribunalSettingsView />

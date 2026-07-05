@@ -1,17 +1,21 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import th from 'date-fns/locale/th';
 import { 
-    X, Clock, UserX, HeartPulse, Calendar, 
-    ArrowRight, AlertCircle, CheckCircle2, Info,
-    Filter, Sparkles, Star
+    ArrowRight, CheckCircle2, Star, Sparkles
 } from 'lucide-react';
 import { User } from '../../../types';
 import { AttendanceLog } from '../../../types/attendance';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAttendanceSummary } from '../../../lib/attendanceUtils';
+import { useUserSession } from '../../../context/UserSessionContext';
+
+// Import our new subcomponents
+import { DetailModalHeader } from './modal/DetailModalHeader';
+import { DetailModalFilterGrid, FilterType } from './modal/DetailModalFilterGrid';
+import { AttendanceRecordCard } from './modal/AttendanceRecordCard';
+import { OvertimeBreakdownSection } from './modal/OvertimeBreakdownSection';
 
 interface UserStat {
     userId: string;
@@ -33,8 +37,6 @@ interface DashboardUserDetailModalProps {
     onClose: () => void;
 }
 
-type FilterType = 'ALL' | 'LATE' | 'ABSENT' | 'LEAVE';
-
 const DashboardUserDetailModal: React.FC<DashboardUserDetailModalProps> = ({
     user,
     stat,
@@ -45,39 +47,80 @@ const DashboardUserDetailModal: React.FC<DashboardUserDetailModalProps> = ({
 }) => {
     const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
     const [isScrolled, setIsScrolled] = useState(false);
+    const { leaveRequests } = useUserSession();
 
     // Categorize dates
-    const onTimeLogs = stat.logs.filter(l => {
-        if (l.status === 'LEAVE' || l.workType === 'LEAVE') return false;
-        if (!l.checkInTime) return false;
-        const summary = getAttendanceSummary(
-            l.checkInTime,
-            l.checkOutTime,
-            { startTime, buffer: lateBuffer, minHours: 9 }
-        );
-        return !summary.isLate;
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const onTimeLogs = useMemo(() => {
+        return stat.logs.filter(l => {
+            if (l.status === 'LEAVE' || l.workType === 'LEAVE') return false;
+            if (!l.checkInTime) return false;
+            const summary = getAttendanceSummary(
+                l.checkInTime,
+                l.checkOutTime,
+                { startTime, buffer: lateBuffer, minHours: 9 }
+            );
+            return !summary.isLate;
+        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [stat.logs, startTime, lateBuffer]);
 
-    const lateLogs = stat.logs.filter(l => {
-        if (!l.checkInTime) return false;
-        const summary = getAttendanceSummary(
-            l.checkInTime,
-            l.checkOutTime,
-            { startTime, buffer: lateBuffer, minHours: 9 }
-        );
-        return summary.isLate;
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const lateLogs = useMemo(() => {
+        return stat.logs.filter(l => {
+            if (!l.checkInTime) return false;
+            const summary = getAttendanceSummary(
+                l.checkInTime,
+                l.checkOutTime,
+                { startTime, buffer: lateBuffer, minHours: 9 }
+            );
+            return summary.isLate;
+        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [stat.logs, startTime, lateBuffer]);
 
-    const leaveLogs = stat.logs.filter(l => l.status === 'LEAVE' || l.workType === 'LEAVE')
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const leaveLogs = useMemo(() => {
+        return stat.logs.filter(l => l.status === 'LEAVE' || l.workType === 'LEAVE')
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [stat.logs]);
 
-    const absentDates = workingDaysInMonth.filter(day => {
-        if (day > new Date()) return false;
-        const dateStr = format(day, 'yyyy-MM-dd');
-        return !stat.logs.some(l => l.date === dateStr);
-    }).sort((a, b) => b.getTime() - a.getTime());
+    const absentDates = useMemo(() => {
+        return workingDaysInMonth.filter(day => {
+            if (day > new Date()) return false;
+            const dateStr = format(day, 'yyyy-MM-dd');
+            return !stat.logs.some(l => l.date === dateStr);
+        }).sort((a, b) => b.getTime() - a.getTime());
+    }, [workingDaysInMonth, stat.logs]);
+
+    // Calculate OT stats
+    const approvedOtRequests = useMemo(() => {
+        if (workingDaysInMonth.length === 0) return [];
+        const currentMonth = workingDaysInMonth[0].getMonth();
+        const currentYear = workingDaysInMonth[0].getFullYear();
+
+        return (leaveRequests || []).filter(req => {
+            if (req.userId !== user.id) return false;
+            if (req.status !== 'APPROVED') return false;
+            if (req.type !== 'OVERTIME') return false;
+            const reqDate = new Date(req.startDate);
+            return reqDate.getMonth() === currentMonth && reqDate.getFullYear() === currentYear;
+        });
+    }, [leaveRequests, user.id, workingDaysInMonth]);
+
+    const totalOtHours = useMemo(() => {
+        return approvedOtRequests.reduce((sum, req) => {
+            const reasonStr = req.reason || '';
+            const match = reasonStr.match(/\[OT:([\d\.]+)hr\]/);
+            const durationHours = match ? parseFloat(match[1]) : 0;
+            return sum + durationHours;
+        }, 0);
+    }, [approvedOtRequests]);
 
     const totalIssues = lateLogs.length + absentDates.length + leaveLogs.length;
+
+    const stats = useMemo(() => ({
+        present: stat.present,
+        late: stat.late,
+        absent: stat.absent,
+        leaves: stat.leaves,
+        otHours: totalOtHours
+    }), [stat, totalOtHours]);
 
     return createPortal(
         <motion.div 
@@ -104,216 +147,25 @@ const DashboardUserDetailModal: React.FC<DashboardUserDetailModalProps> = ({
                     <Star className="w-16 h-16 text-pink-400" />
                 </div>
 
-                {/* Header Section - Pastel Style with collapse animation */}
-                <motion.div 
-                    animate={{ 
-                        paddingTop: isScrolled ? '16px' : '32px',
-                        paddingBottom: isScrolled ? '16px' : '32px',
-                        paddingLeft: isScrolled ? '24px' : '32px',
-                        paddingRight: isScrolled ? '24px' : '32px'
-                    }}
-                    transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    className="bg-gradient-to-br from-indigo-50 via-white to-pink-50 relative overflow-hidden shrink-0 border-b border-indigo-100"
-                >
-                    <motion.button 
-                        onClick={onClose} 
-                        animate={{
-                            top: isScrolled ? '12px' : '24px',
-                            right: isScrolled ? '16px' : '24px'
-                        }}
-                        transition={{ duration: 0.3 }}
-                        className="absolute p-2 bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-2xl transition-all shadow-sm z-20 border border-slate-100"
-                    >
-                        <X className="w-5 h-5"/>
-                    </motion.button>
-
-                    <div className="flex items-center gap-4 relative z-10">
-                        <div className="relative">
-                            <motion.div 
-                                animate={{ 
-                                    borderRadius: isScrolled ? '1.5rem' : '2.5rem',
-                                    inset: isScrolled ? '-4px' : '-8px'
-                                }}
-                                transition={{ duration: 0.3 }}
-                                className="absolute bg-gradient-to-tr from-indigo-200 to-pink-200 blur-lg opacity-40 animate-pulse"
-                            ></motion.div>
-                            <motion.img 
-                                src={user.avatarUrl} 
-                                animate={{ 
-                                    width: isScrolled ? '48px' : '96px',
-                                    height: isScrolled ? '48px' : '96px',
-                                    borderRadius: isScrolled ? '1.2rem' : '2.2rem'
-                                }}
-                                transition={{ duration: 0.3 }}
-                                className="border-4 border-white object-cover shadow-xl relative z-10" 
-                                alt={user.name} 
-                            />
-                            <motion.div 
-                                animate={{
-                                    width: isScrolled ? '20px' : '28px',
-                                    height: isScrolled ? '20px' : '28px',
-                                    borderRadius: isScrolled ? '8px' : '12px'
-                                }}
-                                transition={{ duration: 0.3 }}
-                                className={`absolute -bottom-1 -right-1 border-2 border-white flex items-center justify-center z-20 ${user.workStatus === 'ONLINE' ? 'bg-emerald-400' : 'bg-slate-300'}`}
-                            >
-                                <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
-                            </motion.div>
-                        </div>
-                        <div className="min-w-0">
-                            <motion.div 
-                                animate={{ 
-                                    opacity: isScrolled ? 0 : 1,
-                                    height: isScrolled ? 0 : 'auto',
-                                    marginBottom: isScrolled ? 0 : '4px'
-                                }}
-                                transition={{ duration: 0.2 }}
-                                className="flex items-center gap-2 overflow-hidden"
-                            >
-                                <span className="px-2 py-0.5 rounded-lg bg-indigo-100 text-[10px] font-black text-indigo-500 uppercase tracking-widest">Profile Card</span>
-                                {totalIssues === 0 && <span className="px-2 py-0.5 rounded-lg bg-emerald-100 text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1"><Star className="w-2 h-2" /> Perfect</span>}
-                            </motion.div>
-                            <motion.h3 
-                                animate={{ 
-                                    fontSize: isScrolled ? '1.25rem' : '1.875rem',
-                                    lineHeight: isScrolled ? '1.75rem' : '2.25rem'
-                                }}
-                                transition={{ duration: 0.3 }}
-                                className="font-bold text-slate-800 tracking-tight mb-1 truncate"
-                            >
-                                {user.name}
-                            </motion.h3>
-                            <motion.div 
-                                animate={{ 
-                                    opacity: isScrolled ? 0 : 1,
-                                    height: isScrolled ? 0 : 'auto'
-                                }}
-                                transition={{ duration: 0.2 }}
-                                className="flex items-center gap-2 overflow-hidden"
-                            >
-                                <span className="px-3 py-1 rounded-xl bg-white border border-indigo-100 text-[10px] font-bold text-slate-500 uppercase tracking-widest shadow-sm">
-                                    {user.position}
-                                </span>
-                                <span className="px-3 py-1 rounded-xl bg-gradient-to-r from-indigo-400 to-sky-400 text-[10px] font-black text-white uppercase tracking-widest shadow-md">
-                                    Level {user.level}
-                                </span>
-                            </motion.div>
-                        </div>
+                {/* Header & Quick Filter Stats Grid */}
+                <div className="shrink-0">
+                    <DetailModalHeader 
+                        user={user}
+                        isScrolled={isScrolled}
+                        totalIssues={totalIssues}
+                        onClose={onClose}
+                    />
+                    
+                    {/* Filter grid attached right under header */}
+                    <div className="bg-gradient-to-br from-indigo-50/20 via-white to-pink-50/20 px-6 pb-4 border-b border-indigo-50 shrink-0">
+                        <DetailModalFilterGrid 
+                            activeFilter={activeFilter}
+                            setActiveFilter={setActiveFilter}
+                            isScrolled={isScrolled}
+                            stats={stats}
+                        />
                     </div>
-
-                    {/* Interactive Quick Stats Grid - Pastel Buttons */}
-                    <motion.div 
-                        animate={{ 
-                            marginTop: isScrolled ? '12px' : '32px' 
-                        }}
-                        transition={{ duration: 0.3 }}
-                        className="grid grid-cols-4 gap-3"
-                    >
-                        {/* ALL Button */}
-                        <motion.button 
-                            onClick={() => setActiveFilter('ALL')}
-                            animate={{
-                                padding: isScrolled ? '6px 8px' : '12px',
-                                borderRadius: isScrolled ? '1.2rem' : '1.8rem'
-                            }}
-                            transition={{ duration: 0.3 }}
-                            className={`transition-all flex flex-col items-center justify-center border-2 ${activeFilter === 'ALL' ? 'bg-white border-indigo-200 shadow-md' : 'bg-white/40 border-transparent hover:bg-white/60'}`}
-                        >
-                            <div className="flex items-center gap-1">
-                                <Filter className={`w-4 h-4 ${activeFilter === 'ALL' ? 'text-indigo-500' : 'text-slate-400'}`} />
-                                {isScrolled && (
-                                    <span className={`text-sm font-black ${activeFilter === 'ALL' ? 'text-slate-800' : 'text-slate-400'}`}>
-                                        {stat.present}
-                                    </span>
-                                )}
-                            </div>
-                            {!isScrolled && (
-                                <>
-                                    <span className={`text-lg font-black ${activeFilter === 'ALL' ? 'text-slate-800' : 'text-slate-400'}`}>{stat.present}</span>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">All Days</span>
-                                </>
-                            )}
-                        </motion.button>
-
-                        {/* LATE Button */}
-                        <motion.button 
-                            onClick={() => setActiveFilter('LATE')}
-                            animate={{
-                                padding: isScrolled ? '6px 8px' : '12px',
-                                borderRadius: isScrolled ? '1.2rem' : '1.8rem'
-                            }}
-                            transition={{ duration: 0.3 }}
-                            className={`transition-all flex flex-col items-center justify-center border-2 ${activeFilter === 'LATE' ? 'bg-amber-50 border-amber-200 shadow-md' : 'bg-white/40 border-transparent hover:bg-amber-50/50'}`}
-                        >
-                            <div className="flex items-center gap-1">
-                                <Clock className={`w-4 h-4 ${activeFilter === 'LATE' ? 'text-amber-500' : 'text-amber-300'}`} />
-                                {isScrolled && (
-                                    <span className={`text-sm font-black ${activeFilter === 'LATE' ? 'text-amber-600' : 'text-amber-300'}`}>
-                                        {stat.late}
-                                    </span>
-                                )}
-                            </div>
-                            {!isScrolled && (
-                                <>
-                                    <span className={`text-lg font-black ${activeFilter === 'LATE' ? 'text-amber-600' : 'text-amber-300'}`}>{stat.late}</span>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Late</span>
-                                </>
-                            )}
-                        </motion.button>
-
-                        {/* ABSENT Button */}
-                        <motion.button 
-                            onClick={() => setActiveFilter('ABSENT')}
-                            animate={{
-                                padding: isScrolled ? '6px 8px' : '12px',
-                                borderRadius: isScrolled ? '1.2rem' : '1.8rem'
-                            }}
-                            transition={{ duration: 0.3 }}
-                            className={`transition-all flex flex-col items-center justify-center border-2 ${activeFilter === 'ABSENT' ? 'bg-rose-50 border-rose-200 shadow-md' : 'bg-white/40 border-transparent hover:bg-rose-50/50'}`}
-                        >
-                            <div className="flex items-center gap-1">
-                                <UserX className={`w-4 h-4 ${activeFilter === 'ABSENT' ? 'text-rose-500' : 'text-rose-300'}`} />
-                                {isScrolled && (
-                                    <span className={`text-sm font-black ${activeFilter === 'ABSENT' ? 'text-rose-600' : 'text-rose-300'}`}>
-                                        {stat.absent}
-                                    </span>
-                                )}
-                            </div>
-                            {!isScrolled && (
-                                <>
-                                    <span className={`text-lg font-black ${activeFilter === 'ABSENT' ? 'text-rose-600' : 'text-rose-300'}`}>{stat.absent}</span>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Absent</span>
-                                </>
-                            )}
-                        </motion.button>
-
-                        {/* LEAVE Button */}
-                        <motion.button 
-                            onClick={() => setActiveFilter('LEAVE')}
-                            animate={{
-                                padding: isScrolled ? '6px 8px' : '12px',
-                                borderRadius: isScrolled ? '1.2rem' : '1.8rem'
-                            }}
-                            transition={{ duration: 0.3 }}
-                            className={`transition-all flex flex-col items-center justify-center border-2 ${activeFilter === 'LEAVE' ? 'bg-sky-50 border-sky-200 shadow-md' : 'bg-white/40 border-transparent hover:bg-sky-50/50'}`}
-                        >
-                            <div className="flex items-center gap-1">
-                                <HeartPulse className={`w-4 h-4 ${activeFilter === 'LEAVE' ? 'text-sky-500' : 'text-sky-300'}`} />
-                                {isScrolled && (
-                                    <span className={`text-sm font-black ${activeFilter === 'LEAVE' ? 'text-sky-600' : 'text-sky-300'}`}>
-                                        {stat.leaves}
-                                    </span>
-                                )}
-                            </div>
-                            {!isScrolled && (
-                                <>
-                                    <span className={`text-lg font-black ${activeFilter === 'LEAVE' ? 'text-sky-600' : 'text-sky-300'}`}>{stat.leaves}</span>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Leave</span>
-                                </>
-                            )}
-                        </motion.button>
-                    </motion.div>
-                </motion.div>
+                </div>
 
                 {/* Content Section - Scrollable */}
                 <div 
@@ -331,35 +183,25 @@ const DashboardUserDetailModal: React.FC<DashboardUserDetailModalProps> = ({
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 10 }}
                                 key="on-time-section"
+                                className="space-y-4"
                             >
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="p-2 bg-emerald-50 rounded-2xl text-emerald-500"><CheckCircle2 className="w-5 h-5"/></div>
-                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">On-Time Arrival Records</h4>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-emerald-50 rounded-2xl text-emerald-500">
+                                        <CheckCircle2 className="w-5 h-5"/>
+                                    </div>
+                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] text-left">
+                                        On-Time Arrival Records
+                                    </h4>
                                 </div>
                                 <div className="grid grid-cols-1 gap-3">
                                     {onTimeLogs.map(log => (
-                                        <div key={log.id} className="flex items-center justify-between p-4 bg-white rounded-[2rem] border border-emerald-100 group hover:shadow-lg hover:shadow-emerald-100/50 transition-all">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex flex-col items-center justify-center border border-emerald-100">
-                                                    <span className="text-[10px] font-black text-emerald-400 uppercase">{format(new Date(log.date), 'EEE')}</span>
-                                                    <span className="text-lg font-black text-emerald-600">{format(new Date(log.date), 'd')}</span>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-black text-slate-700">{format(new Date(log.date), 'MMMM yyyy', { locale: th })}</p>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 rounded-lg text-[9px] font-black uppercase">ON-TIME</span>
-                                                        <p className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                                                            <Clock className="w-3 h-3" /> {log.checkInTime ? format(new Date(log.checkInTime), 'HH:mm') : '--:--'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <ArrowRight className="w-4 h-4" />
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <AttendanceRecordCard 
+                                            key={log.id}
+                                            date={new Date(log.date)}
+                                            variant="on-time"
+                                            timeLabel={log.checkInTime ? format(new Date(log.checkInTime), 'HH:mm') : '--:--'}
+                                            badgeText="ON-TIME"
+                                        />
                                     ))}
                                 </div>
                             </motion.section>
@@ -372,35 +214,25 @@ const DashboardUserDetailModal: React.FC<DashboardUserDetailModalProps> = ({
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 10 }}
                                 key="late-section"
+                                className="space-y-4"
                             >
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="p-2 bg-amber-50 rounded-2xl text-amber-500"><Clock className="w-5 h-5"/></div>
-                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Late Arrival Records</h4>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-amber-50 rounded-2xl text-amber-500">
+                                        <CheckCircle2 className="w-5 h-5"/>
+                                    </div>
+                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] text-left">
+                                        Late Arrival Records
+                                    </h4>
                                 </div>
                                 <div className="grid grid-cols-1 gap-3">
                                     {lateLogs.map(log => (
-                                        <div key={log.id} className="flex items-center justify-between p-4 bg-white rounded-[2rem] border border-amber-100 group hover:shadow-lg hover:shadow-amber-100/50 transition-all">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-14 h-14 bg-amber-50 rounded-2xl flex flex-col items-center justify-center border border-amber-100">
-                                                    <span className="text-[10px] font-black text-amber-400 uppercase">{format(new Date(log.date), 'EEE')}</span>
-                                                    <span className="text-lg font-black text-amber-600">{format(new Date(log.date), 'd')}</span>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-black text-slate-700">{format(new Date(log.date), 'MMMM yyyy', { locale: th })}</p>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="px-2 py-0.5 bg-amber-100 text-amber-600 rounded-lg text-[9px] font-black uppercase">LATE</span>
-                                                        <p className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                                                            <Clock className="w-3 h-3" /> {log.checkInTime ? format(new Date(log.checkInTime), 'HH:mm') : '--:--'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <ArrowRight className="w-4 h-4" />
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <AttendanceRecordCard 
+                                            key={log.id}
+                                            date={new Date(log.date)}
+                                            variant="late"
+                                            timeLabel={log.checkInTime ? format(new Date(log.checkInTime), 'HH:mm') : '--:--'}
+                                            badgeText="LATE"
+                                        />
                                     ))}
                                 </div>
                             </motion.section>
@@ -413,33 +245,24 @@ const DashboardUserDetailModal: React.FC<DashboardUserDetailModalProps> = ({
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 10 }}
                                 key="absent-section"
+                                className="space-y-4"
                             >
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="p-2 bg-rose-50 rounded-2xl text-rose-500"><UserX className="w-5 h-5"/></div>
-                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Missing Attendance</h4>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-rose-50 rounded-2xl text-rose-500">
+                                        <CheckCircle2 className="w-5 h-5"/>
+                                    </div>
+                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] text-left">
+                                        Missing Attendance
+                                    </h4>
                                 </div>
                                 <div className="grid grid-cols-1 gap-3">
                                     {absentDates.map(date => (
-                                        <div key={date.toString()} className="flex items-center justify-between p-4 bg-white rounded-[2rem] border border-rose-100 group hover:shadow-lg hover:shadow-rose-100/50 transition-all">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-14 h-14 bg-rose-50 rounded-2xl flex flex-col items-center justify-center border border-rose-100">
-                                                    <span className="text-[10px] font-black text-rose-400 uppercase">{format(date, 'EEE')}</span>
-                                                    <span className="text-lg font-black text-rose-600">{format(date, 'd')}</span>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-black text-slate-700">{format(date, 'MMMM yyyy', { locale: th })}</p>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="px-2 py-0.5 bg-rose-600 text-white rounded-lg text-[9px] font-black uppercase">ABSENT</span>
-                                                        <p className="text-[10px] font-bold text-rose-400">No record found</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <ArrowRight className="w-4 h-4" />
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <AttendanceRecordCard 
+                                            key={date.toString()}
+                                            date={date}
+                                            variant="absent"
+                                            badgeText="ABSENT"
+                                        />
                                     ))}
                                 </div>
                             </motion.section>
@@ -452,48 +275,49 @@ const DashboardUserDetailModal: React.FC<DashboardUserDetailModalProps> = ({
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 10 }}
                                 key="leave-section"
+                                className="space-y-4"
                             >
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="p-2 bg-sky-50 rounded-2xl text-sky-500"><HeartPulse className="w-5 h-5"/></div>
-                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Official Leave History</h4>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-sky-50 rounded-2xl text-sky-500">
+                                        <CheckCircle2 className="w-5 h-5"/>
+                                    </div>
+                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] text-left">
+                                        Official Leave History
+                                    </h4>
                                 </div>
                                 <div className="grid grid-cols-1 gap-3">
                                     {leaveLogs.map(log => (
-                                        <div key={log.id} className="flex items-center justify-between p-4 bg-white rounded-[2rem] border border-sky-100 group hover:shadow-lg hover:shadow-sky-100/50 transition-all">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-14 h-14 bg-sky-50 rounded-2xl flex flex-col items-center justify-center border border-sky-100">
-                                                    <span className="text-[10px] font-black text-sky-400 uppercase">{format(new Date(log.date), 'EEE')}</span>
-                                                    <span className="text-lg font-black text-sky-600">{format(new Date(log.date), 'd')}</span>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-black text-slate-700">{format(new Date(log.date), 'MMMM yyyy', { locale: th })}</p>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="px-2 py-0.5 bg-sky-100 text-sky-600 rounded-lg text-[9px] font-black uppercase">{log.workType || 'LEAVE'}</span>
-                                                        <p className="text-[10px] font-bold text-slate-400 italic truncate max-w-[150px]">
-                                                            "{log.note || 'No reason'}"
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="w-8 h-8 rounded-full bg-sky-50 flex items-center justify-center text-sky-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <ArrowRight className="w-4 h-4" />
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <AttendanceRecordCard 
+                                            key={log.id}
+                                            date={new Date(log.date)}
+                                            variant="leave"
+                                            badgeText={log.workType || 'LEAVE'}
+                                            note={log.note}
+                                        />
                                     ))}
                                 </div>
                             </motion.section>
+                        )}
+
+                        {/* Overtime Breakdown View */}
+                        {activeFilter === 'OT' && (
+                            <OvertimeBreakdownSection 
+                                leaveRequests={leaveRequests || []}
+                                userId={user.id}
+                                workingDaysInMonth={workingDaysInMonth}
+                            />
                         )}
 
                         {/* Empty State / Filter Empty State */}
                         {((activeFilter === 'LATE' && lateLogs.length === 0) || 
                           (activeFilter === 'ABSENT' && absentDates.length === 0) || 
                           (activeFilter === 'LEAVE' && leaveLogs.length === 0) ||
+                          (activeFilter === 'OT' && approvedOtRequests.length === 0) ||
                           (activeFilter === 'ALL' && totalIssues === 0 && onTimeLogs.length === 0)) && (
                             <motion.div 
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
+                                key="empty-state"
                                 className="flex flex-col items-center justify-center py-20 text-indigo-200"
                             >
                                 <div className="w-24 h-24 bg-indigo-50 rounded-[2.5rem] flex items-center justify-center mb-6 relative">
@@ -523,4 +347,3 @@ const DashboardUserDetailModal: React.FC<DashboardUserDetailModalProps> = ({
 };
 
 export default DashboardUserDetailModal;
-

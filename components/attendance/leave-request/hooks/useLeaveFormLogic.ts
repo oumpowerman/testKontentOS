@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, startOfDay, isBefore } from 'date-fns';
 import { LeaveType } from '../../../../types/attendance';
 import { useGlobalDialog } from '../../../../context/GlobalDialogContext';
 
@@ -10,11 +10,12 @@ interface UseLeaveFormLogicProps {
     initialDate?: Date;
     initialReason?: string;
     selectedType?: string;
+    advanceDays?: number;
 }
 
 import { compressImage } from '../../../../lib/imageUtils';
 
-export const useLeaveFormLogic = ({ onSubmit, onClose, initialDate, initialReason, selectedType }: UseLeaveFormLogicProps) => {
+export const useLeaveFormLogic = ({ onSubmit, onClose, initialDate, initialReason, selectedType, advanceDays }: UseLeaveFormLogicProps) => {
     const { showAlert } = useGlobalDialog();
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -44,6 +45,9 @@ export const useLeaveFormLogic = ({ onSubmit, onClose, initialDate, initialReaso
         } else if (selectedType === 'FORGOT_BOTH') {
             setTargetTime('09:00');
             setEndTime('18:00');
+        } else if (selectedType === 'OVERTIME') {
+            setTargetTime('18:30');
+            setEndTime('20:30');
         } else {
             setTargetTime('09:00');
         }
@@ -63,6 +67,17 @@ export const useLeaveFormLogic = ({ onSubmit, onClose, initialDate, initialReaso
         if (start > end) {
             showAlert('วันที่เริ่มต้นต้องไม่มากกว่าวันที่สิ้นสุดครับ', 'วันที่ไม่ถูกต้อง');
             return;
+        }
+
+        if (advanceDays && advanceDays > 0) {
+            const today = startOfDay(new Date());
+            const minAllowedDate = new Date(today);
+            minAllowedDate.setDate(today.getDate() + advanceDays);
+            
+            if (isBefore(startOfDay(start), minAllowedDate)) {
+                showAlert(`ประเภทการลานี้ต้องแจ้งล่วงหน้าอย่างน้อย ${advanceDays} วัน (สามารถเลือกได้ตั้งแต่วันที่ ${format(minAllowedDate, 'd/M/yyyy')})`, 'ต้องแจ้งล่วงหน้า');
+                return;
+            }
         }
 
         if (!reason.trim()) {
@@ -105,7 +120,7 @@ export const useLeaveFormLogic = ({ onSubmit, onClose, initialDate, initialReaso
                 finalEndDate = finalStartDate; 
             }
         } else if (selectedType === 'OVERTIME') {
-            finalReason = `[OT:${otHours}hr] ${reason}`;
+            finalReason = `[OT:${targetTime}-${endTime}] (${otHours}hr) ${reason}`;
             finalEndDate = finalStartDate;
         }
 

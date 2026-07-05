@@ -161,7 +161,16 @@ const AttendanceControl: React.FC<AttendanceControlProps> = ({ user, todayActive
                 todayActiveLeave={todayActiveLeave}
                 onCheckOut={handleCheckOut}
                 onCheckOutRequest={onLeaveSubmit}
-                onOpenCheckIn={() => setIsCheckInModalOpen(true)}
+                onOpenCheckIn={async (isHoliday) => {
+                    if (isHoliday) {
+                        const confirm = await showConfirm(
+                            "โปรดยืนยันว่าการลงเวลาในวันหยุดครั้งนี้ ได้รับการอนุมัติหรือเห็นชอบจากหัวหน้างานของคุณแล้ว\nกดตกลงเพื่อเริ่มต้นขั้นตอนตรวจสอบสถานที่และเข้าสู่ระบบบันทึกเวลา",
+                            "⚠️ ยืนยันการลงเวลาปฏิบัติงานในวันหยุด (OT)"
+                        );
+                        if (!confirm) return;
+                    }
+                    setIsCheckInModalOpen(true);
+                }}
                 onOpenLeave={onOpenLeave}
                 isDriveReady={isDriveReady}
                 isAuthenticated={isDriveAuthenticated}
