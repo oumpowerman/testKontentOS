@@ -1,11 +1,12 @@
 
 import React, { useState, useMemo } from 'react';
 import { LayoutGrid, Calendar as CalendarIcon, Users, MessageCircle, Target, TrendingUp, Coffee, ScanEye, Film, ClipboardList, BookOpen, Settings2, Database, Briefcase, ShieldCheck, LogOut, Edit, Sparkles, BarChart3, Megaphone, FileText, Presentation, ChevronDown, ChevronRight, Building2, Clapperboard, Terminal, Clock, DollarSign, Crown, Monitor, Share2, Map } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { User, ViewMode, MenuGroup } from '../types';
 import SidebarBadge from './SidebarBadge';
 import NotificationPill from './NotificationPill';
 import AIStatusBadge from './common/AIStatusBadge';
+import { useMasterDataContext } from '../context/MasterDataContext';
 
 interface SidebarProps {
   currentUser: User;
@@ -18,6 +19,7 @@ interface SidebarProps {
   systemUnreadCount?: number; 
   isCollapsed: boolean;
   onToggleCollapse: (val: boolean) => void;
+  onLogoTrigger?: () => void;
 }
 
 
@@ -87,9 +89,52 @@ const Sidebar: React.FC<SidebarProps> = ({
   unreadChatCount,
   systemUnreadCount = 0,
   isCollapsed,
-  onToggleCollapse
+  onToggleCollapse,
+  onLogoTrigger
 }) => {
   const isAdmin = currentUser.role === 'ADMIN';
+  
+  // --- SECRET SIDEBAR CONTROL CENTER EASTER EGG ---
+  const { masterOptions } = useMasterDataContext();
+  const [clickCount, setClickCount] = useState(0);
+  const [lastClickTime, setLastClickTime] = useState(0);
+
+  const activeViews = useMemo(() => {
+    const config = masterOptions.find(o => o.type === 'SIDEBAR_CONFIG' && o.key === 'ACTIVE_MENUS');
+    if (!config) return null;
+    try {
+      return JSON.parse(config.label) as string[];
+    } catch (e) {
+      console.error("Failed to parse sidebar config", e);
+      return null;
+    }
+  }, [masterOptions]);
+
+  const filteredMenuGroups = useMemo(() => {
+    if (!activeViews || activeViews.length === 0) return MENU_GROUPS;
+    return MENU_GROUPS.map(group => {
+      const visibleItems = group.items.filter(item => activeViews.includes(item.view));
+      return {
+        ...group,
+        items: visibleItems
+      };
+    }).filter(group => group.items.length > 0);
+  }, [activeViews]);
+
+  const handleLogoClick = () => {
+    const now = Date.now();
+    if (now - lastClickTime > 2000) {
+      setClickCount(1);
+      setLastClickTime(now);
+    } else {
+      const newCount = clickCount + 1;
+      setClickCount(newCount);
+      if (newCount === 5) {
+        setClickCount(0);
+        onLogoTrigger?.();
+      }
+    }
+  };
 
   // Theme Logic
   const isDarkTheme = currentView === 'QUALITY_GATE' || currentView === 'GOALS';
@@ -330,7 +375,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       `}
     >
       {/* 1. Brand Logo Area */}
-      <div className={`flex items-center bg-gradient-to-b ${themeClasses.logoArea} overflow-hidden ${isCollapsed ? 'px-5 py-8 justify-center' : 'px-8 py-8'}`}>
+      <div onClick={handleLogoClick} className={`flex items-center bg-gradient-to-b ${themeClasses.logoArea} overflow-hidden cursor-pointer select-none ${isCollapsed ? 'px-5 py-8 justify-center' : 'px-8 py-8'}`}>
         <motion.div 
           initial={{ rotate: -10, scale: 0.9, opacity: 0 }}
           animate={{ rotate: 0, scale: 1, opacity: 1 }}
@@ -399,7 +444,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* 2. Menu Area */}
       <div className="flex-1 overflow-y-auto sidebar-scroll py-4 scrollbar-hide">
-        {MENU_GROUPS.map((group) => {
+        {filteredMenuGroups.map((group) => {
           if (group.adminOnly && !isAdmin) return null;
           
           const isExpanded = expandedGroups[group.id];
@@ -556,6 +601,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <span className="sidebar-item-text">ลงชื่อออก</span>
         </button>
       </div>
+      
     </aside>
   );
 };

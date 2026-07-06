@@ -19,6 +19,7 @@ export const useLeaveRequests = (currentUser?: any, options: { all?: boolean } =
             rejectRequest: adminApprovals.rejectRequest,
             submitRequest: myRequests.submitRequest, // Fallback
             leaveUsage: myRequests.leaveUsage, // Fallback
+            pendingUsage: myRequests.pendingUsage, // Fallback
             fetchRequests: adminApprovals.fetchAllRequests
         };
     } else {
@@ -29,6 +30,7 @@ export const useLeaveRequests = (currentUser?: any, options: { all?: boolean } =
             rejectRequest: adminApprovals.rejectRequest, // Fallback
             submitRequest: myRequests.submitRequest,
             leaveUsage: myRequests.leaveUsage,
+            pendingUsage: myRequests.pendingUsage,
             fetchRequests: myRequests.fetchMyRequests
         };
     }

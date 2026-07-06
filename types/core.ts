@@ -60,4 +60,13 @@ export interface User {
     lineUserId?: string;
     createdAt?: Date;
     emoji?: string;
+
+    // Detailed Profile Name Fields
+    firstName?: string;
+    lastName?: string;
+    nickname?: string;
+
+    // Policy terms tracking
+    acceptedTermsVersion?: number;
+    acceptedTermsAt?: Date | null;
 }

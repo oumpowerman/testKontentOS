@@ -18,6 +18,7 @@ import DashboardHeader from './DashboardHeader';
 import DashboardStats from './DashboardStats';
 import DashboardTable from './DashboardTable';
 import DashboardUserDetailModal from './DashboardUserDetailModal';
+import { ExportControlCenterModal } from './modal/ExportControlCenterModal';
 
 // Lazy Loaded Analytics Component
 const AttendanceAnalytics = lazy(() => import('./analytics/AttendanceAnalytics'));
@@ -80,6 +81,7 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
     
     // Modal State
     const [selectedUser, setSelectedUser] = useState<{ user: User, stat: UserStat } | null>(null);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     
     // Config State
     const [startTime, setStartTime] = useState('10:00');
@@ -501,7 +503,7 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
 
                         <div className="flex justify-end">
                             <button 
-                                onClick={handleExportCSV}
+                                onClick={() => setIsExportModalOpen(true)}
                                 className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-200 rounded-2xl text-sm font-bold text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all shadow-sm active:scale-95"
                             >
                                 <Download className="w-4 h-4" /> Export CSV Report
@@ -555,16 +557,28 @@ const AdminAttendanceDashboard: React.FC<AdminAttendanceDashboardProps> = ({ use
                 )}
             </AnimatePresence>
             
-            {selectedUser && (
-                <DashboardUserDetailModal 
-                    user={selectedUser.user}
-                    stat={selectedUser.stat}
-                    workingDaysInMonth={workingDaysInMonth}
-                    startTime={startTime}
-                    lateBuffer={lateBuffer}
-                    onClose={() => setSelectedUser(null)}
-                />
-            )}
+            <AnimatePresence>
+                {selectedUser && (
+                    <DashboardUserDetailModal 
+                        user={selectedUser.user}
+                        stat={selectedUser.stat}
+                        workingDaysInMonth={workingDaysInMonth}
+                        startTime={startTime}
+                        lateBuffer={lateBuffer}
+                        onClose={() => setSelectedUser(null)}
+                    />
+                )}
+            </AnimatePresence>
+
+            <ExportControlCenterModal 
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                users={users}
+                userStats={userStats}
+                getGrade={getGrade}
+                currentMonth={currentMonth}
+                workingDaysInMonth={workingDaysInMonth}
+            />
         </div>
     );
 };

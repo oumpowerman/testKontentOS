@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     LayoutGrid, Calendar as CalendarIcon, MessageCircle, Menu, X, 
@@ -14,7 +14,8 @@ import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { useGlobalDialog } from '../context/GlobalDialogContext';
 import { useWorkboxContext } from '../context/WorkboxContext';
 import SidebarBadge from './SidebarBadge';
-import CommandPalette from '../components/ui/CommandPalette'
+import CommandPalette from '../components/ui/CommandPalette';
+import { useMasterDataContext } from '../context/MasterDataContext';
 
 interface MobileNavigationProps {
     currentUser: User;
@@ -137,6 +138,31 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isIOS, setIsIOS] = useState(false);
+
+    // --- SIDEBAR CONFIG INTEGRATION ---
+    const { masterOptions } = useMasterDataContext();
+
+    const activeViews = useMemo(() => {
+      const config = masterOptions.find(o => o.type === 'SIDEBAR_CONFIG' && o.key === 'ACTIVE_MENUS');
+      if (!config) return null;
+      try {
+        return JSON.parse(config.label) as string[];
+      } catch (e) {
+        console.error("Failed to parse sidebar config", e);
+        return null;
+      }
+    }, [masterOptions]);
+
+    const filteredMenuGroups = useMemo(() => {
+      if (!activeViews || activeViews.length === 0) return MOBILE_MENU_GROUPS;
+      return MOBILE_MENU_GROUPS.map(group => {
+        const visibleItems = group.items.filter(item => activeViews.includes(item.view));
+        return {
+          ...group,
+          items: visibleItems
+        };
+      }).filter(group => group.items.length > 0);
+    }, [activeViews]);
     const [activePanel, setActivePanel] = useState<'MENU' | 'SEARCH'>('MENU');
     const containerRef = React.useRef<HTMLDivElement>(null);
     
@@ -456,7 +482,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                                     </div>
                                 </motion.button>
 
-                                {MOBILE_MENU_GROUPS.map((group) => {
+                                {filteredMenuGroups.map((group) => {
                                     if (group.adminOnly && currentUser.role !== 'ADMIN') return null;
                                     return (
                                         <div key={group.id} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -514,7 +540,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                                 <CommandPalette 
                                     currentUser={currentUser}
                                     tasks={tasks}
-                                    menuGroups={MOBILE_MENU_GROUPS}
+                                    menuGroups={filteredMenuGroups}
                                     onNavigate={onNavigate}
                                     onAddTask={onAddTask}
                                     onEditProfile={onEditProfile}

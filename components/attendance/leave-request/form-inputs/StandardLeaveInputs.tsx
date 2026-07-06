@@ -12,9 +12,11 @@ interface Props {
     endDate: string;
     setEndDate: (val: string) => void;
     minDate?: Date;
+    maxDate?: Date;
+    workingDaysCount?: number;
 }
 
-const StandardLeaveInputs: React.FC<Props> = ({ startDate, setStartDate, endDate, setEndDate, minDate }) => {
+const StandardLeaveInputs: React.FC<Props> = ({ startDate, setStartDate, endDate, setEndDate, minDate, maxDate, workingDaysCount }) => {
     const [isStartOpen, setIsStartOpen] = useState(false);
     const [isMultiOpen, setIsMultiOpen] = useState(false);
     
@@ -46,10 +48,16 @@ const StandardLeaveInputs: React.FC<Props> = ({ startDate, setStartDate, endDate
         <div className="space-y-4">
             <label className="block text-[13px] font-kanit font-medium text-gray-400 uppercase ml-1 tracking-widest flex justify-between">
                 <span>ช่วงเวลาที่ลา (Period)</span>
-                {daysCount > 0 && (
-                    <span className="text-indigo-500 font-bold bg-indigo-50 px-2.5 py-0.5 rounded-full text-xs">
-                        {daysCount} วันปฏิทิน
+                {workingDaysCount !== undefined && workingDaysCount > 0 ? (
+                    <span className="text-indigo-500 font-bold bg-indigo-50 px-2.5 py-0.5 rounded-full text-xs animate-fade-in">
+                        {workingDaysCount} วันทำงาน
                     </span>
+                ) : (
+                    daysCount > 0 && (
+                        <span className="text-indigo-500 font-bold bg-indigo-50 px-2.5 py-0.5 rounded-full text-xs">
+                            {daysCount} วันปฏิทิน
+                        </span>
+                    )
                 )}
             </label>
 
@@ -146,6 +154,7 @@ const StandardLeaveInputs: React.FC<Props> = ({ startDate, setStartDate, endDate
                     setEndDate(dateStr); // For single day, start = end
                 }}
                 minDate={minDate}
+                maxDate={maxDate}
             />
 
             <MultiDatePickerModal
@@ -158,6 +167,7 @@ const StandardLeaveInputs: React.FC<Props> = ({ startDate, setStartDate, endDate
                     setEndDate(end.toISOString().split('T')[0]);
                 }}
                 minDate={minDate}
+                maxDate={maxDate}
             />
         </div>
     );

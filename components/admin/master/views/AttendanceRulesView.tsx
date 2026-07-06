@@ -42,7 +42,8 @@ const AttendanceRulesView: React.FC<AttendanceRulesViewProps> = ({
         otThreshold: '2', 
         checkoutPenaltyTime: '06:00',
         dailySummaryDelayHours: '1',
-        lineSummaryDestination: ''
+        lineSummaryDestination: '',
+        enableAttendanceRace: 'true'
     });
     const [isStartTimeOpen, setIsStartTimeOpen] = useState(false);
     const [isEndTimeOpen, setIsEndTimeOpen] = useState(false);
@@ -69,8 +70,9 @@ const AttendanceRulesView: React.FC<AttendanceRulesViewProps> = ({
         const checkoutPenaltyTimeOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'CHECKOUT_PENALTY_TIME');
         const dailySummaryDelayHoursOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'DAILY_SUMMARY_DELAY_HOURS');
         const lineSummaryDestinationOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'LINE_SUMMARY_DESTINATION');
+        const enableRaceOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'ENABLE_ATTENDANCE_RACE');
         
-        if (startOpt || endOpt || bufferOpt || minHoursOpt || otThresholdOpt || checkoutPenaltyTimeOpt || dailySummaryDelayHoursOpt || lineSummaryDestinationOpt) {
+        if (startOpt || endOpt || bufferOpt || minHoursOpt || otThresholdOpt || checkoutPenaltyTimeOpt || dailySummaryDelayHoursOpt || lineSummaryDestinationOpt || enableRaceOpt) {
             setTempTimeConfig({
                 start: startOpt?.label || '10:00',
                 end: endOpt?.label || '19:00',
@@ -79,7 +81,8 @@ const AttendanceRulesView: React.FC<AttendanceRulesViewProps> = ({
                 otThreshold: otThresholdOpt?.label || '2',
                 checkoutPenaltyTime: checkoutPenaltyTimeOpt?.label || '06:00',
                 dailySummaryDelayHours: dailySummaryDelayHoursOpt?.label || '1',
-                lineSummaryDestination: lineSummaryDestinationOpt?.label || ''
+                lineSummaryDestination: lineSummaryDestinationOpt?.label || '',
+                enableAttendanceRace: enableRaceOpt?.label || 'true'
             });
         }
 
@@ -135,6 +138,7 @@ const AttendanceRulesView: React.FC<AttendanceRulesViewProps> = ({
         await updateOrInsert('CHECKOUT_PENALTY_TIME', tempTimeConfig.checkoutPenaltyTime);
         await updateOrInsert('DAILY_SUMMARY_DELAY_HOURS', tempTimeConfig.dailySummaryDelayHours);
         await updateOrInsert('LINE_SUMMARY_DESTINATION', tempTimeConfig.lineSummaryDestination);
+        await updateOrInsert('ENABLE_ATTENDANCE_RACE', tempTimeConfig.enableAttendanceRace);
         
         const parsedRate = parseInt(otJpRate, 10);
         if (!isNaN(parsedRate)) {

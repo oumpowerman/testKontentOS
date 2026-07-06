@@ -6,6 +6,8 @@ import {
     format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, 
     isToday, startOfMonth, endOfMonth, addMonths, isWeekend
 } from 'date-fns';
+import th from 'date-fns/locale/th';
+import { checkIsLate } from '../../../lib/attendanceUtils';
 import { useAnnualHolidays } from '../../../hooks/useAnnualHolidays';
 import { useCalendarExceptions } from '../../../hooks/useCalendarExceptions';
 
@@ -13,6 +15,7 @@ import { useCalendarExceptions } from '../../../hooks/useCalendarExceptions';
 import TimesheetHeader from './TimesheetHeader';
 import TimesheetTable from './TimesheetTable';
 import TimesheetDetailModal from './TimesheetDetailModal';
+import ExportSettingsModal from './ExportSettingsModal';
 import { useMasterDataContext } from '../../../context/MasterDataContext';
 import { AnimatePresence } from 'framer-motion';
 
@@ -22,6 +25,7 @@ const AdminWeeklyTimesheet: React.FC<{ users: User[] }> = ({ users }) => {
     
     // View States
     const [viewMode, setViewMode] = useState<'WEEK' | 'MONTH'>('WEEK');
+    const [showExportSettings, setShowExportSettings] = useState(false);
 
     const workConfig = useMemo(() => {
         const startTime = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'START_TIME')?.label || '10:00';
@@ -179,6 +183,10 @@ const AdminWeeklyTimesheet: React.FC<{ users: User[] }> = ({ users }) => {
         setCurrentDate(prev => viewMode === 'WEEK' ? addWeeks(prev, offset) : addMonths(prev, offset));
     };
 
+    const handleExportCSV = () => {
+        setShowExportSettings(true);
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-700">
             
@@ -194,6 +202,7 @@ const AdminWeeklyTimesheet: React.FC<{ users: User[] }> = ({ users }) => {
                 departments={departments}
                 showInactive={showInactive}
                 setShowInactive={setShowInactive}
+                onExportCSV={handleExportCSV}
             />
 
             <TimesheetTable 
@@ -219,6 +228,18 @@ const AdminWeeklyTimesheet: React.FC<{ users: User[] }> = ({ users }) => {
                             setSelectedLog(null);
                             setSelectedLeaveRequest(null);
                         }}
+                    />
+                )}
+                {showExportSettings && (
+                    <ExportSettingsModal 
+                        onClose={() => setShowExportSettings(false)}
+                        dateRange={dateRange}
+                        filteredAndGroupedUsers={filteredAndGroupedUsers}
+                        logs={logs}
+                        leaveRequests={leaveRequests}
+                        getEffectiveDayStatus={getEffectiveDayStatus}
+                        workConfig={workConfig}
+                        viewMode={viewMode}
                     />
                 )}
             </AnimatePresence>

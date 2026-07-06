@@ -127,16 +127,17 @@ const DashboardUserDetailModal: React.FC<DashboardUserDetailModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-indigo-900/20 backdrop-blur-md p-4"
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-indigo-950/40 backdrop-blur-md p-4"
             onClick={onClose}
         >
             <motion.div 
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                className="bg-white w-full max-w-2xl rounded-[3rem] shadow-[0_32px_64px_-12px_rgba(99,102,241,0.15)] overflow-hidden border-[8px] border-indigo-50 flex flex-col max-h-[90vh] relative"
+                initial={{ opacity: 0, scale: 0.9, y: 80, rotateX: -15, rotateZ: -1.5 }}
+                animate={{ opacity: 1, scale: 1, y: 0, rotateX: 0, rotateZ: 0 }}
+                exit={{ opacity: 0, scale: 0.85, y: 160, rotateX: 20, rotateZ: 3.5 }}
+                transition={{ type: "spring", damping: 28, stiffness: 200 }}
+                style={{ transformPerspective: 1200 }}
+                className="bg-white w-full max-w-2xl h-[80vh] sm:h-[1000px] sm:max-h-[85vh] rounded-[3rem] shadow-[0_32px_64px_-12px_rgba(99,102,241,0.2)] overflow-hidden border-[8px] border-indigo-50 flex flex-col relative"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Decorative Elements */}

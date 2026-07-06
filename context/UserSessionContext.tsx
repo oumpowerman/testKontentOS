@@ -79,7 +79,12 @@ const mapProfileToUser = (data: any): User => ({
     employmentType: data.employment_type || 'FULL_TIME',
     waveBgEnabled: data.wave_bg_enabled !== false,
     ultimateWorkroomEnabled: data.ultimate_workroom_enabled !== false,
-    emoji: data.emoji || ''
+    emoji: data.emoji || '',
+    firstName: data.first_name || '',
+    lastName: data.last_name || '',
+    nickname: data.nickname || '',
+    acceptedTermsVersion: data.accepted_terms_version || 0,
+    acceptedTermsAt: data.accepted_terms_at ? new Date(data.accepted_terms_at) : null
 });
 
 const mapDBToUserUpdates = (u: any): Partial<User> => {
@@ -116,6 +121,11 @@ const mapDBToUserUpdates = (u: any): Partial<User> => {
     if ('wave_bg_enabled' in u) updates.waveBgEnabled = u.wave_bg_enabled;
     if ('ultimate_workroom_enabled' in u) updates.ultimateWorkroomEnabled = u.ultimate_workroom_enabled;
     if ('emoji' in u) updates.emoji = u.emoji;
+    if ('first_name' in u) updates.firstName = u.first_name;
+    if ('last_name' in u) updates.lastName = u.last_name;
+    if ('nickname' in u) updates.nickname = u.nickname;
+    if ('accepted_terms_version' in u) updates.acceptedTermsVersion = u.accepted_terms_version;
+    if ('accepted_terms_at' in u) updates.acceptedTermsAt = u.accepted_terms_at ? new Date(u.accepted_terms_at) : null;
     if ('start_date' in u) updates.startDate = u.start_date ? new Date(u.start_date) : undefined;
     if ('employment_type' in u) updates.employmentType = u.employment_type;
     if ('last_read_chat_at' in u) updates.lastReadChatAt = u.last_read_chat_at ? new Date(u.last_read_chat_at) : new Date(0);
@@ -182,7 +192,7 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
             // - Fetch full data for CURRENT user
             
             const [minProfilesRes, activeProfilesRes, currentProfileRes] = await Promise.all([
-                supabase.from('profiles').select('id, full_name, avatar_url, is_active, role, position, start_date, emoji, employment_type').order('full_name', { ascending: true }),
+                supabase.from('profiles').select('id, full_name, first_name, last_name, nickname, avatar_url, is_active, role, position, start_date, emoji, employment_type').order('full_name', { ascending: true }),
                 supabase.from('profiles').select('*').eq('is_active', true),
                 supabase.from('profiles').select('*').eq('id', sessionUser.id).maybeSingle()
             ]);
@@ -382,6 +392,8 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
             if (updates.waveBgEnabled !== undefined) payload.wave_bg_enabled = updates.waveBgEnabled;
             if (updates.ultimateWorkroomEnabled !== undefined) payload.ultimate_workroom_enabled = updates.ultimateWorkroomEnabled;
             if (updates.emoji !== undefined) payload.emoji = updates.emoji;
+            if (updates.acceptedTermsVersion !== undefined) payload.accepted_terms_version = updates.acceptedTermsVersion;
+            if (updates.acceptedTermsAt !== undefined) payload.accepted_terms_at = updates.acceptedTermsAt ? updates.acceptedTermsAt.toISOString() : null;
 
             if (avatarFile) {
                 const fileExt = avatarFile.name.split('.').pop();

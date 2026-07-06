@@ -137,7 +137,7 @@ const StatusCard: React.FC<StatusCardProps> = ({
     // Check-out Verification Logic
     const [isCheckOutModalOpen, setIsCheckOutModalOpen] = useState(false);
 
-    const { leaveUsage } = useLeaveRequests(user); 
+    const { leaveUsage, pendingUsage } = useLeaveRequests(user); 
 
     const handleRecoverySubmit = async (type: LeaveType, start: Date, end: Date, reason: string, file?: File) => {
         const targetLog = outdatedLogs.find(l => l.date === recoveryLogDate);
@@ -334,6 +334,7 @@ const StatusCard: React.FC<StatusCardProps> = ({
                 onClose={() => setRecoveryLogDate(null)}
                 onSubmit={handleRecoverySubmit}
                 leaveUsage={leaveUsage}
+                pendingUsage={pendingUsage}
                 fixedType="FORGOT_CHECKOUT"
                 initialDate={recoveryLogDate ? new Date(recoveryLogDate) : new Date()}
             />

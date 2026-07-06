@@ -7,6 +7,7 @@ import { useUserSession } from '../context/UserSessionContext';
 import { useMasterData } from './useMasterData';
 import { useGamification } from './useGamification';
 import { isWorkingDay } from '../utils/judgeUtils';
+import { useGlobalDialog } from '../context/GlobalDialogContext';
 import { alignOtHoursWithClockOut, calculateEstimatedPayout } from '../utils/otCalculator';
 import { attendanceService } from '../services/attendanceService';
 import { mergeAttendanceNotes } from '../lib/attendanceUtils';
@@ -21,7 +22,8 @@ export const useAdminApprovals = (currentUser?: any, options: { enabled?: boolea
         refreshOTRequests 
     } = useUserSession();
 
-    const { annualHolidays, calendarExceptions } = useMasterData();
+    const { annualHolidays, calendarExceptions, masterOptions } = useMasterData();
+    const { showConfirm } = useGlobalDialog();
     const { processAction } = useGamification();
     const [rawRequests, setRawRequests] = useState<LeaveRequest[]>([]);
     const [isLoading, setIsLoading] = useState(enabled);
@@ -91,7 +93,13 @@ export const useAdminApprovals = (currentUser?: any, options: { enabled?: boolea
         });
     }, [rawRequests, allUsers, enabled]);
 
-    const approveRequest = async (request: LeaveRequest) => {
+    const approveRequest = async (
+        request: LeaveRequest, 
+        customOtHours?: number, 
+        customStartTime?: string, 
+        customEndTime?: string,
+        adminNote?: string
+    ) => {
         if (!currentUser || currentUser.role !== 'ADMIN') {
             showToast('คุณไม่มีสิทธิ์ในการอนุมัติคำขอ', 'error');
             return;
@@ -103,23 +111,32 @@ export const useAdminApprovals = (currentUser?: any, options: { enabled?: boolea
                 const otReq = (contextOtRequests || []).find(r => r.id === request.id);
                 if (!otReq) throw new Error('ไม่พบข้อมูลคำขอ OT');
 
-                // Get actual clock-out logs from DB
-                const { data: attendanceLogs } = await supabase
-                    .from('attendance_logs')
-                    .select('*')
-                    .eq('user_id', otReq.userId);
+                let finalHours = otReq.durationHours;
+                let checkOutMsg = '';
 
-                const employeeLog = (attendanceLogs || []).find(
-                    log => log.user_id === otReq.userId && log.date === otReq.date
-                );
+                if (customOtHours !== undefined) {
+                    finalHours = customOtHours;
+                } else {
+                    // Get actual clock-out logs from DB
+                    const { data: attendanceLogs } = await supabase
+                        .from('attendance_logs')
+                        .select('*')
+                        .eq('user_id', otReq.userId);
 
-                const { finalHours, message: checkOutMsg } = alignOtHoursWithClockOut(
-                    otReq.date,
-                    otReq.startTime,
-                    otReq.endTime,
-                    otReq.durationHours,
-                    employeeLog?.check_out_time
-                );
+                    const employeeLog = (attendanceLogs || []).find(
+                        log => log.user_id === otReq.userId && log.date === otReq.date
+                    );
+
+                    const aligned = alignOtHoursWithClockOut(
+                        otReq.date,
+                        otReq.startTime,
+                        otReq.endTime,
+                        otReq.durationHours,
+                        employeeLog?.check_out_time
+                    );
+                    finalHours = aligned.finalHours;
+                    checkOutMsg = aligned.message;
+                }
 
                 // Recalculate estimated payout based on final verified hours
                 const baseSalary = otReq.baseSalaryAtTime || 0;
@@ -129,25 +146,76 @@ export const useAdminApprovals = (currentUser?: any, options: { enabled?: boolea
 
                 const finalPayout = calculateEstimatedPayout(baseSalary, finalHours, multiplier);
 
-                await attendanceService.updateOtRequestStatus(otReq.id, 'APPROVED', {
+                const updatePayload: any = {
                     duration_hours: finalHours,
                     computed_payout: finalPayout,
                     approved_by: currentUser.id,
                     approved_at: new Date().toISOString()
-                });
+                };
+
+                if (customStartTime) updatePayload.start_time = customStartTime;
+                if (customEndTime) updatePayload.end_time = customEndTime;
+
+                // Construct audit log and merge with adminNote
+                const isTimeModified = (customStartTime && customStartTime !== otReq.startTime) || 
+                                       (customEndTime && customEndTime !== otReq.endTime) || 
+                                       (customOtHours !== undefined && customOtHours !== otReq.durationHours);
+
+                let auditLogText = '';
+                if (isTimeModified) {
+                    const origStartStr = otReq.startTime.substring(0, 5);
+                    const origEndStr = otReq.endTime.substring(0, 5);
+                    const newStartStr = (customStartTime || otReq.startTime).substring(0, 5);
+                    const newEndStr = (customEndTime || otReq.endTime).substring(0, 5);
+                    
+                    auditLogText = `⚙️ [แอดมินแก้ไขสิทธิ์และเวลาปฏิบัติงาน]\n• เวลาเดิม: ${origStartStr} - ${origEndStr} น. (${otReq.durationHours.toFixed(2)} ชม.)\n• เวลาใหม่: ${newStartStr} - ${newEndStr} น. (${finalHours.toFixed(2)} ชม.)`;
+                }
+
+                let finalDbNote = '';
+                if (auditLogText) {
+                    finalDbNote = auditLogText;
+                    if (adminNote) {
+                        finalDbNote += `\n----------------------------------\n📝 บันทึกจากแอดมิน: ${adminNote}`;
+                    }
+                } else if (adminNote) {
+                    finalDbNote = adminNote;
+                }
+
+                if (finalDbNote) {
+                    updatePayload.rejection_reason = finalDbNote; // Save combined note in rejection_reason column
+                }
+
+                await attendanceService.updateOtRequestStatus(otReq.id, 'APPROVED', updatePayload);
 
                 const dateDisplay = format(new Date(otReq.date), 'd MMM yyyy');
+                
+                // Build a custom notification message with edit logs
+                let notifMsg = `คำขอ OT วันที่: ${dateDisplay} (${finalHours} ชม.) ได้รับการอนุมัติแล้ว\nรายละเอียดเดิม: ${otReq.reason}`;
+                
+                if (isTimeModified) {
+                    const origStartStr = otReq.startTime.substring(0, 5);
+                    const origEndStr = otReq.endTime.substring(0, 5);
+                    const newStartStr = (customStartTime || otReq.startTime).substring(0, 5);
+                    const newEndStr = (customEndTime || otReq.endTime).substring(0, 5);
+                    
+                    notifMsg += `\n\n⚙️ [แอดมินแก้ไขสิทธิ์และเวลาปฏิบัติงาน]\n• เวลาเดิม: ${origStartStr} - ${origEndStr} น. (${otReq.durationHours} ชม.)\n• เวลาใหม่: ${newStartStr} - ${newEndStr} น. (${finalHours} ชม.)`;
+                }
+                
+                if (adminNote) {
+                    notifMsg += `\n\n📝 บันทึกจากแอดมิน: ${adminNote}`;
+                }
+
                 await supabase.from('notifications').insert({
                     user_id: otReq.userId,
                     type: 'INFO',
                     title: '✅ อนุมัติคำขอพิเศษ (OT)',
-                    message: `คำขอ OT วันที่: ${dateDisplay} (${finalHours} ชม.) ได้รับการอนุมัติแล้ว\nรายละเอียด: ${otReq.reason}`,
+                    message: notifMsg,
                     is_read: false,
                     link_path: 'ATTENDANCE'
                 });
 
                 await supabase.from('team_messages').insert({
-                    content: `✅ คำขอ OT ของ **${request.user?.name || 'พนักงาน'}** วันที่ ${dateDisplay} (${finalHours} ชม.) ได้รับการอนุมัติแล้ว${checkOutMsg}`,
+                    content: `✅ คำขอ OT ของ **${request.user?.name || 'พนักงาน'}** วันที่ ${dateDisplay} (${finalHours} ชม.) ได้รับการอนุมัติแล้ว${checkOutMsg}${adminNote ? `\n📝 บันทึก: ${adminNote}` : ''}`,
                     is_bot: true,
                     message_type: 'TEXT',
                     user_id: null
@@ -168,11 +236,64 @@ export const useAdminApprovals = (currentUser?: any, options: { enabled?: boolea
         const CORRECTION_TYPES = ['LATE_ENTRY', 'FORGOT_CHECKIN', 'FORGOT_CHECKOUT', 'FORGOT_BOTH'];
         const SPECIAL_TYPES = ['WFH', 'OVERTIME'];
 
+        let finalDbNote = adminNote || '';
+        let isTimeModified = false;
+        let updatedReason = request.reason;
+
+        if (request.type === 'OVERTIME') {
+            isTimeModified = (customStartTime !== undefined) || (customEndTime !== undefined) || (customOtHours !== undefined);
+            if (isTimeModified) {
+                let cleanReasonText = request.reason || '';
+                const otRangeMatch = cleanReasonText.match(/\[OT:(\d{2}:\d{2}-\d{2}:\d{2})\]/);
+                const originalTimeRange = otRangeMatch ? otRangeMatch[1] : '18:30-20:30';
+                const [origStart, origEnd] = originalTimeRange.split('-');
+                
+                const otHoursMatch = cleanReasonText.match(/\(([\d\.]+)hr\)/) || cleanReasonText.match(/\[OT:([\d\.]+)hr\]/);
+                const origHours = otHoursMatch ? parseFloat(otHoursMatch[1]) : 2.0;
+
+                // Clean all OT tags from the reason
+                cleanReasonText = cleanReasonText
+                    .replace(/\[OT:\d{2}:\d{2}-\d{2}:\d{2}\]\s*\([\d\.]+hr\)\s*/g, '')
+                    .replace(/\[OT:[\d\.]+hr\]\s*/g, '')
+                    .replace(/\[OT_MINUTES:\d+\]/g, '')
+                    .trim();
+
+                const newStart = customStartTime || origStart;
+                const newEnd = customEndTime || origEnd;
+                const newHours = customOtHours !== undefined ? customOtHours : origHours;
+
+                updatedReason = `[OT:${newStart}-${newEnd}] (${newHours}hr) ${cleanReasonText}`;
+                
+                // Construct audit log for general leave overtime request
+                const origStartStr = origStart.substring(0, 5);
+                const origEndStr = origEnd.substring(0, 5);
+                const newStartStr = newStart.substring(0, 5);
+                const newEndStr = newEnd.substring(0, 5);
+                
+                const auditLogText = `⚙️ [แอดมินแก้ไขสิทธิ์และเวลาปฏิบัติงาน]\n• เวลาเดิม: ${origStartStr} - ${origEndStr} น. (${origHours.toFixed(2)} ชม.)\n• เวลาใหม่: ${newStartStr} - ${newEndStr} น. (${newHours.toFixed(2)} ชม.)`;
+                
+                if (adminNote) {
+                    finalDbNote = `${auditLogText}\n----------------------------------\n📝 บันทึกจากแอดมิน: ${adminNote}`;
+                } else {
+                    finalDbNote = auditLogText;
+                }
+            }
+        }
+
         // Optimistic Update
-        setRawRequests(prev => prev.map(r => r.id === request.id ? { ...r, status: 'APPROVED' } : r));
+        setRawRequests(prev => prev.map(r => r.id === request.id ? { ...r, status: 'APPROVED', rejectionReason: finalDbNote } : r));
 
         try {
-            await attendanceService.updateLeaveRequestStatus(request.id, 'APPROVED', { approver_id: currentUser.id });
+            if (request.type === 'OVERTIME' && isTimeModified) {
+                await supabase.from('leave_requests')
+                    .update({ reason: updatedReason })
+                    .eq('id', request.id);
+            }
+
+            await attendanceService.updateLeaveRequestStatus(request.id, 'APPROVED', { 
+                approver_id: currentUser.id,
+                rejection_reason: finalDbNote // ส่งตัวแปร string ไปตรงๆ ได้เลยครับ (หรือใช้ finalDbNote || "")
+            });
 
             let notifTitle = '✅ คำขอได้รับการอนุมัติ';
             if (CORRECTION_TYPES.includes(request.type)) notifTitle = '🛠️ อนุมัติการแก้ไขเวลา';
@@ -183,11 +304,23 @@ export const useAdminApprovals = (currentUser?: any, options: { enabled?: boolea
                 ? dateDisplay 
                 : `${dateDisplay} - ${format(request.endDate, 'd MMM yyyy')}`;
 
+            let notifMsg = `รายการ: ${request.type === 'OVERTIME' ? 'ขอ OT' : request.type}\nวันที่: ${fullDateDisplay}`;
+            
+            if (request.type === 'OVERTIME' && isTimeModified) {
+                notifMsg += `\n\n⚙️ [แอดมินแก้ไขสิทธิ์และเวลาปฏิบัติงาน]\n• รายละเอียดเดิม: ${request.reason}\n• รายละเอียดใหม่: ${updatedReason}`;
+            } else {
+                notifMsg += `\nรายละเอียด: ${request.reason || '-'}`;
+            }
+            
+            if (adminNote) {
+                notifMsg += `\n\n📝 บันทึกจากแอดมิน: ${adminNote}`;
+            }
+
             await supabase.from('notifications').insert({
                 user_id: request.userId,
                 type: 'INFO',
                 title: notifTitle,
-                message: `รายการ: ${request.type}\nวันที่: ${fullDateDisplay}\nรายละเอียด: ${request.reason || '-'}`,
+                message: notifMsg,
                 is_read: false,
                 link_path: 'ATTENDANCE'
             });
@@ -220,9 +353,14 @@ export const useAdminApprovals = (currentUser?: any, options: { enabled?: boolea
                             .eq('id', freshLog.id);
                     }
 
-                    const otMinutesMatch = request.reason ? request.reason.match(/\[OT_MINUTES:(\d+)\]/) : null;
-                    const otMinutes = otMinutesMatch ? parseInt(otMinutesMatch[1], 10) : 60;
-                    const otHours = parseFloat((otMinutes / 60).toFixed(1));
+                    let otHours = 0;
+                    if (customOtHours !== undefined) {
+                        otHours = customOtHours;
+                    } else {
+                        const otMinutesMatch = request.reason ? request.reason.match(/\[OT_MINUTES:(\d+)\]/) : null;
+                        const otMinutes = otMinutesMatch ? parseInt(otMinutesMatch[1], 10) : 60;
+                        otHours = parseFloat((otMinutes / 60).toFixed(1));
+                    }
 
                     await processAction(request.userId, 'ATTENDANCE_OVERTIME', { 
                         hours: otHours, 
@@ -370,8 +508,67 @@ export const useAdminApprovals = (currentUser?: any, options: { enabled?: boolea
             else if (LEAVE_TYPES.includes(request.type)) {
                 if (request.startDate > request.endDate) {
                     showToast('วันที่เริ่มต้นต้องไม่มากกว่าวันที่สิ้นสุดครับ', 'error');
+                    setRawRequests(prev => prev.map(r => r.id === request.id ? { ...r, status: 'PENDING' } : r));
                     return;
                 }
+
+                // Check Quota and Warn Admin
+                const selectedOption = (masterOptions || []).find(o => o.key === request.type);
+                let limit = 999;
+                if (selectedOption?.description) {
+                    try {
+                        const metadata = JSON.parse(selectedOption.description);
+                        limit = metadata.defaultQuota || 999;
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+
+                if (limit < 999) {
+                    // Fetch existing approved requests
+                    const { data: userApprovedRequests } = await supabase
+                        .from('leave_requests')
+                        .select('*')
+                        .eq('user_id', request.userId)
+                        .eq('type', request.type)
+                        .eq('status', 'APPROVED')
+                        .neq('id', request.id); // Exclude current request
+
+                    let approvedDaysCount = 0;
+                    if (userApprovedRequests) {
+                        for (const req of userApprovedRequests) {
+                            const start = new Date(req.start_date);
+                            const end = new Date(req.end_date);
+                            if (isValid(start) && isValid(end) && start <= end) {
+                                const days = eachDayOfInterval({ start, end });
+                                const workingDaysCount = days.filter(d => 
+                                    isWorkingDay(d, annualHolidays || [], calendarExceptions || [], request.user as any)
+                                ).length;
+                                approvedDaysCount += workingDaysCount;
+                            }
+                        }
+                    }
+
+                    // Calculate days for current request
+                    const days = eachDayOfInterval({ start: request.startDate, end: request.endDate });
+                    const currentRequestedDays = days.filter(d => 
+                        isWorkingDay(d, annualHolidays || [], calendarExceptions || [], request.user as any)
+                    ).length;
+
+                    const totalUsedIfApproved = approvedDaysCount + currentRequestedDays;
+
+                    if (totalUsedIfApproved > limit) {
+                        const confirmed = await showConfirm(
+                            `พนักงานท่านนี้ (${request.user?.name || 'พนักงาน'}) มีวันลาประเภท ${request.type} ที่ได้รับอนุมัติแล้ว ${approvedDaysCount} วัน และคำขอนี้ต้องการลาอีก ${currentRequestedDays} วัน ซึ่งรวมเป็น ${totalUsedIfApproved} วัน เกินจากโควต้าที่ระบุไว้สูงสุดที่ ${limit} วัน\n\nคุณแน่ใจหรือไม่ที่จะอนุมัติคำขอนี้?`,
+                            '⚠️ อนุมัติเกินโควต้า'
+                        );
+                        if (!confirmed) {
+                            setRawRequests(prev => prev.map(r => r.id === request.id ? { ...r, status: 'PENDING' } : r));
+                            return;
+                        }
+                    }
+                }
+
                 const days = eachDayOfInterval({ start: request.startDate, end: request.endDate });
                 const dateStrings = days.map(d => format(d, 'yyyy-MM-dd'));
 

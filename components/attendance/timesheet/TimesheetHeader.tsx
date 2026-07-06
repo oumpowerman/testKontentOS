@@ -2,7 +2,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import th from 'date-fns/locale/th';
-import { ChevronLeft, ChevronRight, Search, Calendar, Briefcase, UserX, UserCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Calendar, Briefcase, UserX, UserCheck, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import FilterDropdown from '../../common/FilterDropdown';
 
@@ -18,6 +18,7 @@ interface TimesheetHeaderProps {
     departments: string[];
     showInactive: boolean;
     setShowInactive: (show: boolean) => void;
+    onExportCSV?: () => void;
 }
 
 const TimesheetHeader: React.FC<TimesheetHeaderProps> = ({
@@ -31,7 +32,8 @@ const TimesheetHeader: React.FC<TimesheetHeaderProps> = ({
     setFilterDepartment,
     departments,
     showInactive,
-    setShowInactive
+    setShowInactive,
+    onExportCSV
 }) => {
     const containerVariants = {
         hidden: { opacity: 0, y: -15 },
@@ -89,35 +91,50 @@ const TimesheetHeader: React.FC<TimesheetHeaderProps> = ({
                             <h2 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">Timesheet Central</h2>
                             <span className="px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-extrabold uppercase tracking-widest">{viewMode}</span>
                         </div>
-                        <div className="flex items-center justify-between sm:justify-start gap-3 bg-slate-50/80 p-1 rounded-xl border border-slate-200/50 backdrop-blur-sm w-full sm:w-fit">
-                            <button 
-                                onClick={() => onNav(-1)} 
-                                className="p-1.5 hover:bg-slate-200/50 text-slate-500 hover:text-slate-800 rounded-lg transition-all active:scale-90 cursor-pointer" 
-                                aria-label="สัปดาห์ก่อนหน้า"
-                            >
-                                <ChevronLeft className="w-4 h-4"/>
-                            </button>
-                            <div className="overflow-hidden h-5 flex items-center justify-center min-w-[130px] sm:min-w-[180px]">
-                                <AnimatePresence mode="wait">
-                                    <motion.span 
-                                        key={dateRange[0].toISOString()}
-                                        initial={{ opacity: 0, y: 8 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -8 }}
-                                        transition={{ duration: 0.15, ease: "easeOut" }}
-                                        className="text-[12px] sm:text-sm font-bold text-center px-1 sm:px-2 text-slate-700 whitespace-nowrap"
-                                    >
-                                        {format(dateRange[0], 'd MMM', { locale: th })} - {format(dateRange[dateRange.length-1], 'd MMM yyyy', { locale: th })}
-                                    </motion.span>
-                                </AnimatePresence>
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
+                            <div className="flex items-center justify-between sm:justify-start gap-3 bg-slate-50/80 p-1 rounded-xl border border-slate-200/50 backdrop-blur-sm w-full sm:w-fit shrink-0">
+                                <button 
+                                    onClick={() => onNav(-1)} 
+                                    className="p-1.5 hover:bg-slate-200/50 text-slate-500 hover:text-slate-800 rounded-lg transition-all active:scale-90 cursor-pointer" 
+                                    aria-label="สัปดาห์ก่อนหน้า"
+                                >
+                                    <ChevronLeft className="w-4 h-4"/>
+                                </button>
+                                <div className="overflow-hidden h-5 flex items-center justify-center min-w-[130px] sm:min-w-[180px]">
+                                    <AnimatePresence mode="wait">
+                                        <motion.span 
+                                            key={dateRange[0].toISOString()}
+                                            initial={{ opacity: 0, y: 8 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -8 }}
+                                            transition={{ duration: 0.15, ease: "easeOut" }}
+                                            className="text-[12px] sm:text-sm font-bold text-center px-1 sm:px-2 text-slate-700 whitespace-nowrap"
+                                        >
+                                            {format(dateRange[0], 'd MMM', { locale: th })} - {format(dateRange[dateRange.length-1], 'd MMM yyyy', { locale: th })}
+                                        </motion.span>
+                                    </AnimatePresence>
+                                </div>
+                                <button 
+                                    onClick={() => onNav(1)} 
+                                    className="p-1.5 hover:bg-slate-200/50 text-slate-500 hover:text-slate-800 rounded-lg transition-all active:scale-90 cursor-pointer" 
+                                    aria-label="สัปดาห์ถัดไป"
+                                >
+                                    <ChevronRight className="w-4 h-4"/>
+                                </button>
                             </div>
-                            <button 
-                                onClick={() => onNav(1)} 
-                                className="p-1.5 hover:bg-slate-200/50 text-slate-500 hover:text-slate-800 rounded-lg transition-all active:scale-90 cursor-pointer" 
-                                aria-label="สัปดาห์ถัดไป"
-                            >
-                                <ChevronRight className="w-4 h-4"/>
-                            </button>
+
+                            {onExportCSV && (
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={onExportCSV}
+                                    className="flex items-center justify-center gap-2 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 hover:border-emerald-300 text-emerald-700 rounded-xl text-xs font-bold transition-all shadow-sm w-full sm:w-auto cursor-pointer select-none shrink-0"
+                                    title="ส่งออกไฟล์รายงานในรูปแบบ CSV"
+                                >
+                                    <Download className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>ส่งออกรายงาน (CSV) 📥</span>
+                                </motion.button>
+                            )}
                         </div>
                     </div>
                 </motion.div>

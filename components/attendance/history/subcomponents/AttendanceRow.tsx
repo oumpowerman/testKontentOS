@@ -103,9 +103,7 @@ export const AttendanceRow: React.FC<AttendanceRowProps> = React.memo(({
             } as React.CSSProperties : undefined}
             className={`transition-all duration-1000 group ${
                 localHighlight
-                    ? `bg-rainbow-pastel animate-gradient-x-slow ring-2 hover:opacity-95 ${
-                        isFading ? 'ring-purple-400/0' : 'ring-purple-400/50'
-                      }`
+                    ? 'bg-rainbow-pastel animate-gradient-x-slow hover:opacity-95'
                     : isForgotClockOut 
                     ? 'bg-orange-50 hover:bg-orange-100/80 border-l-4 border-l-orange-500' 
                     : 'hover:bg-indigo-50/30'

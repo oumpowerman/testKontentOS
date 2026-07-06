@@ -20,7 +20,7 @@ export const TableGroupRow: React.FC<TableGroupRowProps> = ({
       className={`${group.bg} cursor-pointer border-y border-gray-100 select-none transition-all`}
       onClick={onToggle}
     >
-      <td colSpan={7} className="px-6 py-3 font-bold text-sm">
+      <td colSpan={8} className="px-6 py-3 font-bold text-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span>{group.title}</span>

@@ -38,6 +38,8 @@ const AuthPage: React.FC<AuthPageProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   
   // Registration dynamic state
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [position, setPosition] = useState(''); 
   const [employmentType, setEmploymentType] = useState('');
   const [phone, setPhone] = useState('');
@@ -149,6 +151,8 @@ const AuthPage: React.FC<AuthPageProps> = ({
       setConfirmPassword('');
       setErrorMsg(null);
       setPosition('');
+      setFirstName('');
+      setLastName('');
       setPhone('');
       setReason('');
       setAvatarFile(null);
@@ -292,7 +296,7 @@ const AuthPage: React.FC<AuthPageProps> = ({
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      if (!name.trim() || !position.trim() || !phone.trim() || !employmentType) {
+      if (!firstName.trim() || !lastName.trim() || !name.trim() || !position.trim() || !phone.trim() || !employmentType) {
         throw new Error('กรุณากรอกข้อมูลให้ครบทุกช่องที่มีเครื่องหมาย * นะครับ');
       }
       if (!selectedEmoji) {
@@ -302,13 +306,15 @@ const AuthPage: React.FC<AuthPageProps> = ({
         throw new Error('อิโมจินี้ถูกเพื่อนในทีมเลือกไปแล้วครับ โปรดเลือกอิโมจิอื่นนะ ✨');
       }
 
+      const fullNameCombined = `${firstName.trim()} ${lastName.trim()}`.trim();
+
       // Create new user credentials
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            full_name: name,
+            full_name: fullNameCombined || name,
             position: position,
             phone_number: phone,
           }
@@ -343,7 +349,10 @@ const AuthPage: React.FC<AuthPageProps> = ({
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
-          full_name: name,
+          full_name: fullNameCombined || name,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          nickname: name.trim(),
           avatar_url: publicUrl || null,
           position: position, 
           employment_type: employmentType,
@@ -377,7 +386,7 @@ const AuthPage: React.FC<AuthPageProps> = ({
   };
 
   return (
-    <div className="h-[100dvh] bg-[#f0f4f8] flex items-center justify-center p-4 font-sans relative overflow-hidden">
+    <div className="min-h-[100dvh] md:h-[100dvh] bg-[#f0f4f8] flex items-center justify-center p-4 md:p-6 font-sans relative overflow-y-auto md:overflow-hidden">
       
       {/* Dynamic Crop Overlay */}
       {cropImageSrc && (
@@ -394,7 +403,7 @@ const AuthPage: React.FC<AuthPageProps> = ({
       <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-gradient-to-tr from-yellow-100/40 to-pink-200/40 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
 
       {/* Main Container card */}
-      <div className="relative w-full max-w-5xl bg-white/80 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_20px_60px_-10px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col md:flex-row border border-white/60 transition-all duration-700 h-full max-h-[850px] md:h-[780px]">
+      <div className="relative w-full max-w-5xl bg-white/80 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_20px_60px_-10px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col md:flex-row border border-white/60 transition-all duration-700 h-full max-h-[92dvh] md:h-[min(780px,88dvh)] my-auto">
         {onBack && (
             <button 
                 onClick={onBack}
@@ -494,6 +503,10 @@ const AuthPage: React.FC<AuthPageProps> = ({
                             setShowPassword={setShowPassword}
                             name={name}
                             setName={setName}
+                            firstName={firstName}
+                            setFirstName={setFirstName}
+                            lastName={lastName}
+                            setLastName={setLastName}
                             position={position}
                             setPosition={setPosition}
                             employmentType={employmentType}

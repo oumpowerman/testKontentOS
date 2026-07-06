@@ -37,6 +37,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(
-    supabaseUrl || 'https://xgsvxgsrasznszvpysat.supabase.co',
-    supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhnc3Z4Z3NyYXN6bnN6dnB5c2F0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMzI0NTgsImV4cCI6MjA5ODgwODQ1OH0.2TLqHFHnKQGuoCpBnYjORYbEfARsmhW-zauZ01bqQHM'
+    supabaseUrl || 'https://ajkycqazreebczqjsfpv.supabase.co',
+    supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqa3ljcWF6cmVlYmN6cWpzZnB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0OTM5MjMsImV4cCI6MjA4NDA2OTkyM30.VscG53hy5tT5_oT297RECiVzaCcCw51AYWQeme_PDRo'
 );

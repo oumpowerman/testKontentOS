@@ -9,6 +9,7 @@ interface TimePickerModalProps {
     onClose: () => void;
     onSelect: (time: string) => void;
     initialTime?: string;
+    title?: string;
 }
 
 const TimePickerModal: React.FC<TimePickerModalProps> = ({ isOpen, onClose, onSelect, initialTime }) => {

@@ -1,22 +1,29 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, XCircle, FileText, Calendar, ExternalLink, Clock, Briefcase, User, Info, ChevronDown, Filter, AlertTriangle, MapPin, Moon } from 'lucide-react';
 import { format } from 'date-fns';
 import { LeaveRequest } from '../../../types/attendance';
 import { useGlobalDialog } from '../../../context/GlobalDialogContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { getWorkingDaysDifference } from '../../../lib/attendanceUtils';
 import { useMasterData } from '../../../hooks/useMasterData';
+import { RequestDetailModal } from './RequestDetailModal';
 
 interface LeaveApprovalListProps {
     requests: LeaveRequest[];
     isLoading: boolean;
-    onApprove: (req: LeaveRequest) => Promise<void>;
+    onApprove: (
+        req: LeaveRequest, 
+        customOtHours?: number, 
+        customStartTime?: string, 
+        customEndTime?: string
+    ) => Promise<void>;
     onReject: (id: string, reason: string) => Promise<void>;
 }
 
 type HistoryFilter = 'ALL' | 'APPROVED' | 'REJECTED';
+type RequestCategory = 'ALL' | 'LEAVE' | 'LATE_FORGOT' | 'OT';
 
 interface ParsedReason {
     cleanReason: string;
@@ -52,13 +59,27 @@ const parseReason = (reason: string): ParsedReason => {
         text = text.replace(/\[TIME:\d{2}:\d{2}\]/g, '');
     }
 
-    // Extract [OT:Xhr]
-    const otMatch = text.match(/\[OT:([\d\.]+)hr\]/);
-    let otHours: string | null = null;
-    if (otMatch) {
-        otHours = otMatch[1];
-        text = text.replace(/\[OT:[\d\.]+hr\]/g, '');
+    // Extract [OT:HH:MM-HH:MM]
+    const otRangeMatch = text.match(/\[OT:(\d{2}:\d{2}-\d{2}:\d{2})\]/);
+    if (otRangeMatch) {
+        time = otRangeMatch[1];
     }
+
+    // Extract OT hours: from either (Xhr) or [OT:Xhr]
+    const otHoursMatch1 = text.match(/\(([\d\.]+)hr\)/);
+    const otHoursMatch2 = text.match(/\[OT:([\d\.]+)hr\]/);
+    let otHours: string | null = null;
+    if (otHoursMatch1) {
+        otHours = otHoursMatch1[1];
+    } else if (otHoursMatch2) {
+        otHours = otHoursMatch2[1];
+    }
+
+    // Cleanup all OT markup tags completely
+    text = text.replace(/\[OT:\d{2}:\d{2}-\d{2}:\d{2}\]/g, '');
+    text = text.replace(/\([\d\.]+hr\)/g, '');
+    text = text.replace(/\[OT_MINUTES:\d+\]/g, '');
+    text = text.replace(/\[OT:[\d\.]+hr\]/g, '');
 
     text = text.trim();
     return {
@@ -69,6 +90,22 @@ const parseReason = (reason: string): ParsedReason => {
         time,
         otHours
     };
+};
+
+interface CounterProps {
+    value: number;
+}
+
+const Counter: React.FC<CounterProps> = ({ value }) => {
+    const count = useMotionValue(0);
+    const rounded = useTransform(count, (latest) => Math.round(latest));
+
+    useEffect(() => {
+        const controls = animate(count, value, { duration: 0.8, ease: "easeOut" });
+        return controls.stop;
+    }, [value, count]);
+
+    return <motion.span>{rounded}</motion.span>;
 };
 
 const getCardStyle = (type: string) => {
@@ -141,8 +178,25 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
     const [rejectingId, setRejectingId] = useState<string | null>(null);
     const [rejectionReason, setRejectionReason] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // New State for Request Detail Modal
+    const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
 
-    const filteredRequests = useMemo(() => {
+    const [activeCategory, setActiveCategory] = useState<RequestCategory>('ALL');
+
+    const isCategoryDimmed = (cat: 'LEAVE' | 'LATE_FORGOT' | 'OT') => {
+        return activeCategory !== 'ALL' && activeCategory !== cat;
+    };
+
+    const isCategoryActive = (cat: 'LEAVE' | 'LATE_FORGOT' | 'OT') => {
+        return activeCategory === cat;
+    };
+
+    const handleCategoryClick = (cat: 'LEAVE' | 'LATE_FORGOT' | 'OT') => {
+        setActiveCategory(prev => prev === cat ? 'ALL' : cat);
+    };
+
+    const tabRequests = useMemo(() => {
         let base = requests.filter(r => 
             filterStatus === 'PENDING' ? r.status === 'PENDING' : r.status !== 'PENDING'
         );
@@ -154,6 +208,42 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
 
         return base;
     }, [requests, filterStatus, historySubFilter]);
+
+    const counts = useMemo(() => {
+        const leaves = ['SICK', 'VACATION', 'PERSONAL', 'EMERGENCY', 'WFH'];
+        const lateForgot = ['LATE_ENTRY', 'FORGOT_CHECKIN', 'FORGOT_CHECKOUT', 'FORGOT_BOTH'];
+        const ot = ['OVERTIME'];
+
+        return {
+            LEAVE: tabRequests.filter(r => leaves.includes(r.type)).length,
+            LATE_FORGOT: tabRequests.filter(r => lateForgot.includes(r.type)).length,
+            OT: tabRequests.filter(r => ot.includes(r.type)).length
+        };
+    }, [tabRequests]);
+
+    const filteredRequests = useMemo(() => {
+        let base = [...tabRequests];
+
+        if (activeCategory === 'LEAVE') {
+            const leaves = ['SICK', 'VACATION', 'PERSONAL', 'EMERGENCY', 'WFH'];
+            base = base.filter(r => leaves.includes(r.type));
+        } else if (activeCategory === 'LATE_FORGOT') {
+            const lateForgot = ['LATE_ENTRY', 'FORGOT_CHECKIN', 'FORGOT_CHECKOUT', 'FORGOT_BOTH'];
+            base = base.filter(r => lateForgot.includes(r.type));
+        } else if (activeCategory === 'OT') {
+            const ot = ['OVERTIME'];
+            base = base.filter(r => ot.includes(r.type));
+        }
+
+        // Sort by createdAt Descending (Newest first)
+        base.sort((a, b) => {
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            return dateB - dateA;
+        });
+
+        return base;
+    }, [tabRequests, activeCategory]);
 
     const paginatedRequests = useMemo(() => {
         return filteredRequests.slice(0, displayLimit);
@@ -229,7 +319,7 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex bg-white p-1 rounded-xl border border-gray-200 w-fit shadow-sm">
                     <button 
-                        onClick={() => { setFilterStatus('PENDING'); setDisplayLimit(10); }}
+                        onClick={() => { setFilterStatus('PENDING'); setDisplayLimit(10); setActiveCategory('ALL'); }}
                         className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${filterStatus === 'PENDING' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         รออนุมัติ 
@@ -238,7 +328,7 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
                         </span>
                     </button>
                     <button 
-                        onClick={() => { setFilterStatus('HISTORY'); setDisplayLimit(10); }}
+                        onClick={() => { setFilterStatus('HISTORY'); setDisplayLimit(10); setActiveCategory('ALL'); }}
                         className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterStatus === 'HISTORY' ? 'bg-gray-100 text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         ประวัติย้อนหลัง
@@ -248,25 +338,88 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
                 {filterStatus === 'HISTORY' && (
                     <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-gray-200 w-fit shadow-sm">
                         <button 
-                            onClick={() => { setHistorySubFilter('ALL'); setDisplayLimit(10); }}
+                            onClick={() => { setHistorySubFilter('ALL'); setDisplayLimit(10); setActiveCategory('ALL'); }}
                             className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${historySubFilter === 'ALL' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
                         >
                             ทั้งหมด
                         </button>
                         <button 
-                            onClick={() => { setHistorySubFilter('APPROVED'); setDisplayLimit(10); }}
+                            onClick={() => { setHistorySubFilter('APPROVED'); setDisplayLimit(10); setActiveCategory('ALL'); }}
                             className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${historySubFilter === 'APPROVED' ? 'bg-green-50 text-green-600' : 'text-gray-400 hover:text-gray-600'}`}
                         >
                             อนุมัติแล้ว
                         </button>
                         <button 
-                            onClick={() => { setHistorySubFilter('REJECTED'); setDisplayLimit(10); }}
+                            onClick={() => { setHistorySubFilter('REJECTED'); setDisplayLimit(10); setActiveCategory('ALL'); }}
                             className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${historySubFilter === 'REJECTED' ? 'bg-red-50 text-red-600' : 'text-gray-400 hover:text-gray-600'}`}
                         >
                             ไม่อนุมัติ
                         </button>
                     </div>
                 )}
+            </div>
+
+            {/* Category Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* General Leaves Card */}
+                <div 
+                    onClick={() => handleCategoryClick('LEAVE')}
+                    className={`bg-rose-50/70 p-4 md:p-5 rounded-2xl border-2 flex items-center justify-between cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-95 transition-all duration-300 ${
+                        isCategoryActive('LEAVE') 
+                            ? 'border-rose-400 ring-4 ring-rose-500/10 opacity-100 scale-[1.02]' 
+                            : isCategoryDimmed('LEAVE')
+                                ? 'border-transparent opacity-40 hover:opacity-100'
+                                : 'border-rose-100/80 opacity-100'
+                    }`}
+                >
+                    <div className="space-y-1">
+                        <p className="text-xs md:text-sm font-semibold text-rose-600 uppercase tracking-wider">การลาและขอ WFH ทั้งหมด</p>
+                        <h3 className="text-2xl md:text-3xl font-black text-rose-950 mt-1"><Counter value={counts.LEAVE} /></h3>
+                    </div>
+                    <div className={`p-2.5 md:p-3 rounded-xl transition-all shrink-0 ${isCategoryActive('LEAVE') ? 'bg-rose-500 text-white shadow-inner' : 'bg-white text-rose-500 shadow-sm'}`}>
+                        <Briefcase className="w-5 h-5 md:w-6 md:h-6" />
+                    </div>
+                </div>
+
+                {/* Late & Missed Punch Card */}
+                <div 
+                    onClick={() => handleCategoryClick('LATE_FORGOT')}
+                    className={`bg-amber-50/70 p-4 md:p-5 rounded-2xl border-2 flex items-center justify-between cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-95 transition-all duration-300 ${
+                        isCategoryActive('LATE_FORGOT') 
+                            ? 'border-amber-400 ring-4 ring-amber-500/10 opacity-100 scale-[1.02]' 
+                            : isCategoryDimmed('LATE_FORGOT')
+                                ? 'border-transparent opacity-40 hover:opacity-100'
+                                : 'border-amber-100/80 opacity-100'
+                    }`}
+                >
+                    <div className="space-y-1">
+                        <p className="text-xs md:text-sm font-semibold text-amber-600 uppercase tracking-wider">เข้าสาย / ลืมบันทึกเวลา</p>
+                        <h3 className="text-2xl md:text-3xl font-black text-amber-950 mt-1"><Counter value={counts.LATE_FORGOT} /></h3>
+                    </div>
+                    <div className={`p-2.5 md:p-3 rounded-xl transition-all shrink-0 ${isCategoryActive('LATE_FORGOT') ? 'bg-amber-500 text-white shadow-inner' : 'bg-white text-amber-500 shadow-sm'}`}>
+                        <Clock className="w-5 h-5 md:w-6 md:h-6" />
+                    </div>
+                </div>
+
+                {/* Overtime Requests Card */}
+                <div 
+                    onClick={() => handleCategoryClick('OT')}
+                    className={`bg-indigo-50/70 p-4 md:p-5 rounded-2xl border-2 flex items-center justify-between cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-95 transition-all duration-300 ${
+                        isCategoryActive('OT') 
+                            ? 'border-indigo-400 ring-4 ring-indigo-500/10 opacity-100 scale-[1.02]' 
+                            : isCategoryDimmed('OT')
+                                ? 'border-transparent opacity-40 hover:opacity-100'
+                                : 'border-indigo-100/80 opacity-100'
+                    }`}
+                >
+                    <div className="space-y-1">
+                        <p className="text-xs md:text-sm font-semibold text-indigo-600 uppercase tracking-wider">เวลาทำงานล่วงเวลา (OT)</p>
+                        <h3 className="text-2xl md:text-3xl font-black text-indigo-950 mt-1"><Counter value={counts.OT} /></h3>
+                    </div>
+                    <div className={`p-2.5 md:p-3 rounded-xl transition-all shrink-0 ${isCategoryActive('OT') ? 'bg-indigo-500 text-white shadow-inner' : 'bg-white text-indigo-500 shadow-sm'}`}>
+                        <Moon className="w-5 h-5 md:w-6 md:h-6" />
+                    </div>
+                </div>
             </div>
 
             {/* List */}
@@ -302,7 +455,8 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
                                         initial={{ opacity: 0, scale: 0.95 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.95 }}
-                                        className={`${cardStyle.bg} ${cardStyle.border} p-5 rounded-3xl border shadow-sm hover:shadow-md transition-all relative overflow-hidden group`}
+                                        onClick={() => setSelectedRequest(req)}
+                                        className={`${cardStyle.bg} ${cardStyle.border} p-5 rounded-3xl border shadow-sm hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all relative overflow-hidden group cursor-pointer`}
                                     >
                                         {/* Status Indicator Bar */}
                                         <div className={`absolute top-0 left-0 w-1.5 h-full ${
@@ -333,9 +487,18 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
                                                 </div>
 
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                                                        <h4 className="font-black text-gray-800 text-lg leading-none">{req.user?.name || 'Unknown'}</h4>
-                                                        {getTypeBadge(req.type)}
+                                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-2">
+                                                    {/* จัดกลุ่มชื่อและตำแหน่งให้เป็นระเบียบในแนวตั้ง */}
+                                                    <div className="flex flex-col justify-center">
+                                                         <h4 className="font-black text-gray-800 text-base leading-tight">
+                                                            {req.user?.name || 'Unknown'}
+                                                        </h4>
+                                                        {req.user?.position && (
+                                                            <span className="text-[11px] text-slate-500 font-semibold tracking-wide mt-0.5 leading-none">
+                                                                {req.user.position}
+                                                            </span>
+                                                         )}
+                                                    </div>
                                                         
                                                         {/* Parsed Badges */}
                                                         {parsed.isLateSubmission && (
@@ -377,7 +540,7 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
                                                             )
                                                         )}
 
-                                                        <span className="text-[10px] text-gray-400 font-mono ml-auto">
+                                                        <span className="text-[11px] text-slate-500 font-semibold bg-slate-50/80 px-2 py-0.5 rounded-md border border-slate-100 ml-auto">
                                                             {format(req.createdAt, 'd MMM HH:mm')}
                                                         </span>
                                                     </div>
@@ -398,6 +561,7 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
                                                                 href={req.attachmentUrl} 
                                                                 target="_blank" 
                                                                 rel="noreferrer" 
+                                                                onClick={(e) => e.stopPropagation()}
                                                                 className="inline-flex items-center gap-1.5 text-[10px] bg-blue-100 text-blue-700 border border-blue-200/50 px-3 py-1.5 rounded-full font-black hover:bg-blue-200 transition-colors"
                                                             >
                                                                 <ExternalLink className="w-3 h-3" /> ดูหลักฐาน
@@ -427,13 +591,13 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
                                             {req.status === 'PENDING' && (
                                                 <div className="flex flex-row lg:flex-col gap-2 shrink-0 lg:w-32 lg:justify-center border-t lg:border-t-0 lg:border-l border-black/5 pt-4 lg:pt-0 lg:pl-6 mt-2 lg:mt-0">
                                                     <button 
-                                                        onClick={async () => { if(await showConfirm('อนุมัติคำขอนี้?')) onApprove(req); }}
+                                                        onClick={async (e) => { e.stopPropagation(); if(await showConfirm('อนุมัติคำขอนี้?')) onApprove(req); }}
                                                         className="flex-1 px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-2xl text-xs font-black shadow-lg shadow-green-100 transition-all active:scale-95 flex items-center justify-center gap-2"
                                                     >
                                                         <CheckCircle2 className="w-4 h-4" /> อนุมัติ
                                                     </button>
                                                     <button 
-                                                        onClick={() => handleRejectClick(req.id)}
+                                                        onClick={(e) => { e.stopPropagation(); handleRejectClick(req.id); }}
                                                         className="flex-1 px-4 py-3 bg-white border-2 border-red-100 text-red-500 hover:bg-red-50 rounded-2xl text-xs font-black transition-all active:scale-95 flex items-center justify-center gap-2"
                                                     >
                                                         <XCircle className="w-4 h-4" /> ปฏิเสธ
@@ -506,6 +670,19 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
                 </div>,
                 document.body
             )}
+
+            {/* Request Detail Modal */}
+            <AnimatePresence>
+                {selectedRequest && (
+                    <RequestDetailModal 
+                        request={selectedRequest}
+                        isOpen={true}
+                        onClose={() => setSelectedRequest(null)}
+                        onApprove={onApprove}
+                        onReject={onReject}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 };

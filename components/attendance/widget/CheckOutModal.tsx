@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, MapPin, Loader2, AlertTriangle, Send, LogOut, RefreshCw, Clock, CheckCircle2, MessageSquare, Sparkles } from 'lucide-react';
+import { X, MapPin, Loader2, AlertTriangle, Send, LogOut, RefreshCw, Clock, CheckCircle2, MessageSquare, Sparkles, Hourglass } from 'lucide-react';
 import { LocationDef } from '../../../types/attendance';
 import { calculateDistance } from '../../../lib/locationUtils';
 import { format } from 'date-fns';
@@ -52,6 +52,9 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
     // Overtime Flow State
     const [otFlowStep, setOtFlowStep] = useState<'NONE' | 'PROMPT' | 'REASON'>('NONE');
     const [otReason, setOtReason] = useState('');
+    const [otStartTime, setOtStartTime] = useState('');
+    const [otEndTime, setOtEndTime] = useState('');
+    const [activeOtTimePicker, setActiveOtTimePicker] = useState<'START' | 'END' | null>(null);
 
     // Form for Request / Early Leave
     const [time, setTime] = useState('');
@@ -61,14 +64,23 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
     const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
     const [showEarlyConfirmation, setShowEarlyConfirmation] = useState(false);
 
-    // Calculate real-time projected OT hours and JP rewards
+    // Calculate real-time projected OT hours and JP rewards based on custom selected start & end times
     const otDetails = React.useMemo(() => {
-        if (!statusDetails || !statusDetails.requiredEndTime) return { minutes: 0, hours: "0", calculatedJP: 0 };
-        const minutes = Math.max(0, Math.round((new Date().getTime() - statusDetails.requiredEndTime.getTime()) / (60 * 1000)));
+        const start = otStartTime || (statusDetails?.requiredEndTime ? format(statusDetails.requiredEndTime, 'HH:mm') : '18:00');
+        const end = otEndTime || format(new Date(), 'HH:mm');
+        
+        const [startHour, startMinute] = start.split(':').map(Number);
+        const [endHour, endMinute] = end.split(':').map(Number);
+        
+        let minutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+        if (minutes < 0) {
+            minutes += 24 * 60; // handle cross-day OT
+        }
+        
         const hours = (minutes / 60).toFixed(1);
         const calculatedJP = Math.round((minutes / 60) * 10); // Base rate 10 JP per hour
         return { minutes, hours, calculatedJP };
-    }, [statusDetails]);
+    }, [otStartTime, otEndTime, statusDetails]);
 
     useEffect(() => {
         if (isOpen) {
@@ -87,6 +99,14 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
             const result = calculateCheckOutStatus(checkInTime, new Date(), minHours);
             setCheckOutStatus(result.status);
             setStatusDetails(result);
+
+            // Initialize custom OT start & end times
+            if (result && result.requiredEndTime) {
+                setOtStartTime(format(result.requiredEndTime, 'HH:mm'));
+            } else {
+                setOtStartTime('18:00');
+            }
+            setOtEndTime(format(new Date(), 'HH:mm'));
         }
     }, [isOpen]);
 
@@ -201,10 +221,13 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
             `[OT_PENDING:${otReason}] ทำงานล่วงเวลา (OT): ${otReason}`
         );
 
-        // 2. Calculate OT minutes and submit the formal OT request
-        const otMinutes = Math.round((new Date().getTime() - statusDetails.requiredEndTime.getTime()) / (60 * 1000));
+        // 2. Calculate OT minutes from selected start/end times and submit the formal OT request
+        const otMinutes = otDetails.minutes;
         if (onOvertimeSubmit) {
-            await onOvertimeSubmit(otMinutes, `[OT_MINUTES:${otMinutes}] ${otReason}`);
+            await onOvertimeSubmit(
+                otMinutes, 
+                `[OT:${otStartTime}-${otEndTime}] (${otDetails.hours}hr) [OT_MINUTES:${otMinutes}] ${otReason}`
+            );
         }
 
         setIsSubmitting(false);
@@ -318,6 +341,44 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
                                 </div>
                             )}
 
+                            {/* TIME PICKER INPUTS FOR OT */}
+                            <div className="grid grid-cols-2 gap-3 text-left">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 block mb-1">เวลาเริ่มต้น OT</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveOtTimePicker('START')}
+                                        className="w-full flex items-center justify-center gap-2 p-3 bg-indigo-50/50 hover:bg-indigo-50 border border-indigo-100 hover:border-indigo-300 rounded-2xl font-bold text-gray-700 transition-all text-sm"
+                                    >
+                                        <Clock className="w-4 h-4 text-indigo-500 animate-pulse" />
+                                        {otStartTime || '--:--'}
+                                    </button>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 block mb-1">เวลาสิ้นสุด OT</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveOtTimePicker('END')}
+                                        className="w-full flex items-center justify-center gap-2 p-3 bg-rose-50/50 hover:bg-rose-50 border border-rose-100 hover:border-rose-300 rounded-2xl font-bold text-gray-700 transition-all text-sm"
+                                    >
+                                        <Clock className="w-4 h-4 text-rose-500 animate-pulse" />
+                                        {otEndTime || '--:--'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* แสดงสรุปชั่วโมง OT รวมใต้ปุ่มเลือกเวลา */}
+                            {otDetails && (
+                                <div className="flex items-center justify-between p-3.5 px-4 bg-violet-50/50 border border-violet-100 rounded-2xl text-xs transition-all animate-in fade-in slide-in-from-top-2 shadow-sm shadow-violet-100/30">
+                                    <span className="text-violet-700 font-bold flex items-center gap-1.5">
+                                        <Hourglass className="w-3.5 h-3.5 text-violet-500 animate-spin-slow" /> รวมเวลา OT:
+                                    </span>
+                                    <span className="font-extrabold text-violet-700 bg-white border border-violet-200/60 px-2.5 py-1 rounded-lg shadow-sm">
+                                        {otDetails.hours} ชั่วโมง <span className="text-violet-400 font-normal">({otDetails.minutes} นาที)</span>
+                                    </span>
+                                </div>
+                            )}
+
                             <div className="text-left space-y-2">
                                 <label className="text-xs font-bold text-gray-500">รายละเอียดงานที่ทำล่วงเวลา (Required)</label>
                                 <textarea
@@ -333,7 +394,7 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
                             <div className="space-y-2">
                                 <button
                                     onClick={handleOvertimeSubmit}
-                                    disabled={isSubmitting || !otReason.trim()}
+                                    disabled={isSubmitting || !otReason.trim() || otDetails.minutes <= 0}
                                     className="w-full py-4 bg-violet-600 hover:bg-violet-700 text-white rounded-2xl font-bold text-lg shadow-lg shadow-violet-200 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
                                 >
                                     {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Send className="w-6 h-6" />}
@@ -571,6 +632,19 @@ export const CheckOutModal: React.FC<CheckOutModalProps> = ({
                 onClose={() => setIsTimePickerOpen(false)}
                 initialTime={time}
                 onSelect={(val) => setTime(val)}
+            />
+            <TimePickerModal
+                isOpen={activeOtTimePicker !== null}
+                onClose={() => setActiveOtTimePicker(null)}
+                initialTime={activeOtTimePicker === 'START' ? otStartTime : otEndTime}
+                onSelect={(val) => {
+                    if (activeOtTimePicker === 'START') {
+                        setOtStartTime(val);
+                    } else if (activeOtTimePicker === 'END') {
+                        setOtEndTime(val);
+                    }
+                    setActiveOtTimePicker(null);
+                }}
             />
         </div>,
         document.body

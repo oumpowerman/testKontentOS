@@ -49,7 +49,7 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
 }) => {
     return (
         <div className="bg-white rounded-3xl sm:rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden flex flex-col min-h-[500px] sm:min-h-[600px] relative z-10">
-            <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-slate-200">
+            <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-slate-200 rounded-b-3xl sm:rounded-b-[2.5rem]">
                 <table className="w-full border-collapse table-fixed min-w-[700px] sm:min-w-[1200px]">
                     <thead className="sticky top-0 z-[100]">
                         <tr className="bg-slate-50/95 backdrop-blur-md border-b border-slate-200">
@@ -61,19 +61,35 @@ const TimesheetTable: React.FC<TimesheetTableProps> = ({
                                 const isHoliday = dayStatus.status === 'HOLIDAY';
                                 const isTodayDay = isToday(day);
                                 return (
-                                    <th key={day.toString()} className={`p-1.5 sm:p-2 text-center w-16 sm:w-24 ${isTodayDay ? 'bg-indigo-50/50' : ''} ${isHoliday ? 'bg-slate-50/30' : ''}`}>
-                                        <p className={`text-[9px] sm:text-[10px] font-black uppercase ${isHoliday ? 'text-rose-400' : 'text-slate-400'}`}>
-                                            {format(day, 'EEE', { locale: th })}
-                                        </p>
-                                        <p className={`text-xs sm:text-sm font-black leading-tight ${isTodayDay ? 'text-indigo-600' : 'text-slate-700'}`}>
-                                            {format(day, 'd MMM', { locale: th })}
-                                        </p>
-                                        {dayStatus.source === 'EXCEPTION' && (
-                                            <div className="flex justify-center mt-0.5">
-                                                <div className={`w-1 h-1 rounded-full ${dayStatus.status === 'WORK_DAY' ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
-                                            </div>
-                                        )}
-                                    </th>
+                                    <motion.th 
+                                        key={day.toString()} 
+                                        layout="position"
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                        className={`p-1.5 sm:p-2 text-center w-16 sm:w-24 ${isTodayDay ? 'bg-indigo-50/50' : ''} ${isHoliday ? 'bg-slate-50/30' : ''}`}
+                                    >
+                                        <motion.div
+                                            key={day.toString()}
+                                            initial={{ opacity: 0, y: -4 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 4 }}
+                                            transition={{ duration: 0.15 }}
+                                        >
+                                            <p className={`text-[9px] sm:text-[10px] font-black uppercase ${isHoliday ? 'text-rose-400' : 'text-slate-400'}`}>
+                                                {format(day, 'EEE', { locale: th })}
+                                            </p>
+                                            <p className={`text-xs sm:text-sm font-black leading-tight ${isTodayDay ? 'text-indigo-600' : 'text-slate-700'}`}>
+                                                {format(day, 'd MMM', { locale: th })}
+                                            </p>
+                                            {dayStatus.source === 'EXCEPTION' && (
+                                                <div className="flex justify-center mt-0.5">
+                                                    <div className={`w-1 h-1 rounded-full ${dayStatus.status === 'WORK_DAY' ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    </motion.th>
                                 );
                             })}
                         </tr>

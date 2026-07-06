@@ -7,8 +7,11 @@ import { MasterOption } from '../../../types';
 import { LEAVE_THEMES } from './constants';
 import { useLeaveFormLogic } from './hooks/useLeaveFormLogic';
 import LeaveQuotaDisplay from './LeaveQuotaDisplay';
-import { differenceInDays, format } from 'date-fns';
+import { differenceInDays, format, eachDayOfInterval } from 'date-fns';
 import { th } from 'date-fns/locale';
+import { isWorkingDay } from '../../../utils/judgeUtils';
+import { useMasterData } from '../../../hooks/useMasterData';
+import { useUserSession } from '../../../context/UserSessionContext';
 
 // Input Components
 import StandardLeaveInputs from './form-inputs/StandardLeaveInputs';
@@ -22,6 +25,7 @@ interface Props {
     onClose: () => void;
     masterOptions: MasterOption[];
     leaveUsage?: LeaveUsage;
+    pendingUsage?: LeaveUsage;
     initialDate?: Date;
     initialReason?: string;
     fixedType?: boolean;
@@ -29,8 +33,11 @@ interface Props {
 
 
 const LeaveFormContainer: React.FC<Props> = ({ 
-    selectedType, onBack, onSubmit, onClose, masterOptions, leaveUsage, initialDate, initialReason, fixedType
+    selectedType, onBack, onSubmit, onClose, masterOptions, leaveUsage, pendingUsage, initialDate, initialReason, fixedType
 }) => {
+    const { annualHolidays, calendarExceptions } = useMasterData();
+    const { currentUserProfile } = useUserSession();
+
     const selectedOption = useMemo(() => masterOptions.find(o => o.key === selectedType), [masterOptions, selectedType]);
     const metadata = useMemo(() => {
         try {
@@ -41,15 +48,37 @@ const LeaveFormContainer: React.FC<Props> = ({
     }, [selectedOption]);
 
     const minDate = useMemo(() => {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        
+        const candidateDates: Date[] = [];
+
         if (metadata.advanceDays && metadata.advanceDays > 0) {
+            const allowedAdvance = new Date(today);
+            allowedAdvance.setDate(today.getDate() + metadata.advanceDays);
+            candidateDates.push(allowedAdvance);
+        }
+
+        if (metadata.maxPastDays && metadata.maxPastDays > 0) {
+            const allowedPast = new Date(today);
+            allowedPast.setDate(today.getDate() - metadata.maxPastDays);
+            candidateDates.push(allowedPast);
+        }
+
+        if (candidateDates.length === 0) return undefined;
+        return candidateDates.reduce((max, current) => current > max ? current : max, candidateDates[0]);
+    }, [metadata.advanceDays, metadata.maxPastDays]);
+
+    const maxDate = useMemo(() => {
+        if (metadata.maxFutureDays && metadata.maxFutureDays > 0) {
             const today = new Date();
             today.setHours(0,0,0,0);
             const allowed = new Date(today);
-            allowed.setDate(today.getDate() + metadata.advanceDays);
+            allowed.setDate(today.getDate() + metadata.maxFutureDays);
             return allowed;
         }
         return undefined;
-    }, [metadata.advanceDays]);
+    }, [metadata.maxFutureDays]);
     
     const { 
         startDate, setStartDate, endDate, setEndDate, 
@@ -62,7 +91,9 @@ const LeaveFormContainer: React.FC<Props> = ({
         initialDate, 
         initialReason, 
         selectedType, 
-        advanceDays: metadata.advanceDays 
+        advanceDays: metadata.advanceDays,
+        maxFutureDays: metadata.maxFutureDays,
+        maxPastDays: metadata.maxPastDays
     });
 
     const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
@@ -110,20 +141,29 @@ const LeaveFormContainer: React.FC<Props> = ({
     const daysRequested = useMemo(() => {
         if (isTimeSpecific) return 0;
         if (startDate && endDate) {
-            return differenceInDays(new Date(endDate), new Date(startDate)) + 1;
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return 0;
+
+            const days = eachDayOfInterval({ start, end });
+            return days.filter(d => 
+                isWorkingDay(d, annualHolidays || [], calendarExceptions || [], currentUserProfile)
+            ).length;
         }
         return 0;
-    }, [startDate, endDate, isTimeSpecific]);
+    }, [startDate, endDate, isTimeSpecific, annualHolidays, calendarExceptions, currentUserProfile]);
 
     const quotaInfo = useMemo(() => {
         const limit = metadata.defaultQuota || 999;
         if (!limit || !leaveUsage) return null;
         const used = leaveUsage[selectedType as LeaveType] || 0;
+        const pending = pendingUsage ? (pendingUsage[selectedType as LeaveType] || 0) : 0;
         const remaining = Math.max(0, limit - used);
-        return { limit, used, remaining };
-    }, [selectedType, leaveUsage, metadata]);
+        const remainingIncludingPending = Math.max(0, limit - used - pending);
+        return { limit, used, pending, remaining, remainingIncludingPending };
+    }, [selectedType, leaveUsage, pendingUsage, metadata]);
 
-    const isOverQuota = !!(quotaInfo && daysRequested > quotaInfo.remaining);
+    const isOverQuota = !!(quotaInfo && daysRequested > quotaInfo.remainingIncludingPending);
 
     const getPlaceholder = () => {
         if (metadata.placeholder) return metadata.placeholder;
@@ -232,13 +272,12 @@ const LeaveFormContainer: React.FC<Props> = ({
                                         <p className="text-[9px] sm:text-[10px] font-bold text-indigo-300 uppercase mb-1 sm:mb-2 tracking-widest">สิ้นสุด (End)</p>
                                         <p className="text-xs sm:text-base font-bold text-indigo-950">{formatDateThai(endDate)}</p>
                                         {selectedType === 'FORGOT_BOTH' && <p className="text-lg sm:text-2xl font-bold text-indigo-600 mt-1 sm:mt-2">{endTime} น.</p>}
-                                        {selectedType === 'OVERTIME' && <p className="text-lg sm:text-2xl font-bold text-indigo-600 mt-1 sm:mt-2">{otHours} ชั่วโมง</p>}
                                     </div>
                                 </div>
 
                                 {!isTimeSpecific && daysRequested > 0 && (
                                     selectedType === 'OVERTIME' ? (
-                                        <div className="bg-gradient-to-r from-sky-400 via-indigo-500 to-purple-600 text-white p-4 rounded-[1.5rem] shadow-xl shadow-indigo-500/20 border border-white/20 relative flex items-center justify-between overflow-hidden">
+                                        <div className="bg-gradient-to-r from-sky-400 via-indigo-500 to-purple-600  bg-no-repeat bg-[length:100%_100%] bg-clip-padding text-white p-4 rounded-[1.5rem] shadow-xl shadow-indigo-500/20 border border-white/20 relative flex items-center justify-between overflow-hidden">
                                             {/* Glow overlay */}
                                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_50%)]" />
                                             
@@ -354,25 +393,25 @@ const LeaveFormContainer: React.FC<Props> = ({
                                 </motion.div>
                             )}
 
-                            {/* Over Quota Alert */}
-                            {isOverQuota && (
-                                <motion.div 
-                                    initial={{ x: -20, opacity: 0 }}
-                                    animate={{ x: 0, opacity: 1 }}
-                                    className="bg-rose-50/80 backdrop-blur-xl border border-rose-100/50 p-4 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] flex items-start gap-4 sm:gap-5 shadow-xl shadow-rose-100/20"
-                                >
-                                    <div className="bg-rose-100 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl text-rose-600 shadow-sm shrink-0">
-                                        <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-rose-800 text-sm sm:text-base">วันลาเกินสิทธิ์ (Over Quota)</h4>
-                                        <p className="text-[11px] sm:text-xs text-rose-500 mt-1 sm:mt-1.5 leading-relaxed font-bold">
-                                            คุณเหลือสิทธิ์ {quotaInfo?.remaining} วัน แต่ต้องการลา {daysRequested} วัน <br/>
-                                            กรุณาปรับเปลี่ยนวันที่ หรือติดต่อ HR ครับ
-                                        </p>
-                                    </div>
-                                </motion.div>
-                            )}
+                             {/* Over Quota Alert */}
+                             {isOverQuota && (
+                                 <motion.div 
+                                     initial={{ x: -20, opacity: 0 }}
+                                     animate={{ x: 0, opacity: 1 }}
+                                     className="bg-rose-50/80 backdrop-blur-xl border border-rose-100/50 p-4 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] flex items-start gap-4 sm:gap-5 shadow-xl shadow-rose-100/20"
+                                 >
+                                     <div className="bg-rose-100 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl text-rose-600 shadow-sm shrink-0">
+                                         <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+                                     </div>
+                                     <div>
+                                         <h4 className="font-bold text-rose-800 text-sm sm:text-base">วันลาเกินสิทธิ์ (Over Quota)</h4>
+                                         <p className="text-[11px] sm:text-xs text-rose-500 mt-1 sm:mt-1.5 leading-relaxed font-bold">
+                                             คุณเหลือสิทธิ์ {quotaInfo?.remaining} วัน {quotaInfo?.pending && quotaInfo.pending > 0 ? `(และมีรายการที่รอนุมัติอยู่แล้ว ${quotaInfo.pending} วัน)` : ''} แต่ต้องการลา {daysRequested} วัน <br/>
+                                             กรุณาปรับเปลี่ยนวันที่ หรือติดต่อ HR ครับ
+                                         </p>
+                                     </div>
+                                 </motion.div>
+                             )}
 
                             {/* Time Correction Strictness Warning */}
                             {(selectedType === 'FORGOT_CHECKIN' || selectedType === 'FORGOT_CHECKOUT' || selectedType === 'FORGOT_BOTH') && (
@@ -415,6 +454,8 @@ const LeaveFormContainer: React.FC<Props> = ({
                                         startDate={startDate} setStartDate={setStartDate} 
                                         endDate={endDate} setEndDate={setEndDate} 
                                         minDate={minDate}
+                                        maxDate={maxDate}
+                                        workingDaysCount={daysRequested}
                                     />
                                 )}
                             </div>

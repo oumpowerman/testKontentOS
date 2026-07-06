@@ -18,7 +18,12 @@ interface NotificationPopoverProps {
     onMarkRead?: (id: string) => void;
     onMarkAllRead?: () => void;
     onNavigate: (view: ViewMode) => void; 
-    onApproveLeave?: (request: LeaveRequest) => Promise<void>;
+    onApproveLeave?: (
+        request: LeaveRequest, 
+        customOtHours?: number, 
+        customStartTime?: string, 
+        customEndTime?: string
+    ) => Promise<void>;
     onRejectLeave?: (id: string, reason: string) => Promise<void>;
     leaveRequests?: LeaveRequest[];
 }

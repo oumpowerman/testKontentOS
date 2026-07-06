@@ -14,6 +14,7 @@ interface LeaveRequestModalProps {
     onSubmit: (type: LeaveType, start: Date, end: Date, reason: string, file?: File) => Promise<boolean>;
     masterOptions?: MasterOption[];
     leaveUsage?: LeaveUsage; 
+    pendingUsage?: LeaveUsage;
     requests?: LeaveRequest[];
     initialDate?: Date;
     initialReason?: string; // Add Prop
@@ -21,7 +22,7 @@ interface LeaveRequestModalProps {
 }
 
 const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({ 
-    isOpen, onClose, onSubmit, masterOptions = [], leaveUsage, initialDate, initialReason, fixedType
+    isOpen, onClose, onSubmit, masterOptions = [], leaveUsage, pendingUsage, initialDate, initialReason, fixedType
 }) => {
     const [step, setStep] = useState<'SELECT' | 'FORM'>('SELECT');
     const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -104,6 +105,7 @@ const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({
                                 onClose={onClose}
                                 masterOptions={masterOptions}
                                 leaveUsage={leaveUsage}
+                                pendingUsage={pendingUsage}
                                 initialDate={initialDate}
                                 initialReason={initialReason}
                                 fixedType={!!fixedType}

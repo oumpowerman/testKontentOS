@@ -9,15 +9,33 @@ interface BrandSectionProps {
 
 export const BrandSection: React.FC<BrandSectionProps> = ({ authMode }) => {
   return (
-    <div className={`
-        hidden md:flex md:w-5/12 relative flex-col items-center justify-center text-white p-12 overflow-hidden transition-all duration-700
-        ${authMode === 'LOGIN' 
-            ? 'bg-gradient-to-br from-[#4f46e5] to-[#818cf8]' 
-            : authMode === 'REGISTER'
-            ? 'bg-gradient-to-br from-[#db2777] to-[#f472b6]'
-            : 'bg-gradient-to-br from-[#0f172a] to-[#334155]'}
-    `}>
-         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 4px 4px, white 2px, transparent 0)', backgroundSize: '40px 40px' }}></div>
+    <div className="hidden md:flex md:w-5/12 relative flex-col items-center justify-center text-white p-12 overflow-hidden select-none">
+         {/* 1. Login Background Layer */}
+         <motion.div
+           initial={false}
+           animate={{ opacity: authMode === 'LOGIN' ? 1 : 0 }}
+           transition={{ duration: 0.8, ease: "easeInOut" }}
+           className="absolute inset-0 bg-gradient-to-br from-[#4f46e5] to-[#818cf8]"
+         />
+
+         {/* 2. Register Background Layer */}
+         <motion.div
+           initial={false}
+           animate={{ opacity: authMode === 'REGISTER' ? 1 : 0 }}
+           transition={{ duration: 0.8, ease: "easeInOut" }}
+           className="absolute inset-0 bg-gradient-to-br from-[#db2777] to-[#f472b6]"
+         />
+
+         {/* 3. Other Modes (Forgot / Update) Background Layer */}
+         <motion.div
+           initial={false}
+           animate={{ opacity: (authMode !== 'LOGIN' && authMode !== 'REGISTER') ? 1 : 0 }}
+           transition={{ duration: 0.8, ease: "easeInOut" }}
+           className="absolute inset-0 bg-gradient-to-br from-[#0f172a] to-[#334155]"
+         />
+
+         {/* ลายจุด Dot Pattern ด้านบนสุดของ Background */}
+         <div className="absolute inset-0 opacity-20 z-0" style={{ backgroundImage: 'radial-gradient(circle at 4px 4px, white 2px, transparent 0)', backgroundSize: '40px 40px' }}></div>
          
          <AnimatePresence mode="wait">
             <motion.div 

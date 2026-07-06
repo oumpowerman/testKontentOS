@@ -57,12 +57,16 @@ const MasterFormModal: React.FC<MasterFormModalProps> = ({
     // Parse default quota and advance days from description if it's LEAVE_TYPE
     let defaultQuotaValue = 0;
     let advanceDaysValue = 0;
+    let maxFutureDaysValue = 0;
+    let maxPastDaysValue = 0;
     const isLeaveType = activeTab === 'LEAVE_TYPE' || formData.type === 'LEAVE_TYPE';
     if (isLeaveType) {
         try {
             const meta = formData.description ? JSON.parse(formData.description) : {};
             defaultQuotaValue = typeof meta.defaultQuota === 'number' ? meta.defaultQuota : parseInt(meta.defaultQuota) || 0;
             advanceDaysValue = typeof meta.advanceDays === 'number' ? meta.advanceDays : parseInt(meta.advanceDays) || 0;
+            maxFutureDaysValue = typeof meta.maxFutureDays === 'number' ? meta.maxFutureDays : parseInt(meta.maxFutureDays) || 0;
+            maxPastDaysValue = typeof meta.maxPastDays === 'number' ? meta.maxPastDays : parseInt(meta.maxPastDays) || 0;
         } catch (e) {
             // Description might not be valid JSON yet if it's empty or custom text
         }
@@ -100,6 +104,44 @@ const MasterFormModal: React.FC<MasterFormModalProps> = ({
         if (!currentMeta.placeholder) currentMeta.placeholder = "ระบุเหตุผลการลา...";
         
         currentMeta.advanceDays = val;
+        setFormData({
+            ...formData,
+            description: JSON.stringify(currentMeta)
+        });
+    };
+
+    const handleLeaveMaxFutureDaysChange = (newVal: string) => {
+        const val = parseInt(newVal) || 0;
+        let currentMeta: any = {};
+        try {
+            currentMeta = formData.description ? JSON.parse(formData.description) : {};
+        } catch (e) {
+            currentMeta = {};
+        }
+        if (!currentMeta.icon) currentMeta.icon = "FileText";
+        if (!currentMeta.category) currentMeta.category = "STANDARD";
+        if (!currentMeta.placeholder) currentMeta.placeholder = "ระบุเหตุผลการลา...";
+        
+        currentMeta.maxFutureDays = val;
+        setFormData({
+            ...formData,
+            description: JSON.stringify(currentMeta)
+        });
+    };
+
+    const handleLeaveMaxPastDaysChange = (newVal: string) => {
+        const val = parseInt(newVal) || 0;
+        let currentMeta: any = {};
+        try {
+            currentMeta = formData.description ? JSON.parse(formData.description) : {};
+        } catch (e) {
+            currentMeta = {};
+        }
+        if (!currentMeta.icon) currentMeta.icon = "FileText";
+        if (!currentMeta.category) currentMeta.category = "STANDARD";
+        if (!currentMeta.placeholder) currentMeta.placeholder = "ระบุเหตุผลการลา...";
+        
+        currentMeta.maxPastDays = val;
         setFormData({
             ...formData,
             description: JSON.stringify(currentMeta)
@@ -320,6 +362,46 @@ const MasterFormModal: React.FC<MasterFormModalProps> = ({
                                                     required
                                                 />
                                             </div>
+
+                                            <div className="space-y-2">
+                                                <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                    <Calendar className="w-3 h-3 text-blue-500" /> ขอล่วงหน้าสูงสุดไม่เกิน (วัน)
+                                                </label>
+                                                <input 
+                                                    type="number" 
+                                                    min="0"
+                                                    max="365"
+                                                    value={maxFutureDaysValue} 
+                                                    onChange={e => handleLeaveMaxFutureDaysChange(e.target.value)} 
+                                                    className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700 placeholder:text-slate-300 text-sm"
+                                                    placeholder="ไม่มีการจำกัดถ้าเป็น 0..."
+                                                    required
+                                                />
+                                                <p className="text-[10.5px] font-medium text-slate-400 mt-1 flex items-center gap-1">
+                                                    <span>💡</span>
+                                                    <span>ใส่เลข 0 หรือปล่อยว่างไว้ หากไม่ต้องการจำกัดวันขอล่วงหน้า</span>
+                                                </p>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                    <Calendar className="w-3 h-3 text-rose-500" /> ขอลาย้อนหลังสูงสุดไม่เกิน (วัน)
+                                                </label>
+                                                <input 
+                                                    type="number" 
+                                                    min="0"
+                                                    max="365"
+                                                    value={maxPastDaysValue} 
+                                                    onChange={e => handleLeaveMaxPastDaysChange(e.target.value)} 
+                                                    className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700 placeholder:text-slate-300 text-sm"
+                                                    placeholder="ไม่มีการจำกัดถ้าเป็น 0..."
+                                                    required
+                                                />
+                                                <p className="text-[10.5px] font-medium text-slate-400 mt-1 flex items-center gap-1">
+                                                    <span>💡</span>
+                                                    <span>ใส่เลข 0 หรือปล่อยว่างไว้ หากไม่ต้องการจำกัดวันขอลาย้อนหลัง</span>
+                                                </p>
+                                            </div>
                                         </div>
                                     )}
                                     
@@ -360,7 +442,7 @@ const MasterFormModal: React.FC<MasterFormModalProps> = ({
                                                 <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
                                                     <Percent className="w-3 h-3" /> Progress Value
                                                 </label>
-                                                <span className="text-sm font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
+                                                <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
                                                     {formData.progressValue || 0}%
                                                 </span>
                                             </div>

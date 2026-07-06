@@ -1,8 +1,10 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, User, Briefcase, Mail, Phone, Lock, Eye, EyeOff, Quote, ArrowRight, Loader2, Camera } from 'lucide-react';
+import { Sparkles, User, Briefcase, Mail, Phone, Lock, Eye, EyeOff, Quote, ArrowRight, Loader2, Camera, ShieldCheck, X } from 'lucide-react';
 import FilterDropdown from '../common/FilterDropdown';
 import { EMOJI_POOL } from '../../constants/emojis';
+import { supabase } from '../../lib/supabase';
 
 interface RegisterFormProps {
   email: string;
@@ -13,6 +15,10 @@ interface RegisterFormProps {
   setShowPassword: (val: boolean) => void;
   name: string;
   setName: (val: string) => void;
+  firstName: string;
+  setFirstName: (val: string) => void;
+  lastName: string;
+  setLastName: (val: string) => void;
   position: string;
   setPosition: (val: string) => void;
   employmentType: string;
@@ -43,6 +49,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   setShowPassword,
   name,
   setName,
+  firstName,
+  setFirstName,
+  lastName,
+  setLastName,
   position,
   setPosition,
   employmentType,
@@ -62,9 +72,54 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   setSelectedEmoji,
   takenEmojis,
 }) => {
+  const [policyData, setPolicyData] = React.useState<{ title: string; content: string } | null>(null);
+  const [isPolicyModalOpen, setIsPolicyModalOpen] = React.useState(false);
+  const [acceptedTerms, setAcceptedTerms] = React.useState(false);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = React.useState(false);
+
+  React.useEffect(() => {
+    const fetchPolicy = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('master_options')
+          .select('*')
+          .eq('type', 'SYSTEM_POLICY')
+          .eq('key', 'TERMS_OF_SERVICE')
+          .maybeSingle();
+        if (data) {
+          setPolicyData({
+            title: data.label || 'ข้อตกลงและเงื่อนไขการปฏิบัติงาน',
+            content: data.description || 'ไม่มีเนื้อหาข้อตกลงในระบบ',
+          });
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchPolicy();
+  }, []);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const difference = target.scrollHeight - target.scrollTop - target.clientHeight;
+    if (difference <= 15) {
+      setHasScrolledToBottom(true);
+    }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!acceptedTerms) {
+      alert('กรุณาเปิดอ่านและกดยอมรับข้อตกลงและระเบียบปฏิบัติการทำงานก่อนส่งใบสมัคร');
+      return;
+    }
+    onSubmit(e);
+  };
+
   // EMOJI_POOL is imported from central constants
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <>
+      <form onSubmit={handleFormSubmit} className="space-y-4">
       {/* Avatar Image Selection */}
       <div className="flex justify-center mb-6">
         <div 
@@ -97,6 +152,45 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             onChange={handleFileChange} 
             disabled={isConvertingImg}
           />
+        </div>
+      </div>
+
+      {/* First Name & Last Name Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* First Name */}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-slate-500 ml-1 uppercase">ชื่อจริง *</label>
+          <div className="relative group">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+              <User className="w-5 h-5 text-slate-400 group-focus-within:text-pink-500 transition-colors" />
+            </div>
+            <input 
+              type="text" 
+              value={firstName} 
+              onChange={(e) => setFirstName(e.target.value)} 
+              className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-pink-400 rounded-xl outline-none transition-all font-bold text-slate-700 text-sm" 
+              placeholder="ชื่อจริง" 
+              required 
+            />
+          </div>
+        </div>
+
+        {/* Last Name */}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-slate-500 ml-1 uppercase">นามสกุล *</label>
+          <div className="relative group">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+              <User className="w-5 h-5 text-slate-400 group-focus-within:text-pink-500 transition-colors" />
+            </div>
+            <input 
+              type="text" 
+              value={lastName} 
+              onChange={(e) => setLastName(e.target.value)} 
+              className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-pink-400 rounded-xl outline-none transition-all font-bold text-slate-700 text-sm" 
+              placeholder="นามสกุล" 
+              required 
+            />
+          </div>
         </div>
       </div>
 
@@ -288,12 +382,56 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         </div>
       </div>
 
+      {/* Terms & Conditions Checkbox */}
+      <div className="flex items-start gap-3 bg-indigo-50/25 p-4 rounded-2xl border border-indigo-100/50">
+        <input
+          id="terms-checkbox"
+          type="checkbox"
+          checked={acceptedTerms}
+          onChange={(e) => {
+            if (!acceptedTerms) {
+              setIsPolicyModalOpen(true);
+              setHasScrolledToBottom(false);
+            } else {
+              setAcceptedTerms(false);
+            }
+          }}
+          className="w-5 h-5 rounded border-gray-300 text-pink-600 focus:ring-pink-500 mt-0.5 cursor-pointer accent-pink-600"
+        />
+        <label 
+          onClick={(e) => {
+            e.preventDefault();
+            if (!acceptedTerms) {
+              setIsPolicyModalOpen(true);
+              setHasScrolledToBottom(false);
+            } else {
+              setAcceptedTerms(false);
+            }
+          }}
+          className="text-xs text-slate-500 leading-relaxed cursor-pointer select-none"
+        >
+          ฉันได้เปิดอ่านและเข้าใจ{' '}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsPolicyModalOpen(true);
+              setHasScrolledToBottom(false);
+            }}
+            className="text-pink-600 font-bold hover:underline"
+          >
+            ข้อตกลงและระเบียบปฏิบัติการทำงาน
+          </button>{' '}
+          ขององค์กรครบถ้วน และตกลงที่จะปฏิบัติตามนโยบายนี้ทุกประการ *
+        </label>
+      </div>
+
       {/* Submit Button */}
       <div className="pt-4">
         <button 
           type="submit" 
-          disabled={isLoading || isConvertingImg}
-          className={`w-full py-4 rounded-xl font-black text-white text-base shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${isLoading || isConvertingImg ? 'opacity-70 cursor-not-allowed' : ''} bg-gradient-to-r from-pink-500 to-rose-500 shadow-pink-200`}
+          disabled={isLoading || isConvertingImg || !acceptedTerms}
+          className={`w-full py-4 rounded-xl font-black text-white text-base shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${isLoading || isConvertingImg || !acceptedTerms ? 'opacity-50 cursor-not-allowed' : ''} bg-gradient-to-r from-pink-500 to-rose-500 shadow-pink-200`}
         >
           {isLoading || isConvertingImg ? (
             <>
@@ -309,5 +447,90 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         </button>
       </div>
     </form>
+
+    {/* Policy View Modal overlay */}
+    {isPolicyModalOpen && createPortal(
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 text-slate-800">
+          {/* Header */}
+          <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <h3 className="font-bold text-slate-800 text-base">
+                  {policyData?.title || 'ข้อตกลงและเงื่อนไขการปฏิบัติงาน'}
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  กรุณาเลื่อนลงไปด้านล่างสุดเพื่อเปิดใช้งานปุ่มยินยอม
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsPolicyModalOpen(false)}
+              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Content (Scrollable) */}
+          <div
+            onScroll={handleScroll}
+            className="p-6 overflow-y-auto flex-1 text-sm text-slate-600 leading-relaxed font-sans space-y-4 text-left"
+          >
+            {policyData?.content ? (
+              policyData.content.split('\n').map((line, idx) => {
+                if (line.startsWith('###')) {
+                  return <h4 key={idx} className="font-black text-slate-850 text-base pt-3">{line.replace('###', '').trim()}</h4>;
+                }
+                if (line.startsWith('#')) {
+                  return <h3 key={idx} className="font-black text-slate-900 text-lg border-b pb-2">{line.replace('#', '').trim()}</h3>;
+                }
+                if (line.startsWith('-')) {
+                  return <li key={idx} className="ml-4 list-disc text-slate-600">{line.replace('-', '').trim()}</li>;
+                }
+                return <p key={idx}>{line}</p>;
+              })
+            ) : (
+              <div className="text-center py-12 text-slate-400 italic">
+                กำลังโหลดข้อมูลข้อตกลง...
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="p-6 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row items-center gap-3">
+            <div className="text-xs text-slate-400 flex-1 text-center sm:text-left">
+              {!hasScrolledToBottom ? (
+                <span className="animate-pulse">⚠️ กรุณาเลื่อนลงเพื่ออ่านรายละเอียดให้ครบถ้วน</span>
+              ) : (
+                <span className="text-green-600 font-bold">✓ อ่านรายละเอียดครบถ้วนแล้ว</span>
+              )}
+            </div>
+            <button
+              type="button"
+              disabled={!hasScrolledToBottom}
+              onClick={() => {
+                setAcceptedTerms(true);
+                setIsPolicyModalOpen(false);
+              }}
+              className={`w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-white text-sm transition-all shadow-md
+                ${hasScrolledToBottom 
+                  ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100 cursor-pointer' 
+                  : 'bg-slate-300 shadow-none cursor-not-allowed'
+                }
+              `}
+            >
+              ฉันเข้าใจและยอมรับข้อตกลง
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
 };

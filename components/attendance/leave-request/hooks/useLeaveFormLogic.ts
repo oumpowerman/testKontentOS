@@ -11,11 +11,16 @@ interface UseLeaveFormLogicProps {
     initialReason?: string;
     selectedType?: string;
     advanceDays?: number;
+    maxFutureDays?: number;
+    maxPastDays?: number;
 }
 
 import { compressImage } from '../../../../lib/imageUtils';
 
-export const useLeaveFormLogic = ({ onSubmit, onClose, initialDate, initialReason, selectedType, advanceDays }: UseLeaveFormLogicProps) => {
+export const useLeaveFormLogic = ({ 
+    onSubmit, onClose, initialDate, initialReason, selectedType, 
+    advanceDays, maxFutureDays, maxPastDays 
+}: UseLeaveFormLogicProps) => {
     const { showAlert } = useGlobalDialog();
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -76,6 +81,28 @@ export const useLeaveFormLogic = ({ onSubmit, onClose, initialDate, initialReaso
             
             if (isBefore(startOfDay(start), minAllowedDate)) {
                 showAlert(`ประเภทการลานี้ต้องแจ้งล่วงหน้าอย่างน้อย ${advanceDays} วัน (สามารถเลือกได้ตั้งแต่วันที่ ${format(minAllowedDate, 'd/M/yyyy')})`, 'ต้องแจ้งล่วงหน้า');
+                return;
+            }
+        }
+
+        if (maxFutureDays && maxFutureDays > 0) {
+            const today = startOfDay(new Date());
+            const maxAllowedDate = new Date(today);
+            maxAllowedDate.setDate(today.getDate() + maxFutureDays);
+            
+            if (isBefore(maxAllowedDate, startOfDay(start))) {
+                showAlert(`ประเภทการลานี้สามารถขอล่วงหน้าได้ไม่เกิน ${maxFutureDays} วัน (เลือกได้ไม่เกินวันที่ ${format(maxAllowedDate, 'd/M/yyyy')})`, 'เกินกำหนดล่วงหน้า');
+                return;
+            }
+        }
+
+        if (maxPastDays && maxPastDays > 0) {
+            const today = startOfDay(new Date());
+            const minAllowedDate = new Date(today);
+            minAllowedDate.setDate(today.getDate() - maxPastDays);
+            
+            if (isBefore(startOfDay(start), minAllowedDate)) {
+                showAlert(`ประเภทการลานี้สามารถขอลาย้อนหลังได้ไม่เกิน ${maxPastDays} วัน (เลือกได้ตั้งแต่วันที่ ${format(minAllowedDate, 'd/M/yyyy')})`, 'เกินกำหนดลาย้อนหลัง');
                 return;
             }
         }

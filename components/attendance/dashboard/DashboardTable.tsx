@@ -66,7 +66,7 @@ const DashboardTable: React.FC<DashboardTableProps> = ({
         activeStatFilter={activeStatFilter}
       />
 
-      <div className="overflow-x-auto relative">
+      <div className="overflow-x-auto relative [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {/* Dynamic Scan Line Indicator */}
         <AnimatePresence>
           {isScanning && (

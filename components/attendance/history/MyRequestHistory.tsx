@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import th from 'date-fns/locale/th';
 import { 
     Clock, CheckCircle2, XCircle, Calendar, 
-    FileText, AlertTriangle, ChevronDown, AlertCircle
+    FileText, AlertTriangle, ChevronDown, AlertCircle, Settings
 } from 'lucide-react';
 
 interface MyRequestHistoryProps {
@@ -226,7 +226,21 @@ const MyRequestHistory: React.FC<MyRequestHistoryProps> = ({ requests }) => {
                                                             </p>
 
                                                             {/* Rejection Reason (Highlight) */}
-                                                            {req.status === 'REJECTED' && req.rejectionReason && (
+                                                            {req.status === 'APPROVED' && req.rejectionReason && (
+                                                                 <div className="mt-3 bg-indigo-50/70 p-2.5 rounded-lg border border-indigo-100/50 flex items-start gap-2">
+                                                                     <Settings className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5 animate-pulse" />
+                                                                     <div>
+                                                                         <p className="text-[10px] font-bold text-indigo-700 uppercase mb-0.5">
+                                                                             บันทึกการอนุมัติ/ปรับแก้เวลาจากแอดมิน:
+                                                                         </p>
+                                                                         <p className="text-xs text-indigo-800 font-medium whitespace-pre-line">
+                                                                             {req.rejectionReason}
+                                                                         </p>
+                                                                     </div>
+                                                                 </div>
+                                                             )}
+
+                                                             {req.status === 'REJECTED' && req.rejectionReason && (
                                                                 <div className="mt-3 bg-red-50 p-2.5 rounded-lg border border-red-100 flex items-start gap-2">
                                                                     <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                                                                     <div>

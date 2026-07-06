@@ -15,6 +15,7 @@ import {
 import { useAttendanceStats } from '../hooks/attendance/useAttendanceStats'; 
 import { useLeaveRequests } from '../hooks/useLeaveRequests';
 import { useAttendanceAlerts } from '../hooks/attendance/useAttendanceAlerts';
+import { useMasterData } from '../hooks/useMasterData';
 import { Clock, Calendar, PieChart, FileCheck, TableProperties } from 'lucide-react';
 import AppBackground, { BackgroundTheme } from '../components/common/AppBackground';
 
@@ -33,6 +34,12 @@ const AttendanceRouter: React.FC<AttendanceRouterProps> = ({ currentUser, users 
     // Hooks
     const { stats } = useAttendanceStats(currentUser.id);
     const { actionRequiredLogs } = useAttendanceAlerts(currentUser.id);
+    const { masterOptions } = useMasterData();
+    
+    const enableRace = useMemo(() => {
+        const opt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'ENABLE_ATTENDANCE_RACE');
+        return opt ? opt.label === 'true' : true;
+    }, [masterOptions]);
     // Lift state up: Fetch all requests here so we can pass actions to child
     // If Admin, fetch all requests for the approval list
     const { requests, leaveUsage, isLoading: isRequestsLoading, approveRequest, rejectRequest } = useLeaveRequests(
@@ -77,7 +84,7 @@ const AttendanceRouter: React.FC<AttendanceRouterProps> = ({ currentUser, users 
                 </div>
 
                 {/* 8-bit Daily Attendance Racing track */}
-                <WeeklyAttendanceRace />
+                {enableRace && <WeeklyAttendanceRace />}
 
                 {/* Navigation Tabs & Actions */}
                 <div className="flex flex-wrap items-center gap-3">

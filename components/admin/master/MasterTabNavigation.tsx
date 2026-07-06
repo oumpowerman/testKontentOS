@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Activity, CheckSquare, Flag, Tag, Calendar, CalendarDays, Type, Layers, LayoutTemplate, FileText, MapPin, Presentation, Package, AlertTriangle, Briefcase, HeartPulse, Clock, ShieldAlert, Gift, Smile, Monitor, HardDrive, BookOpen, Gamepad2, Coins, Gavel } from 'lucide-react';
+import { Activity, CheckSquare, Flag, Tag, Calendar, CalendarDays, Type, Layers, LayoutTemplate, FileText, MapPin, Presentation, Package, AlertTriangle, Briefcase, HeartPulse, Clock, ShieldAlert, Gift, Smile, Monitor, HardDrive, BookOpen, Gamepad2, Coins, Gavel, ShieldCheck } from 'lucide-react';
 import { MasterTab } from '../../../hooks/useMasterDataView';
 
 // Metadata Configuration
@@ -41,6 +41,7 @@ export const MASTER_META: Record<string, { label: string, icon: any, desc: strin
     STORAGE_HUB: { label: 'Storage Hubs', icon: HardDrive, desc: 'จัดการไดรฟ์และ Hub เก็บไฟล์ (รองรับการย้ายไดรฟ์ E: F: G: อัตโนมัติ)', group: 'SYSTEM' },
     PAYROLL_RULES: { label: 'Payroll Rules', icon: Coins, desc: 'ตั้งค่าอัตราค่าปรับ (หักเงิน) สำหรับการขาด/ลา/สาย', group: 'SYSTEM' },
     TRIBUNAL_SETTINGS: { label: 'Tribunal Settings', icon: Gavel, desc: 'ตั้งค่าระบบฟ้องร้อง (รางวัล, บทลงโทษ, หมวดหมู่)', group: 'SYSTEM' },
+    SYSTEM_POLICY: { label: 'Policy Enforcer', icon: ShieldCheck, desc: 'ข้อตกลงการปฏิบัติงานและระเบียบวินัยสำหรับการใช้ระบบ', group: 'SYSTEM' },
 };
 
 interface MasterTabNavigationProps {
@@ -90,7 +91,7 @@ const MasterTabNavigation: React.FC<MasterTabNavigationProps> = ({ activeTab, on
             {/* GROUP: SYSTEM */}
             <div className="bg-white p-2 rounded-2xl border border-gray-200 shadow-sm min-w-max">
                     <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-2">System Config</div>
-                    {['GAME_TUNING', 'PAYROLL_RULES', 'TRIBUNAL_SETTINGS', 'REWARDS', 'GREETINGS', 'DASHBOARD', 'MAINTENANCE', 'WIKI_CATEGORY', 'STORAGE_HUB'].map(key => renderTabButton(key))}
+                    {['GAME_TUNING', 'PAYROLL_RULES', 'TRIBUNAL_SETTINGS', 'REWARDS', 'GREETINGS', 'DASHBOARD', 'MAINTENANCE', 'WIKI_CATEGORY', 'STORAGE_HUB', 'SYSTEM_POLICY'].map(key => renderTabButton(key))}
             </div>
         </div>
     );

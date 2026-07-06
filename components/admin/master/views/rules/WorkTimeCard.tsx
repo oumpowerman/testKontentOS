@@ -11,6 +11,7 @@ interface WorkTimeConfig {
     checkoutPenaltyTime: string;
     dailySummaryDelayHours: string;
     lineSummaryDestination: string;
+    enableAttendanceRace: string;
 }
 
 interface WorkTimeCardProps {
@@ -148,9 +149,9 @@ const WorkTimeCard: React.FC<WorkTimeCardProps> = ({
             <div className="mt-8 pt-6 border-t border-dashed border-gray-100">
                 <h4 className="text-xs font-black text-indigo-600 uppercase tracking-wider mb-4 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
-                    ระบบตรวจสอบและเตือนสติเซิร์ฟเวอร์ (Server-Side Automated Reminders & Penalties)
+                    ระบบตรวจสอบและเตือนสติเซิร์ฟเวอร์ & ฟังก์ชันพิเศษ (Server-Side Checks & Add-ons)
                 </h4>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     {/* Plan B Info Card */}
                     <div className="p-4 bg-indigo-50/40 rounded-2xl border border-indigo-100/60 flex flex-col justify-between">
                         <div>
@@ -266,6 +267,38 @@ const WorkTimeCard: React.FC<WorkTimeCardProps> = ({
                                     })()}
                                 </span>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Add-on Feature Card (Weekly Attendance Race Toggle) */}
+                    <div className="p-4 bg-violet-50/40 rounded-2xl border border-violet-100/60 flex flex-col justify-between">
+                        <div>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 text-violet-700 mb-2">
+                                🏆 ฟังก์ชันเสริม (Add-on Feature)
+                            </span>
+                            <h5 className="font-bold text-sm text-gray-800 mb-1">ระบบสนามวิ่งแข่งเช็คอินรายวัน</h5>
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                เพิ่มความสนุกและลูกเล่นน่ารักๆ (Weekly Attendance Race) เพื่อกระตุ้นให้พนักงานตื่นเช้ามาลงเวลาเข้างาน
+                            </p>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-violet-100/40 flex items-center justify-between">
+                            <span className="text-xs font-bold text-violet-800">สถานะการใช้งาน:</span>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input 
+                                    id="toggle-attendance-race"
+                                    type="checkbox" 
+                                    className="sr-only peer"
+                                    checked={tempTimeConfig.enableAttendanceRace === 'true'}
+                                    onChange={e => setTempTimeConfig(prev => ({ 
+                                        ...prev, 
+                                        enableAttendanceRace: e.target.checked ? 'true' : 'false' 
+                                    }))}
+                                />
+                                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
+                                <span className="ml-2 text-xs font-bold text-gray-700">
+                                    {tempTimeConfig.enableAttendanceRace === 'true' ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                                </span>
+                            </label>
                         </div>
                     </div>
                 </div>

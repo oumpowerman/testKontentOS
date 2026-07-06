@@ -13,6 +13,7 @@ interface MultiDatePickerModalProps {
     initialStartDate?: Date;
     initialEndDate?: Date;
     minDate?: Date;
+    maxDate?: Date;
 }
 
 const THAI_MONTHS = [
@@ -28,7 +29,8 @@ const MultiDatePickerModal: React.FC<MultiDatePickerModalProps> = ({
     onConfirm,
     initialStartDate,
     initialEndDate,
-    minDate
+    minDate,
+    maxDate
 }) => {
     // Selection state
     const [rangeStart, setRangeStart] = useState<Date | null>(initialStartDate || null);
@@ -356,7 +358,8 @@ const MultiDatePickerModal: React.FC<MultiDatePickerModalProps> = ({
 
                                     // Check constraints if needed, none for now but keep clean
                                     const isTooEarly = minDate ? isBefore(startOfDate, startOfDay(minDate)) : false;
-                                    const isDisabled = isTooEarly;
+                                    const isTooLate = maxDate ? isBefore(startOfDay(maxDate), startOfDate) : false;
+                                    const isDisabled = isTooEarly || isTooLate;
 
                                     const dayInfo = getDayInfo(date);
 

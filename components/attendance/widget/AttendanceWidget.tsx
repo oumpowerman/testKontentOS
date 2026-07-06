@@ -20,7 +20,7 @@ interface AttendanceWidgetProps {
 const AttendanceWidget: React.FC<AttendanceWidgetProps> = ({ user, onNavigateToHistory }) => {
     // Hooks
     const { masterOptions } = useMasterData(); 
-    const { submitRequest, leaveUsage, requests } = useLeaveRequests(user);
+    const { submitRequest, leaveUsage, pendingUsage, requests } = useLeaveRequests(user);
 
     // UI State
     const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
@@ -103,6 +103,7 @@ const AttendanceWidget: React.FC<AttendanceWidgetProps> = ({ user, onNavigateToH
                 onSubmit={handleLeaveSubmit}
                 masterOptions={masterOptions}
                 leaveUsage={leaveUsage}
+                pendingUsage={pendingUsage}
                 requests={requests} 
             />
         </div>

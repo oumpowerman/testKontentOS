@@ -155,7 +155,7 @@ export const attendanceService = {
     /**
      * Updates an OT request status (APPROVED / REJECTED) and associated variables.
      */
-    async updateOtRequestStatus(
+     async updateOtRequestStatus(
         id: string,
         status: 'APPROVED' | 'REJECTED',
         updateFields: {
@@ -164,6 +164,8 @@ export const attendanceService = {
             approved_by: string;
             approved_at: string;
             rejection_reason?: string;
+            start_time?: string;
+            end_time?: string;
         }
     ) {
         const { data, error } = await supabase
@@ -176,7 +178,9 @@ export const attendanceService = {
                 computed_payout: updateFields.computed_payout,
                 approved_by: updateFields.approved_by,
                 approved_at: updateFields.approved_at,
-                rejection_reason: updateFields.rejection_reason
+                rejection_reason: updateFields.rejection_reason,
+                start_time: updateFields.start_time,
+                end_time: updateFields.end_time
             })
             .eq('id', id)
             .select()
@@ -208,5 +212,32 @@ export const attendanceService = {
             .single();
         if (error) throw error;
         return data;
+    },
+
+    /**
+     * Fetches standard leave history for a specific user.
+     */
+    async getUserLeaveHistory(userId: string): Promise<LeaveRequest[]> {
+        const { data, error } = await supabase
+            .from('leave_requests')
+            .select('*')
+            .eq('user_id', userId)
+            .order('start_date', { ascending: false });
+        
+        if (error) throw error;
+        
+        return (data || []).map((r: any) => ({
+            id: r.id,
+            userId: r.user_id,
+            type: r.type,
+            startDate: new Date(r.start_date),
+            endDate: new Date(r.end_date),
+            reason: r.reason,
+            attachmentUrl: r.attachment_url,
+            status: r.status as RequestStatus,
+            approverId: r.approver_id,
+            createdAt: new Date(r.created_at),
+            rejectionReason: r.rejection_reason
+        }));
     }
 };
