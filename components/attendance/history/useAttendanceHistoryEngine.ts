@@ -42,7 +42,7 @@ export const useAttendanceHistoryEngine = (userId: string, highlightedDate?: str
 
     const { getAttendanceLogs, isHistoryLoading: isFetching } = useAttendanceHistory(userId);
     const { allUsers } = useUserSession();
-    const { requests, submitRequest } = useLeaveRequests({ id: userId } as any);
+    const { requests, submitRequest, fetchRequestsForRange, isLoadingHistorical } = useLeaveRequests({ id: userId } as any);
 
     const targetUser = useMemo(() => allUsers.find(u => u.id === userId), [allUsers, userId]);
 
@@ -329,6 +329,8 @@ export const useAttendanceHistoryEngine = (userId: string, highlightedDate?: str
         totalPages,
         targetUser,
         myRequests,
+        fetchRequestsForRange,
+        isLoadingHistorical,
         handleFilterChange,
         resetFilters,
         viewProofUrl,

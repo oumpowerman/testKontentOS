@@ -14,6 +14,7 @@ interface AttendanceDetailCardViewProps {
     cleanNote: (note?: string) => string;
     formatTime: (time: any) => string;
     setPreviewImage: (url: string | null) => void;
+    isStreak?: boolean;
 }
 
 export const AttendanceDetailCardView: React.FC<AttendanceDetailCardViewProps> = ({
@@ -24,6 +25,7 @@ export const AttendanceDetailCardView: React.FC<AttendanceDetailCardViewProps> =
     cleanNote,
     formatTime,
     setPreviewImage,
+    isStreak,
 }) => {
     const getOtDetailsForDate = (dateStr: string, userId: string) => {
         if (!leaveRequests) return null;
@@ -99,8 +101,13 @@ export const AttendanceDetailCardView: React.FC<AttendanceDetailCardViewProps> =
                     >
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-xl bg-indigo-50/60 flex items-center justify-center border border-indigo-100/30">
-                                    <Calendar className="w-4 h-4 text-indigo-500" />
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-colors
+                                    ${isStreak 
+                                        ? 'bg-amber-50/70 border-amber-200/50' 
+                                        : 'bg-indigo-50/60 border-indigo-100/30'
+                                    }
+                                `}>
+                                    <Calendar className={`w-4 h-4 transition-colors ${isStreak ? 'text-amber-500' : 'text-indigo-500'}`} />
                                 </div>
                                 <span className="text-sm font-bold text-slate-700">
                                     {format(parseISO(log.date), 'd MMMM yyyy', { locale: th })}
@@ -120,7 +127,7 @@ export const AttendanceDetailCardView: React.FC<AttendanceDetailCardViewProps> =
                         <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
                             <div className="bg-slate-50/80 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-100">
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                                    <Clock className="w-3" /> Check In
+                                    <Clock className={`w-3 ${isStreak ? 'text-amber-500' : 'text-slate-400'}`} /> Check In
                                 </p>
                                 <p className="text-lg sm:text-xl font-bold text-slate-800 font-mono">
                                     {formatTime(log.checkInTime)}
@@ -128,7 +135,7 @@ export const AttendanceDetailCardView: React.FC<AttendanceDetailCardViewProps> =
                             </div>
                             <div className="bg-slate-50/80 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-100">
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                                    <Clock className="w-3" /> Check Out
+                                    <Clock className={`w-3 ${isStreak ? 'text-amber-500' : 'text-slate-400'}`} /> Check Out
                                 </p>
                                 <p className="text-lg sm:text-xl font-bold text-slate-800 font-mono">
                                     {formatTime(log.checkOutTime)}
@@ -157,9 +164,16 @@ export const AttendanceDetailCardView: React.FC<AttendanceDetailCardViewProps> =
                         )}
 
                         {noteText && (
-                            <div className="p-3 sm:p-4 bg-indigo-50/30 rounded-xl sm:rounded-2xl border border-indigo-100/50">
-                                <p className="text-xs text-indigo-600 font-medium leading-relaxed">
-                                    <span className="font-bold uppercase text-[9px] tracking-widest block mb-1 opacity-60">Note</span>
+                            <div className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-colors
+                                ${isStreak
+                                    ? 'bg-amber-50/20 border-amber-100/50 text-amber-700'
+                                    : 'bg-indigo-50/30 border-indigo-100/50 text-indigo-600'
+                                }
+                            `}>
+                                <p className="text-xs font-medium leading-relaxed">
+                                    <span className={`font-bold uppercase text-[9px] tracking-widest block mb-1 opacity-60 transition-colors
+                                        ${isStreak ? 'text-amber-500' : 'text-indigo-600'}
+                                    `}>Note</span>
                                     "{noteText}"
                                 </p>
                             </div>

@@ -17,15 +17,30 @@ import TimesheetTable from './TimesheetTable';
 import TimesheetDetailModal from './TimesheetDetailModal';
 import ExportSettingsModal from './ExportSettingsModal';
 import { useMasterDataContext } from '../../../context/MasterDataContext';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Check, X } from 'lucide-react';
 
 // --- Main Dashboard ---
 const AdminWeeklyTimesheet: React.FC<{ users: User[] }> = ({ users }) => {
     const { masterOptions } = useMasterDataContext();
     
+    // Toast state
+    const [exportToast, setExportToast] = useState<{ filename: string; id: string } | null>(null);
+
+    // Auto-dismiss Toast
+    useEffect(() => {
+        if (exportToast) {
+            const timer = setTimeout(() => {
+                setExportToast(null);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [exportToast]);
+
     // View States
     const [viewMode, setViewMode] = useState<'WEEK' | 'MONTH'>('WEEK');
     const [showExportSettings, setShowExportSettings] = useState(false);
+    const [isToolsExpanded, setIsToolsExpanded] = useState(false);
 
     const workConfig = useMemo(() => {
         const startTime = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'START_TIME')?.label || '10:00';
@@ -203,6 +218,8 @@ const AdminWeeklyTimesheet: React.FC<{ users: User[] }> = ({ users }) => {
                 showInactive={showInactive}
                 setShowInactive={setShowInactive}
                 onExportCSV={handleExportCSV}
+                isToolsExpanded={isToolsExpanded}
+                setIsToolsExpanded={setIsToolsExpanded}
             />
 
             <TimesheetTable 
@@ -230,17 +247,42 @@ const AdminWeeklyTimesheet: React.FC<{ users: User[] }> = ({ users }) => {
                         }}
                     />
                 )}
-                {showExportSettings && (
-                    <ExportSettingsModal 
-                        onClose={() => setShowExportSettings(false)}
-                        dateRange={dateRange}
-                        filteredAndGroupedUsers={filteredAndGroupedUsers}
-                        logs={logs}
-                        leaveRequests={leaveRequests}
-                        getEffectiveDayStatus={getEffectiveDayStatus}
-                        workConfig={workConfig}
-                        viewMode={viewMode}
-                    />
+                <ExportSettingsModal 
+                    isOpen={showExportSettings}
+                    onClose={() => setShowExportSettings(false)}
+                    dateRange={dateRange}
+                    filteredAndGroupedUsers={filteredAndGroupedUsers}
+                    logs={logs}
+                    leaveRequests={leaveRequests}
+                    getEffectiveDayStatus={getEffectiveDayStatus}
+                    workConfig={workConfig}
+                    viewMode={viewMode}
+                    onExportSuccess={(filename) => setExportToast({ filename, id: Date.now().toString() })}
+                />
+                {exportToast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                        transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                        className="fixed top-6 right-6 z-[250] bg-white/95 backdrop-blur-md border border-emerald-100 shadow-2xl rounded-2xl p-4 pr-12 max-w-sm w-full flex items-center gap-3.5"
+                    >
+                        <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center border border-emerald-100 shrink-0">
+                            <Check className="w-5 h-5 stroke-[2.5]" />
+                        </div>
+                        <div className="min-w-0 flex-1 text-left">
+                            <p className="text-xs font-bold text-slate-800">ดาวน์โหลดสำเร็จแล้ว! 📥</p>
+                            <p className="text-[10px] font-semibold text-slate-400 truncate mt-0.5" title={exportToast.filename}>
+                                {exportToast.filename}
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setExportToast(null)}
+                            className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>

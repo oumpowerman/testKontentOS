@@ -162,7 +162,8 @@ const mapOtRequest = (data: any) => ({
     rejectionReason: data.rejection_reason,
     baseSalaryAtTime: data.base_salary_at_time ? Number(data.base_salary_at_time) : undefined,
     computedPayout: Number(data.computed_payout || 0),
-    createdAt: new Date(data.created_at)
+    createdAt: new Date(data.created_at),
+    attachmentUrl: data.attachment_url
 });
 
 export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.ReactNode }> = ({ sessionUser, children }) => {
@@ -367,8 +368,24 @@ export const UserSessionProvider: React.FC<{ sessionUser: any, children: React.R
 
     // --- AUTH ACTIONS (From useAuth) ---
     const fetchProfile = async () => {
-        // Since we are realtime, we can just return the current state.
-        // If strict refetch is needed, we could do it here, but returning state is faster.
+        if (!sessionUser?.id) return currentUserProfile;
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', sessionUser.id)
+                .maybeSingle();
+            
+            if (error) throw error;
+            if (data) {
+                const updatedUser = mapProfileToUser(data);
+                setCurrentUserProfile(updatedUser);
+                setAllUsers(prev => prev.map(u => u.id === sessionUser.id ? updatedUser : u));
+                return updatedUser;
+            }
+        } catch (err) {
+            console.error('Error in fetchProfile:', err);
+        }
         return currentUserProfile;
     };
 

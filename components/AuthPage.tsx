@@ -345,10 +345,12 @@ const AuthPage: React.FC<AuthPageProps> = ({
         publicUrl = urlData.publicUrl;
       }
 
-      // Update customized user levels and details
+      // Upsert customized user levels and details to ensure profile creation even if database triggers are missing
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ 
+        .upsert({ 
+          id: userId,
+          email: email,
           full_name: fullNameCombined || name,
           first_name: firstName.trim(),
           last_name: lastName.trim(),
@@ -368,8 +370,7 @@ const AuthPage: React.FC<AuthPageProps> = ({
           available_points: 0,
           death_count: 0,
           emoji: selectedEmoji
-        })
-        .eq('id', userId);
+        });
 
       if (profileError) throw profileError;
 

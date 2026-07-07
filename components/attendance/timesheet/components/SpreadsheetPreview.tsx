@@ -68,7 +68,7 @@ const SpreadsheetPreview: React.FC<SpreadsheetPreviewProps> = ({
         <div className="flex flex-col space-y-4">
             {/* Title of preview */}
             <div className="flex items-center justify-between">
-                <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                     <Eye className="w-3.5 h-3.5 text-slate-400" /> ตัวอย่างไฟล์ที่จะได้รับ (Excel Simulation Live View)
                 </span>
                 <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
@@ -86,7 +86,7 @@ const SpreadsheetPreview: React.FC<SpreadsheetPreviewProps> = ({
                         <div className="w-3 h-3 rounded-full bg-red-400" />
                         <div className="w-3 h-3 rounded-full bg-yellow-400" />
                         <div className="w-3 h-3 rounded-full bg-green-400" />
-                        <span className="text-[11px] font-black text-slate-500 ml-2 font-mono">timesheet_export.xlsx</span>
+                        <span className="text-[11px] font-bold text-slate-500 ml-2 font-mono">timesheet_export.xlsx</span>
                     </div>
                     <div className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded font-mono font-bold select-none">
                         Sheet 1

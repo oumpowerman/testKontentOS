@@ -27,6 +27,7 @@ export const useAdminApprovals = (currentUser?: any, options: { enabled?: boolea
     const { processAction } = useGamification();
     const [rawRequests, setRawRequests] = useState<LeaveRequest[]>([]);
     const [isLoading, setIsLoading] = useState(enabled);
+    const [isLoadingHistorical, setIsLoadingHistorical] = useState(false);
     const { showToast } = useToast();
 
     const fetchAllRequests = async () => {
@@ -39,6 +40,38 @@ export const useAdminApprovals = (currentUser?: any, options: { enabled?: boolea
             console.error("Fetch all requests failed", err);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchRequestsForRange = async (start?: Date, end?: Date): Promise<LeaveRequest[]> => {
+        if (!enabled) return [];
+        setIsLoadingHistorical(true);
+        try {
+            const options: any = { all: true, isAdmin: true };
+            if (start) options.startDate = format(start, 'yyyy-MM-dd');
+            if (end) options.endDate = format(end, 'yyyy-MM-dd');
+            const data = await attendanceService.fetchCombinedRequests(undefined, options);
+            
+            // Map users if they aren't fully merged
+            return data.map(req => {
+                if (req.user) return req;
+                const user = allUsers.find(u => u.id === req.userId);
+                return {
+                    ...req,
+                    user: user ? {
+                        id: user.id,
+                        name: user.name,
+                        avatarUrl: user.avatarUrl,
+                        position: user.position
+                    } : undefined
+                };
+            });
+        } catch (err: any) {
+            console.error("Fetch requests for range failed", err);
+            showToast('ดึงข้อมูลประวัติย้อนหลังล้มเหลว', 'error');
+            return [];
+        } finally {
+            setIsLoadingHistorical(false);
         }
     };
 
@@ -67,7 +100,8 @@ export const useAdminApprovals = (currentUser?: any, options: { enabled?: boolea
             status: r.status as RequestStatus,
             createdAt: new Date(r.createdAt),
             rejectionReason: r.rejectionReason,
-            user: r.user
+            user: r.user,
+            attachmentUrl: r.attachmentUrl
         }));
 
         combinedRequests = [...combinedRequests, ...mappedOtRequests];
@@ -710,8 +744,10 @@ export const useAdminApprovals = (currentUser?: any, options: { enabled?: boolea
     return {
         requests,
         isLoading,
+        isLoadingHistorical,
         approveRequest,
         rejectRequest,
-        fetchAllRequests
+        fetchAllRequests,
+        fetchRequestsForRange
     };
 };

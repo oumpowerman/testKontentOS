@@ -7,7 +7,7 @@ export const attendanceService = {
      */
     async fetchCombinedRequests(
         userId?: string,
-        options: { all?: boolean; isAdmin?: boolean } = {}
+        options: { all?: boolean; isAdmin?: boolean; startDate?: string; endDate?: string } = {}
     ): Promise<LeaveRequest[]> {
         let query = supabase
             .from('leave_requests')
@@ -19,6 +19,13 @@ export const attendanceService = {
         
         if (!options.all && userId) {
             query = query.eq('user_id', userId);
+        }
+
+        if (options.startDate) {
+            query = query.gte('start_date', options.startDate);
+        }
+        if (options.endDate) {
+            query = query.lte('start_date', options.endDate);
         }
 
         const { data: leaveData, error: leaveError } = await query;
@@ -47,13 +54,22 @@ export const attendanceService = {
         // Fetch dedicated OT requests
         let ots: LeaveRequest[] = [];
         if (options.all && options.isAdmin) {
-            const { data: otData, error: otError } = await supabase
+            let otQuery = supabase
                 .from('ot_requests')
                 .select(`
                     *,
                     profiles:profiles!ot_requests_user_id_fkey (id, full_name, avatar_url, position)
                 `)
                 .order('created_at', { ascending: false });
+
+            if (options.startDate) {
+                otQuery = otQuery.gte('date', options.startDate);
+            }
+            if (options.endDate) {
+                otQuery = otQuery.lte('date', options.endDate);
+            }
+
+            const { data: otData, error: otError } = await otQuery;
 
             if (otError) throw otError;
 
@@ -65,6 +81,7 @@ export const attendanceService = {
                     startDate: new Date(r.date + 'T' + r.start_time),
                     endDate: new Date(r.date + 'T' + r.end_time),
                     reason: `[OT:${r.duration_hours}hr] ${r.reason}`,
+                    attachmentUrl: r.attachment_url,
                     status: r.status as RequestStatus,
                     createdAt: new Date(r.created_at),
                     rejectionReason: r.rejection_reason,
@@ -77,11 +94,20 @@ export const attendanceService = {
                 }));
             }
         } else if (userId) {
-            const { data: otData, error: otError } = await supabase
+            let otQuery = supabase
                 .from('ot_requests')
                 .select('*')
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
+
+            if (options.startDate) {
+                otQuery = otQuery.gte('date', options.startDate);
+            }
+            if (options.endDate) {
+                otQuery = otQuery.lte('date', options.endDate);
+            }
+
+            const { data: otData, error: otError } = await otQuery;
 
             if (otError) throw otError;
 
@@ -93,6 +119,7 @@ export const attendanceService = {
                     startDate: new Date(r.date + 'T' + r.start_time),
                     endDate: new Date(r.date + 'T' + r.end_time),
                     reason: `[OT:${r.duration_hours}hr] ${r.reason}`,
+                    attachmentUrl: r.attachment_url,
                     status: r.status as RequestStatus,
                     createdAt: new Date(r.created_at),
                     rejectionReason: r.rejection_reason,
@@ -142,6 +169,7 @@ export const attendanceService = {
         computed_payout: number;
         base_salary_at_time: number;
         status: string;
+        attachment_url?: string | null;
     }) {
         const { data, error } = await supabase
             .from('ot_requests')

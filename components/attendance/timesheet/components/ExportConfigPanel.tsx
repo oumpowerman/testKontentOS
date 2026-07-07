@@ -181,7 +181,7 @@ const ExportConfigPanel: React.FC<ExportConfigPanelProps> = ({
                     <button 
                         type="button"
                         onClick={() => setHolidayFormat('text')}
-                        className={`py-2 rounded-lg text-[11px] font-black tracking-tight transition-all ${
+                        className={`py-2 rounded-lg text-[11px] font-bold tracking-tight transition-all ${
                             holidayFormat === 'text' 
                                 ? 'bg-white text-slate-800 shadow-sm' 
                                 : 'text-slate-500 hover:text-slate-700'
@@ -192,7 +192,7 @@ const ExportConfigPanel: React.FC<ExportConfigPanelProps> = ({
                     <button 
                         type="button"
                         onClick={() => setHolidayFormat('blank')}
-                        className={`py-2 rounded-lg text-[11px] font-black tracking-tight transition-all ${
+                        className={`py-2 rounded-lg text-[11px] font-bold tracking-tight transition-all ${
                             holidayFormat === 'blank' 
                                 ? 'bg-white text-slate-800 shadow-sm' 
                                 : 'text-slate-500 hover:text-slate-700'
@@ -209,7 +209,7 @@ const ExportConfigPanel: React.FC<ExportConfigPanelProps> = ({
                     <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
                 </div>
                 <div className="space-y-0.5">
-                    <h5 className="text-[11px] font-black text-emerald-800 uppercase tracking-wider">รองรับภาษาไทยใน Microsoft Excel 100%</h5>
+                    <h5 className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">รองรับภาษาไทยใน Microsoft Excel 100%</h5>
                     <p className="text-[10px] text-emerald-700/95 leading-relaxed">
                         เข้ารหัสแบบ UTF-8 BOM อัตโนมัติ ป้องกันปัญหาอักษรต่างดาวเมื่อเปิดไฟล์รายงานใน Excel ทุกรุ่น
                     </p>

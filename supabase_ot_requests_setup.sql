@@ -20,8 +20,10 @@ CREATE TABLE IF NOT EXISTS public.ot_requests (
     base_salary_at_time DECIMAL(10, 2),        -- บันทึกเงินเดือน ณ วันที่ทำรายการ (เพื่อไม่ให้สูญเสียประวัติเมื่อเงินเดือนขึ้น)
     computed_payout DECIMAL(10, 2) DEFAULT 0,  -- ยอดเงินค่า OT สรุปสุดท้ายที่ได้รับการอนุมัติ
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    
 );
 
+ALTER TABLE public.ot_requests ADD COLUMN IF NOT EXISTS attachment_url TEXT;
 -- 2. Enable Row Level Security (RLS)
 ALTER TABLE public.ot_requests ENABLE ROW LEVEL SECURITY;
 

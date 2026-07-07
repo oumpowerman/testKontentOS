@@ -24,6 +24,8 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ userId, highlight
         totalPages,
         targetUser,
         myRequests,
+        fetchRequestsForRange,
+        isLoadingHistorical,
         handleFilterChange,
         resetFilters,
         viewProofUrl,
@@ -52,7 +54,11 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ userId, highlight
                  <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-3 ml-1">
                      รายการคำขอ (Requests)
                  </h3>
-                 <MyRequestHistory requests={myRequests} />
+                 <MyRequestHistory 
+                     requests={myRequests} 
+                     fetchRequestsForRange={fetchRequestsForRange}
+                     isLoadingHistorical={isLoadingHistorical}
+                 />
             </div>
 
             {/* --- SECTION 2: ATTENDANCE LOGS (ประวัติเวลา) --- */}

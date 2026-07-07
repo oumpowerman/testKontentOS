@@ -77,7 +77,21 @@ const AttendanceDetailCards: React.FC<Props> = ({ logs, type, onClose }) => {
 
     const cleanNote = (note?: string) => {
         if (!note) return '';
-        return note.replace(/\[PROOF:.*?\]/, '').replace(/\[APPEAL_PENDING\]/, '').replace(/\[MANUAL_ENTRY\]/, '').trim();
+        
+        // 1. ดึงเฉพาะข้อความจาก [REASON:...] ออกมาแสดงถ้ามี
+        const reasonMatch = note.match(/\[REASON:(.*?)\]/);
+        if (reasonMatch && reasonMatch[1]) {
+            return reasonMatch[1].trim();
+        }
+        
+        // 2. ดึงข้อความจาก [ADMIN FIXED:...] มาทำให้อ่านง่าย
+        const adminMatch = note.match(/\[ADMIN FIXED:(.*?)\]/);
+        if (adminMatch && adminMatch[1]) {
+            return `แก้ไขโดยแอดมิน: ${adminMatch[1].trim()}`;
+        }
+
+        // 3. ถ้าไม่มีโครงสร้างแท็กเฉพาะทางเลย ให้ล้างวงเล็บ [] ทุกชนิดทิ้งทั้งหมด เพื่อความปลอดภัย
+        return note.replace(/\[.*?\]/g, '').trim();
     };
 
     const formatTime = (time: any) => {
@@ -118,7 +132,7 @@ const AttendanceDetailCards: React.FC<Props> = ({ logs, type, onClose }) => {
     };
 
     return createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-2 sm:p-6 shadow-[0_0_50px_rgba(0,0,0,0.3)]">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-0 sm:p-6 shadow-[0_0_50px_rgba(0,0,0,0.3)]">
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -131,54 +145,94 @@ const AttendanceDetailCards: React.FC<Props> = ({ logs, type, onClose }) => {
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="relative w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] bg-slate-50 rounded-2xl sm:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col border border-white/20"
+                className={`relative w-full h-full sm:h-auto sm:max-h-[90vh] max-w-4xl rounded-none sm:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col border transition-all duration-500
+                    ${type === 'STREAK'
+                        ? 'bg-white border-amber-200 shadow-[0_0_40px_rgba(245,158,11,0.12)] ring-1 ring-amber-100/40'
+                        : 'bg-slate-50 border-white/20'
+                    }
+                `}
             >
-                {/* Header */}
-                <div className="p-4 sm:p-6 bg-white border-b border-slate-100 flex flex-col sm:flex-row gap-4 sm:items-center justify-between sticky top-0 z-10">
-                    <div className="flex items-center gap-3 sm:gap-4">
-                        <div className="p-2 sm:p-3 bg-slate-50 rounded-xl sm:rounded-2xl shadow-inner border border-slate-100">
-                            {getIcon()}
+                        {/* Header */}
+                <div className={`p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row gap-4 sm:items-center justify-between sticky top-0 z-10 transition-colors
+                    ${type === 'STREAK' ? 'bg-white/85 backdrop-blur-md' : 'bg-white'}
+                `}>
+                    {/* Top Row / Main Title Area */}
+                    <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-4 w-full sm:w-auto">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                            <div className={`p-2 sm:p-3 rounded-xl sm:rounded-2xl shadow-inner border transition-colors
+                                ${type === 'STREAK' ? 'bg-amber-50/50 border-amber-100/40' : 'bg-slate-50 border-slate-100'}
+                            `}>
+                                {getIcon()}
+                            </div>
+                            <div>
+                                <h4 className="text-base sm:text-xl font-bold text-slate-800 tracking-tight leading-none">{getTitle()}</h4>
+                                <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Attendance Details</p>
+                            </div>
                         </div>
-                        <div>
-                            <h4 className="text-base sm:text-xl font-bold text-slate-800 tracking-tight leading-none">{getTitle()}</h4>
-                            <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Attendance Details</p>
-                        </div>
+
+                        {/* Mobile Only Close Button */}
+                        <button
+                            onClick={onClose}
+                            className="sm:hidden p-2 bg-slate-100/80 hover:bg-rose-50 text-slate-500 hover:text-rose-500 rounded-xl transition-all active:scale-90 shadow-sm"
+                        >
+                            <X className="w-4.5 h-4.5" />
+                        </button>
                     </div>
                     
-                    {/* View Switcher & Close button */}
-                    <div className="flex items-center gap-2 sm:gap-3 justify-end w-full sm:w-auto">
-                        <div className="bg-slate-100 p-1 rounded-xl sm:rounded-2xl flex items-center">
+                    {/* View Switcher & Desktop Close button */}
+                    <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                        {/* Segmented Switcher */}
+                        <div className="relative bg-slate-100/95 p-1 rounded-xl sm:rounded-2xl flex items-center w-full sm:w-auto shadow-sm sm:shadow-none">
                             <button
                                 onClick={() => setViewMode('card')}
-                                className={`flex items-center gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-xs font-bold transition-all ${
+                                className={`relative flex-1 sm:flex-none flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-xs font-bold transition-colors z-10 outline-none ${
                                     viewMode === 'card'
-                                        ? 'bg-white text-slate-800 shadow-sm'
+                                        ? 'text-slate-800'
                                         : 'text-slate-400 hover:text-slate-600'
                                 }`}
                                 title="แสดงแบบการ์ด"
                             >
-                                <LayoutGrid className="w-3.5 h-3.5" />
-                                <span className="hidden xs:inline">การ์ด</span>
+                                {viewMode === 'card' && (
+                                    <motion.div
+                                        layoutId="activeDetailTab"
+                                        className="absolute inset-0 bg-white rounded-lg sm:rounded-xl shadow-sm z-0"
+                                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                                    />
+                                )}
+                                <span className="relative z-10 flex items-center gap-1.5">
+                                    <LayoutGrid className="w-3.5 h-3.5" />
+                                    <span>การ์ด</span>
+                                </span>
                             </button>
                             <button
                                 onClick={() => setViewMode('table')}
-                                className={`flex items-center gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-xs font-bold transition-all ${
+                                className={`relative flex-1 sm:flex-none flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-xs font-bold transition-colors z-10 outline-none ${
                                     viewMode === 'table'
-                                        ? 'bg-white text-slate-800 shadow-sm'
+                                        ? 'text-slate-800'
                                         : 'text-slate-400 hover:text-slate-600'
                                 }`}
                                 title="แสดงแบบตาราง"
                             >
-                                <Table className="w-3.5 h-3.5" />
-                                <span className="hidden xs:inline">ตาราง</span>
+                                {viewMode === 'table' && (
+                                    <motion.div
+                                        layoutId="activeDetailTab"
+                                        className="absolute inset-0 bg-white rounded-lg sm:rounded-xl shadow-sm z-0"
+                                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                                    />
+                                )}
+                                <span className="relative z-10 flex items-center gap-1.5">
+                                    <Table className="w-3.5 h-3.5" />
+                                    <span>ตาราง</span>
+                                </span>
                             </button>
                         </div>
 
-                        <button 
+                        {/* Desktop Only Close Button */}
+                        <button
                             onClick={onClose}
-                            className="p-2.5 sm:p-3 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-xl sm:rounded-2xl transition-all active:scale-90"
+                            className="hidden sm:block p-3 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-2xl transition-all active:scale-90"
                         >
-                            <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                            <X className="w-5 h-5" />
                         </button>
                     </div>
                 </div>
@@ -195,6 +249,7 @@ const AttendanceDetailCards: React.FC<Props> = ({ logs, type, onClose }) => {
                                 cleanNote={cleanNote}
                                 formatTime={formatTime}
                                 setPreviewImage={setPreviewImage}
+                                isStreak={type === 'STREAK'}
                             />
                         ) : (
                             <AttendanceDetailCardView 
@@ -205,6 +260,7 @@ const AttendanceDetailCards: React.FC<Props> = ({ logs, type, onClose }) => {
                                 cleanNote={cleanNote}
                                 formatTime={formatTime}
                                 setPreviewImage={setPreviewImage}
+                                isStreak={type === 'STREAK'}
                             />
                         )
                     ) : (

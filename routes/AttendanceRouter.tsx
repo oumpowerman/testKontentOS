@@ -40,9 +40,11 @@ const AttendanceRouter: React.FC<AttendanceRouterProps> = ({ currentUser, users 
         const opt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'ENABLE_ATTENDANCE_RACE');
         return opt ? opt.label === 'true' : true;
     }, [masterOptions]);
+
     // Lift state up: Fetch all requests here so we can pass actions to child
     // If Admin, fetch all requests for the approval list
-    const { requests, leaveUsage, isLoading: isRequestsLoading, approveRequest, rejectRequest } = useLeaveRequests(
+    const { requests, leaveUsage, isLoading: isRequestsLoading, isLoadingHistorical,approveRequest, rejectRequest,fetchRequestsForRange} = useLeaveRequests(
+        
         currentUser, 
         { all: currentUser.role === 'ADMIN' }
     );
@@ -238,6 +240,8 @@ const AttendanceRouter: React.FC<AttendanceRouterProps> = ({ currentUser, users 
                                 <LeaveApprovalList 
                                     requests={requests}
                                     isLoading={isRequestsLoading}
+                                    isLoadingHistorical={isLoadingHistorical}
+                                    fetchRequestsForRange={fetchRequestsForRange}
                                     onApprove={approveRequest}
                                     onReject={rejectRequest}
                                 />

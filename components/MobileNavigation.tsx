@@ -16,6 +16,11 @@ import { useWorkboxContext } from '../context/WorkboxContext';
 import SidebarBadge from './SidebarBadge';
 import CommandPalette from '../components/ui/CommandPalette';
 import { useMasterDataContext } from '../context/MasterDataContext';
+import SkinManager from './dashboard/member/welcome-header/SkinManager';
+import { MOBILE_SKIN_THEMES } from './navigation/MobileSkinThemes';
+import MobileUserHeader from './navigation/MobileUserHeader';
+import MobileNavItem from './navigation/MobileNavItem';
+
 
 interface MobileNavigationProps {
     currentUser: User;
@@ -259,6 +264,9 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
     const nextLevelXP = currentUser.level * 1000;
     const progressPercent = Math.min(((currentUser.xp % 1000) / 1000) * 100, 100);
 
+    const skinId = (currentUser as any).equippedFrameId || 'default';
+    const activeSkinTheme = MOBILE_SKIN_THEMES[skinId] || MOBILE_SKIN_THEMES['default'];
+
     const getStatusColor = (status: string) => {
         switch(status) {
             case 'ONLINE': return 'bg-green-500';
@@ -347,65 +355,18 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                     >
                         
                         {/* Header: User Profile & Stats */}
-                    <div className="bg-slate-900 text-white p-4 pb-6 min-[375px]:p-6 min-[375px]:pb-8 rounded-b-[2.5rem] min-[375px]:rounded-b-[3rem] shadow-2xl relative overflow-hidden shrink-0">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/20 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
+                        <MobileUserHeader
+                            currentUser={currentUser}
+                            isFullscreen={isFullscreen}
+                            isIOS={isIOS}
+                            toggleFullScreen={toggleFullScreen}
+                            onClose={() => setIsMenuOpen(false)}
+                            onEditProfile={onEditProfile}
+                            activeSkinTheme={activeSkinTheme}
+                            progressPercent={progressPercent}
+                            getStatusColor={getStatusColor}
+                        />
 
-                        <div className="relative z-10">
-                            <div className="flex justify-between items-start mb-4 min-[375px]:mb-6">
-                                <div className="flex items-center gap-3 min-[375px]:gap-4 active:opacity-80 transition-opacity min-w-0" onClick={onEditProfile}>
-                                    <div className="relative">
-                                        <img src={currentUser.avatarUrl} className="w-11 h-11 min-[375px]:w-14 min-[375px]:h-14 rounded-full border-2 border-white/20 shadow-md object-cover flex-shrink-0" />
-                                        <div className={`absolute -bottom-1 -right-1 ${getStatusColor(currentUser.workStatus || 'ONLINE')} w-3.5 h-3.5 min-[375px]:w-4 min-[375px]:h-4 rounded-full border-2 border-slate-900`}></div>
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h2 className="text-base min-[375px]:text-xl font-black tracking-tight truncate max-w-[110px] min-[360px]:max-w-[140px] min-[400px]:max-w-[180px] min-[500px]:max-w-none">{currentUser.name}</h2>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <span className="text-[10px] min-[375px]:text-xs text-slate-300 font-bold bg-white/10 px-2 py-0.5 rounded-lg backdrop-blur-sm border border-white/5 truncate">
-                                                {currentUser.position}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-1.5 min-[375px]:gap-2 ml-2 flex-shrink-0">
-                                    <button 
-                                        onClick={toggleFullScreen}
-                                        className={`p-2 rounded-full transition-colors text-white/70 hover:text-white ${isIOS ? 'bg-white/5 opacity-30 cursor-not-allowed' : 'bg-white/10'}`}
-                                    >
-                                        {isFullscreen ? <Minimize2 className="w-4 h-4 min-[375px]:w-5 min-[375px]:h-5" /> : <Maximize2 className="w-4 h-4 min-[375px]:w-5 min-[375px]:h-5" />}
-                                    </button>
-                                    <button onClick={() => setIsMenuOpen(false)} className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-white/70 hover:text-white">
-                                        <X className="w-4 h-4 min-[375px]:w-5 min-[375px]:h-5" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Mini Stats Bar */}
-                            <div className="flex gap-2.5 min-[375px]:gap-3">
-                                <div className="flex-1 bg-white/10 rounded-2xl p-2 min-[375px]:p-3 backdrop-blur-md border border-white/5 shadow-inner">
-                                    <div className="flex justify-between items-center text-[9px] min-[375px]:text-[10px] font-bold text-slate-300 mb-1">
-                                        <span className="flex items-center"><Heart className={`w-3 h-3 mr-1 ${currentUser.hp <= 0 ? 'text-red-600 animate-pulse' : 'text-red-400'} fill-current`}/> HP</span>
-                                        <span className={currentUser.hp < 0 ? 'text-red-400 font-black' : ''}>{currentUser.hp}/{currentUser.maxHp}</span>
-                                    </div>
-                                    <div className="h-1 text-slate-800 bg-slate-800 rounded-full overflow-hidden">
-                                        <div 
-                                            className={`h-full transition-all duration-500 ${currentUser.hp <= 0 ? 'bg-red-700' : 'bg-red-500'}`} 
-                                            style={{ width: `${Math.max(0, Math.min(100, (currentUser.hp / (currentUser.maxHp || 100)) * 100))}%` }}
-                                        ></div>
-                                    </div>
-                                </div>
-                                <div className="flex-1 bg-white/10 rounded-2xl p-2 min-[375px]:p-3 backdrop-blur-md border border-white/5 shadow-inner">
-                                    <div className="flex justify-between items-center text-[9px] min-[375px]:text-[10px] font-bold text-slate-300 mb-1">
-                                        <span className="flex items-center"><Trophy className="w-3 h-3 mr-1 text-yellow-400 fill-yellow-400"/> Lv.{currentUser.level}</span>
-                                        <span>{progressPercent.toFixed(0)}%</span>
-                                    </div>
-                                    <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
-                                        <div className="h-full bg-yellow-400 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }}></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     {/* Main Content Area (Swipable Panels) */}
                     <div className="flex-1 overflow-hidden relative" ref={containerRef} style={{ touchAction: 'pan-y' }}>
@@ -500,33 +461,18 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                                                     if (group.id === 'ADMIN') color = 'bg-slate-600';
 
                                                     const isActive = currentView === item.view;
-                                                    const Icon = item.icon;
 
                                                     return (
-                                                        <button
+                                                        <MobileNavItem
                                                             key={item.view}
+                                                            item={item}
+                                                            isActive={isActive}
+                                                            isDarkTheme={isDarkTheme}
+                                                            color={color}
+                                                            currentUser={currentUser}
+                                                            unreadChatCount={unreadChatCount}
                                                             onClick={() => handleNavigateAndClose(item.view)}
-                                                            className={`
-                                                                flex flex-col items-center justify-center p-1.5 min-[360px]:p-2 rounded-2xl border transition-all relative group active:scale-95 h-18 min-[360px]:h-20
-                                                                ${isActive 
-                                                                    ? isDarkTheme ? 'bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-900/40' : 'bg-indigo-50 border-indigo-200 shadow-sm' 
-                                                                    : isDarkTheme ? 'bg-white/5 border-white/5 hover:border-white/10' : 'bg-white border-gray-100 hover:border-indigo-100 hover:shadow-md'}
-                                                            `}
-                                                        >
-                                                            <div className={`p-1.5 min-[360px]:p-2 rounded-xl mb-1 min-[360px]:mb-1.5 transition-colors ${isActive ? 'bg-white text-indigo-600 shadow-sm' : `${color} bg-opacity-10`}`}>
-                                                                <Icon className={`w-5 h-5 min-[360px]:w-5 min-[360px]:h-5 ${isActive ? 'text-indigo-600' : color.replace('bg-', 'text-').replace('/10', '')}`} />
-                                                            </div>
-                                                            <span className={`text-[9px] min-[360px]:text-[10px] font-bold text-center leading-tight truncate w-full ${isActive ? isDarkTheme ? 'text-white' : 'text-indigo-700' : isDarkTheme ? 'text-slate-400' : 'text-gray-500'}`}>{item.label}</span>
-                                                            
-                                                            {/* Real-time Badge */}
-                                                            <div className="absolute top-1 right-1 min-[360px]:top-1.5 min-[360px]:right-1.5">
-                                                                <SidebarBadge 
-                                                                    view={item.view} 
-                                                                    currentUser={currentUser} 
-                                                                    count={item.view === 'CHAT' ? unreadChatCount : undefined}
-                                                                />
-                                                            </div>
-                                                        </button>
+                                                        />
                                                     )
                                                 })}
                                             </div>

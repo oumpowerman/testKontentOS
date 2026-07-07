@@ -25,6 +25,8 @@ import { ShootQueueProvider } from './context/ShootQueueContext';
 import { StorageProvider } from './context/StorageContext';
 import { GlobalRealtimeSync } from './components/GlobalRealtimeSync';
 import { ScreenSessionLimiter } from './components/ScreenSessionLimiter';
+import { LineUserIdLinker } from './components/LineUserIdLinker';
+import { LinePendingBanner } from './components/LinePendingBanner';
 import PWAReloadPrompt from './components/PWAReloadPrompt';
 import { Loader2 } from 'lucide-react';
 
@@ -39,6 +41,13 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  // --- ROUTING CHECK: LINE Webhook pending user ID ---
+  const queryParams = new URLSearchParams(window.location.search);
+  const lineUserIdParam = queryParams.get('line_user_id');
+  if (lineUserIdParam) {
+    sessionStorage.setItem('pending_line_user_id', lineUserIdParam.trim());
+  }
+
   // --- ROUTING CHECK: Magic Link (Script Share) ---
   const path = window.location.pathname;
   if (path.startsWith('/s/')) {
@@ -214,6 +223,7 @@ function App() {
   return (
     <>
       <PWAReloadPrompt />
+      {!session && <LinePendingBanner />}
       <AnimatePresence mode="wait">
         {content}
       </AnimatePresence>
@@ -268,6 +278,7 @@ function AuthenticatedAppInner({ user }: { user: any }) {
                     <TaskProvider>
                       <ShootQueueProvider>
                         <GlobalRealtimeSync />
+                        <LineUserIdLinker />
                         <ScreenSessionLimiter user={user} />
                         <AppRouter user={user} />
                       </ShootQueueProvider>

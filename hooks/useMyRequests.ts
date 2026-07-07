@@ -23,6 +23,7 @@ export const useMyRequests = (currentUser?: any, options: { enabled?: boolean } 
     const { annualHolidays, calendarExceptions } = useMasterData();
     const [rawRequests, setRawRequests] = useState<LeaveRequest[]>([]);
     const [isLoading, setIsLoading] = useState(enabled);
+    const [isLoadingHistorical, setIsLoadingHistorical] = useState(false);
     const { showToast } = useToast();
     const { uploadFileToDrive, isReady: isDriveReady } = useGoogleDrive();
 
@@ -218,6 +219,43 @@ export const useMyRequests = (currentUser?: any, options: { enabled?: boolean } 
                     return false;
                 }
 
+                // Upload attachment specifically for OT if provided
+                let otAttachmentUrl: string | null = null;
+                if (file) {
+                    let driveSuccess = false;
+                    if (isDriveReady) {
+                        try {
+                            showToast('กำลังอัปโหลดไปที่ Google Drive...', 'info');
+                            const currentYear = format(new Date(), 'yyyy');
+                            const currentMonth = format(new Date(), 'MM');
+                            const driveResult = await uploadFileToDrive(file, ['Juijui_Assets', 'Attendance', 'Leaves', currentYear, currentMonth, currentUser.name || 'Unknown']);
+                            otAttachmentUrl = driveResult.thumbnailUrl || driveResult.url;
+                            driveSuccess = true;
+                        } catch (driveErr: any) {
+                            console.warn("Drive upload failed, falling back to Supabase", driveErr);
+                        }
+                    }
+
+                    if (!driveSuccess) {
+                        try {
+                            showToast('กำลังอัปโหลดไปที่ Storage สำรอง...', 'info');
+                            const fileExt = file.name.split('.').pop();
+                            const fileName = `${currentUser.id}_${Date.now()}.${fileExt}`;
+                            const { error: uploadErr } = await supabase.storage
+                                .from('chat-files')
+                                .upload(`proofs/${fileName}`, file);
+
+                            if (uploadErr) throw uploadErr;
+
+                            const { data } = supabase.storage.from('chat-files').getPublicUrl(`proofs/${fileName}`);
+                            otAttachmentUrl = data.publicUrl;
+                        } catch (supabaseErr: any) {
+                            console.error("Supabase upload failed", supabaseErr);
+                            throw new Error("ไม่สามารถอัปโหลดไฟล์ได้ทั้ง Google Drive และ Supabase");
+                        }
+                    }
+                }
+
                 const baseSalary = currentUser.baseSalary || 0;
                 const { type: otType, multiplier } = calculateOtMultiplier(startDate, annualHolidays, calendarExceptions);
                 const estimatedPayout = calculateEstimatedPayout(baseSalary, otHours, multiplier);
@@ -232,7 +270,8 @@ export const useMyRequests = (currentUser?: any, options: { enabled?: boolean } 
                     type: otType,
                     status: 'PENDING',
                     base_salary_at_time: baseSalary,
-                    computed_payout: estimatedPayout
+                    computed_payout: estimatedPayout,
+                    attachment_url: otAttachmentUrl
                 });
 
                 const msg = `📢 **${currentUser.name}** ส่งคำขอ OT (${otHours} ชม.) \n📅 ${format(startDate, 'd MMM')} \n📝: ${cleanReason}`;
@@ -344,12 +383,32 @@ export const useMyRequests = (currentUser?: any, options: { enabled?: boolean } 
         }
     };
 
+    const fetchRequestsForRange = async (start?: Date, end?: Date): Promise<LeaveRequest[]> => {
+        if (!currentUser?.id) return [];
+        setIsLoadingHistorical(true);
+        try {
+            const options: any = { all: false };
+            if (start) options.startDate = format(start, 'yyyy-MM-dd');
+            if (end) options.endDate = format(end, 'yyyy-MM-dd');
+            const data = await attendanceService.fetchCombinedRequests(currentUser.id, options);
+            return data;
+        } catch (err) {
+            console.error("Fetch requests for range failed", err);
+            showToast('ดึงข้อมูลประวัติย้อนหลังล้มเหลว', 'error');
+            return [];
+        } finally {
+            setIsLoadingHistorical(false);
+        }
+    };
+
     return {
         requests,
         leaveUsage,
         pendingUsage,
         isLoading,
+        isLoadingHistorical,
         submitRequest,
-        fetchMyRequests
+        fetchMyRequests,
+        fetchRequestsForRange
     };
 };

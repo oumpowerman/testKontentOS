@@ -311,4 +311,6 @@ export const generateAndDownloadCSV = (
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    
+    return filename;
 };

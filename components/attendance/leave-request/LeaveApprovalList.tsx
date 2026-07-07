@@ -1,18 +1,24 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle2, XCircle, FileText, Calendar, ExternalLink, Clock, Briefcase, User, Info, ChevronDown, Filter, AlertTriangle, MapPin, Moon } from 'lucide-react';
-import { format } from 'date-fns';
+import { FileText, XCircle } from 'lucide-react';
 import { LeaveRequest } from '../../../types/attendance';
 import { useGlobalDialog } from '../../../context/GlobalDialogContext';
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
-import { getWorkingDaysDifference } from '../../../lib/attendanceUtils';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useMasterData } from '../../../hooks/useMasterData';
 import { RequestDetailModal } from './RequestDetailModal';
+import MultiDatePickerModal from '../../ui/MultiDatePickerModal';
+
+// Modularized Components
+import { ApprovalFilterBar } from './approval/ApprovalFilterBar';
+import { ApprovalCategorySelector } from './approval/ApprovalCategorySelector';
+import { ApprovalRequestCard } from './approval/ApprovalRequestCard';
+import { ApprovalPagination } from './approval/ApprovalPagination';
 
 interface LeaveApprovalListProps {
     requests: LeaveRequest[];
     isLoading: boolean;
+    isLoadingHistorical?: boolean;
+    fetchRequestsForRange?: (start?: Date, end?: Date) => Promise<LeaveRequest[]>;
     onApprove: (
         req: LeaveRequest, 
         customOtHours?: number, 
@@ -25,189 +31,193 @@ interface LeaveApprovalListProps {
 type HistoryFilter = 'ALL' | 'APPROVED' | 'REJECTED';
 type RequestCategory = 'ALL' | 'LEAVE' | 'LATE_FORGOT' | 'OT';
 
-interface ParsedReason {
-    cleanReason: string;
-    isLateSubmission: boolean;
-    isLocationMismatch: boolean;
-    forgotCheckoutPenalty: boolean;
-    time: string | null;
-    otHours: string | null;
-}
-
-const parseReason = (reason: string): ParsedReason => {
-    let text = reason || '';
-    
-    // Check for [LATE_SUBMISSION]
-    const isLateSubmission = text.includes('[LATE_SUBMISSION]');
-    text = text.replace(/\[LATE_SUBMISSION\]/g, '');
-    
-    // Check for (Location Mismatch)
-    const isLocationMismatch = text.includes('(Location Mismatch)');
-    text = text.replace(/\(Location Mismatch\)/g, '');
-    
-    // Check for forgotten checkout
-    const forgotCheckoutPenalty = text.includes('Penalized for forgotten checkout') || text.includes('forgotten checkout') || text.includes('ลืมเช็คเอาท์');
-    text = text.replace(/\[SYSTEM\]\s*Penalized for forgotten checkout/g, '');
-    text = text.replace(/Penalized for forgotten checkout/g, '');
-    text = text.replace(/\|/g, ''); // Clear any pipes
-    
-    // Extract [TIME:XX:XX]
-    const timeMatch = text.match(/\[TIME:(\d{2}:\d{2})\]/);
-    let time: string | null = null;
-    if (timeMatch) {
-        time = timeMatch[1];
-        text = text.replace(/\[TIME:\d{2}:\d{2}\]/g, '');
-    }
-
-    // Extract [OT:HH:MM-HH:MM]
-    const otRangeMatch = text.match(/\[OT:(\d{2}:\d{2}-\d{2}:\d{2})\]/);
-    if (otRangeMatch) {
-        time = otRangeMatch[1];
-    }
-
-    // Extract OT hours: from either (Xhr) or [OT:Xhr]
-    const otHoursMatch1 = text.match(/\(([\d\.]+)hr\)/);
-    const otHoursMatch2 = text.match(/\[OT:([\d\.]+)hr\]/);
-    let otHours: string | null = null;
-    if (otHoursMatch1) {
-        otHours = otHoursMatch1[1];
-    } else if (otHoursMatch2) {
-        otHours = otHoursMatch2[1];
-    }
-
-    // Cleanup all OT markup tags completely
-    text = text.replace(/\[OT:\d{2}:\d{2}-\d{2}:\d{2}\]/g, '');
-    text = text.replace(/\([\d\.]+hr\)/g, '');
-    text = text.replace(/\[OT_MINUTES:\d+\]/g, '');
-    text = text.replace(/\[OT:[\d\.]+hr\]/g, '');
-
-    text = text.trim();
-    return {
-        cleanReason: text,
-        isLateSubmission,
-        isLocationMismatch,
-        forgotCheckoutPenalty,
-        time,
-        otHours
-    };
-};
-
-interface CounterProps {
-    value: number;
-}
-
-const Counter: React.FC<CounterProps> = ({ value }) => {
-    const count = useMotionValue(0);
-    const rounded = useTransform(count, (latest) => Math.round(latest));
-
-    useEffect(() => {
-        const controls = animate(count, value, { duration: 0.8, ease: "easeOut" });
-        return controls.stop;
-    }, [value, count]);
-
-    return <motion.span>{rounded}</motion.span>;
-};
-
-const getCardStyle = (type: string) => {
-    const styles: Record<string, { bg: string; border: string; accent: string }> = {
-        OVERTIME: { 
-            bg: 'bg-indigo-50 hover:bg-indigo-100/40', 
-            border: 'border-indigo-100 hover:border-indigo-200/80', 
-            accent: 'bg-indigo-500' 
-        },
-        WFH: { 
-            bg: 'bg-sky-50 hover:bg-sky-100/40', 
-            border: 'border-sky-100 hover:border-sky-200/80', 
-            accent: 'bg-sky-500' 
-        },
-        SICK: { 
-            bg: 'bg-rose-50 hover:bg-rose-100/40', 
-            border: 'border-rose-100 hover:border-rose-200/80', 
-            accent: 'bg-rose-500' 
-        },
-        VACATION: { 
-            bg: 'bg-emerald-50 hover:bg-emerald-100/40', 
-            border: 'border-emerald-100 hover:border-emerald-200/80', 
-            accent: 'bg-emerald-500' 
-        },
-        PERSONAL: { 
-            bg: 'bg-slate-50 hover:bg-slate-100/40', 
-            border: 'border-slate-100 hover:border-slate-200/80', 
-            accent: 'bg-slate-500' 
-        },
-        EMERGENCY: { 
-            bg: 'bg-amber-50 hover:bg-amber-100/40', 
-            border: 'border-amber-100 hover:border-amber-200/80', 
-            accent: 'bg-amber-500' 
-        },
-        LATE_ENTRY: { 
-            bg: 'bg-violet-50 hover:bg-violet-100/40', 
-            border: 'border-violet-100 hover:border-violet-200/80', 
-            accent: 'bg-violet-500' 
-        },
-        FORGOT_CHECKIN: { 
-            bg: 'bg-amber-50 hover:bg-amber-100/40', 
-            border: 'border-amber-100 hover:border-amber-200/80', 
-            accent: 'bg-amber-500' 
-        },
-        FORGOT_CHECKOUT: { 
-            bg: 'bg-amber-50 hover:bg-amber-100/40', 
-            border: 'border-amber-100 hover:border-amber-200/80', 
-            accent: 'bg-amber-500' 
-        },
-        FORGOT_BOTH: { 
-            bg: 'bg-amber-50 hover:bg-amber-100/40', 
-            border: 'border-amber-100 hover:border-amber-200/80', 
-            accent: 'bg-amber-500' 
-        }
-    };
-
-    return styles[type] || { bg: 'bg-white', border: 'border-gray-100', accent: 'bg-orange-400' };
-};
-
 const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({ 
-    requests, isLoading, onApprove, onReject 
+    requests, 
+    isLoading, 
+    isLoadingHistorical = false, 
+    fetchRequestsForRange, 
+    onApprove, 
+    onReject 
 }) => {
     const { showAlert, showConfirm } = useGlobalDialog();
     const { annualHolidays, calendarExceptions } = useMasterData();
     const [filterStatus, setFilterStatus] = useState<'PENDING' | 'HISTORY'>('PENDING');
     const [historySubFilter, setHistorySubFilter] = useState<HistoryFilter>('ALL');
-    const [displayLimit, setDisplayLimit] = useState(10);
     
-    // New State for Rejection Modal
+    // State for Rejection Modal
     const [rejectingId, setRejectingId] = useState<string | null>(null);
     const [rejectionReason, setRejectionReason] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    // New State for Request Detail Modal
+    // State for Request Detail Modal
     const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
 
     const [activeCategory, setActiveCategory] = useState<RequestCategory>('ALL');
+
+    // Date/Month Filtering State
+    const today = useMemo(() => new Date(), []);
+    const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
+    const [selectedYear, setSelectedYear] = useState(today.getFullYear());
+    const [isMonthFilterEnabled, setIsMonthFilterEnabled] = useState(true);
+
+    // Custom Date Range state
+    const [isCustomRangeEnabled, setIsCustomRangeEnabled] = useState(false);
+    const [customRange, setCustomRange] = useState<{ start: Date; end: Date } | null>(null);
+    const [customRangeRequests, setCustomRangeRequests] = useState<LeaveRequest[]>([]);
+    const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+    const [isLocalLoading, setIsLocalLoading] = useState(false);
+
+    // Show All (Full History) state
+    const [allRequestsLoaded, setAllRequestsLoaded] = useState<LeaveRequest[]>([]);
+    const [hasLoadedAll, setHasLoadedAll] = useState(false);
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+
+    // Historical Cache & Window Check (60 days)
+    const [historicalCache, setHistoricalCache] = useState<Record<string, LeaveRequest[]>>({});
+    
+    const sixtyDaysAgo = useMemo(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 60);
+        return d;
+    }, []);
+
+    const isOutsideSixtyDays = (month: number, year: number) => {
+        const endOfSelectedMonth = new Date(year, month + 1, 0, 23, 59, 59);
+        return endOfSelectedMonth < sixtyDaysAgo;
+    };
+
+    // On-Demand Fetching Effect for Monthly Filters
+    const currentCacheKey = `${selectedYear}-${selectedMonth}`;
+    const isCurrentMonthCached = !!historicalCache[currentCacheKey];
+
+    useEffect(() => {
+        if (!isMonthFilterEnabled || isCustomRangeEnabled || !fetchRequestsForRange) return;
+        if (!isOutsideSixtyDays(selectedMonth, selectedYear)) return;
+        if (isCurrentMonthCached) return; // already cached
+
+        const loadHistorical = async () => {
+            setIsLocalLoading(true);
+            try {
+                const startOfSelectedMonth = new Date(selectedYear, selectedMonth, 1);
+                const endOfSelectedMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
+                const data = await fetchRequestsForRange(startOfSelectedMonth, endOfSelectedMonth);
+                setHistoricalCache(prev => ({
+                    ...prev,
+                    [currentCacheKey]: data
+                }));
+            } catch (err) {
+                console.error("Failed to fetch historical requests", err);
+            } finally {
+                setIsLocalLoading(false);
+            }
+        };
+
+        loadHistorical();
+    }, [selectedMonth, selectedYear, isMonthFilterEnabled, isCustomRangeEnabled, fetchRequestsForRange, isCurrentMonthCached, sixtyDaysAgo]);
+
+    // On-Demand Fetching Effect for Show All (Full History)
+    useEffect(() => {
+        if (isMonthFilterEnabled || isCustomRangeEnabled) return;
+        if (hasLoadedAll || !fetchRequestsForRange) return;
+
+        const loadAll = async () => {
+            setIsLocalLoading(true);
+            try {
+                const data = await fetchRequestsForRange(); // No parameters = ALL
+                setAllRequestsLoaded(data);
+                setHasLoadedAll(true);
+            } catch (err) {
+                console.error("Failed to fetch all requests", err);
+            } finally {
+                setIsLocalLoading(false);
+            }
+        };
+
+        loadAll();
+    }, [isMonthFilterEnabled, isCustomRangeEnabled, hasLoadedAll, fetchRequestsForRange]);
+
+    const handleCustomRangeConfirm = async (startDate: Date, endDate: Date) => {
+        setIsDatePickerOpen(false);
+        setCustomRange({ start: startDate, end: endDate });
+        setIsCustomRangeEnabled(true);
+        setIsMonthFilterEnabled(false);
+        setCurrentPage(1);
+        setActiveCategory('ALL');
+
+        if (fetchRequestsForRange) {
+            setIsLocalLoading(true);
+            try {
+                const data = await fetchRequestsForRange(startDate, endDate);
+                setCustomRangeRequests(data);
+            } catch (err) {
+                console.error("Failed to fetch custom range requests", err);
+            } finally {
+                setIsLocalLoading(false);
+            }
+        }
+    };
+
+    // Combined Requests (Default 60-day Context + Cached On-Demand)
+    const combinedRequests = useMemo(() => {
+        const key = `${selectedYear}-${selectedMonth}`;
+        const historicalList = (isMonthFilterEnabled && isOutsideSixtyDays(selectedMonth, selectedYear))
+            ? (historicalCache[key] || [])
+            : [];
+        
+        const customList = isCustomRangeEnabled ? customRangeRequests : [];
+        const showAllList = (!isMonthFilterEnabled && !isCustomRangeEnabled) ? allRequestsLoaded : [];
+        
+        const all = [...requests, ...historicalList, ...customList, ...showAllList];
+        const seen = new Set<string>();
+        const uniq = all.filter(item => {
+            if (seen.has(item.id)) return false;
+            seen.add(item.id);
+            return true;
+        });
+
+        return uniq.sort((a, b) => {
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            return dateB - dateA;
+        });
+    }, [requests, historicalCache, selectedMonth, selectedYear, isMonthFilterEnabled, isCustomRangeEnabled, customRangeRequests, allRequestsLoaded, sixtyDaysAgo]);
 
     const isCategoryDimmed = (cat: 'LEAVE' | 'LATE_FORGOT' | 'OT') => {
         return activeCategory !== 'ALL' && activeCategory !== cat;
     };
 
-    const isCategoryActive = (cat: 'LEAVE' | 'LATE_FORGOT' | 'OT') => {
-        return activeCategory === cat;
-    };
-
     const handleCategoryClick = (cat: 'LEAVE' | 'LATE_FORGOT' | 'OT') => {
         setActiveCategory(prev => prev === cat ? 'ALL' : cat);
+        setCurrentPage(1);
     };
 
     const tabRequests = useMemo(() => {
-        let base = requests.filter(r => 
+        let base = combinedRequests.filter(r => 
             filterStatus === 'PENDING' ? r.status === 'PENDING' : r.status !== 'PENDING'
         );
 
         if (filterStatus === 'HISTORY') {
+            base = base.filter(req => {
+                if (isCustomRangeEnabled && customRange) {
+                    const reqDate = new Date(req.startDate);
+                    const start = new Date(customRange.start.getFullYear(), customRange.start.getMonth(), customRange.start.getDate());
+                    const end = new Date(customRange.end.getFullYear(), customRange.end.getMonth(), customRange.end.getDate(), 23, 59, 59);
+                    return reqDate >= start && reqDate <= end;
+                }
+                if (!isMonthFilterEnabled) return true;
+                const start = new Date(req.startDate);
+                return start.getMonth() === selectedMonth && start.getFullYear() === selectedYear;
+            });
+
             if (historySubFilter === 'APPROVED') base = base.filter(r => r.status === 'APPROVED');
             if (historySubFilter === 'REJECTED') base = base.filter(r => r.status === 'REJECTED');
         }
 
         return base;
-    }, [requests, filterStatus, historySubFilter]);
+    }, [combinedRequests, filterStatus, historySubFilter, isCustomRangeEnabled, customRange, isMonthFilterEnabled, selectedMonth, selectedYear]);
 
     const counts = useMemo(() => {
         const leaves = ['SICK', 'VACATION', 'PERSONAL', 'EMERGENCY', 'WFH'];
@@ -235,7 +245,6 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
             base = base.filter(r => ot.includes(r.type));
         }
 
-        // Sort by createdAt Descending (Newest first)
         base.sort((a, b) => {
             const dateA = new Date(a.createdAt).getTime();
             const dateB = new Date(b.createdAt).getTime();
@@ -246,10 +255,44 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
     }, [tabRequests, activeCategory]);
 
     const paginatedRequests = useMemo(() => {
-        return filteredRequests.slice(0, displayLimit);
-    }, [filteredRequests, displayLimit]);
+        if (filterStatus === 'PENDING') {
+            return filteredRequests;
+        }
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredRequests.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredRequests, filterStatus, currentPage, itemsPerPage]);
 
-    const hasMore = filteredRequests.length > displayLimit;
+    const totalPages = useMemo(() => {
+        return Math.max(1, Math.ceil(filteredRequests.length / itemsPerPage));
+    }, [filteredRequests, itemsPerPage]);
+
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [totalPages, currentPage]);
+
+    const handlePrevMonth = () => {
+        if (selectedMonth === 0) {
+            setSelectedMonth(11);
+            setSelectedYear(prev => prev - 1);
+        } else {
+            setSelectedMonth(prev => prev - 1);
+        }
+        setCurrentPage(1);
+    };
+
+    const handleNextMonth = () => {
+        if (selectedMonth === 11) {
+            setSelectedMonth(0);
+            setSelectedYear(prev => prev + 1);
+        } else {
+            setSelectedMonth(prev => prev + 1);
+        }
+        setCurrentPage(1);
+    };
+
+    const showLoading = isLoading || isLoadingHistorical || isLocalLoading;
 
     const handleRejectClick = (id: string) => {
         setRejectingId(id);
@@ -268,163 +311,40 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
         setRejectingId(null);
     };
 
-    const getTypeBadge = (type: string) => {
-        const styles: Record<string, string> = {
-            SICK: 'bg-rose-100 text-rose-700 border-rose-200/60',
-            VACATION: 'bg-emerald-100 text-emerald-700 border-emerald-200/60',
-            PERSONAL: 'bg-slate-100 text-slate-700 border-slate-200/60',
-            EMERGENCY: 'bg-rose-100 text-rose-700 border-rose-200/60',
-            LATE_ENTRY: 'bg-violet-100 text-violet-700 border-violet-200/60',
-            OVERTIME: 'bg-indigo-100 text-indigo-700 border-indigo-200/60',
-            FORGOT_CHECKIN: 'bg-amber-100 text-amber-700 border-amber-200/60',
-            FORGOT_CHECKOUT: 'bg-amber-100 text-amber-700 border-amber-200/60',
-            WFH: 'bg-sky-100 text-sky-700 border-sky-200/60'
-        };
-
-        const labels: Record<string, string> = {
-            SICK: 'ลาป่วย',
-            VACATION: 'ลาพักร้อน',
-            PERSONAL: 'ลากิจ',
-            EMERGENCY: 'ลาฉุกเฉิน',
-            LATE_ENTRY: 'ขอเข้าสาย',
-            OVERTIME: 'แจ้ง OT',
-            FORGOT_CHECKIN: 'ลืมเช็คอิน',
-            FORGOT_CHECKOUT: 'ลืมเช็คเอาท์',
-            WFH: 'ขอ WFH'
-        };
-        
-        let icon = <Info className="w-3 h-3 mr-1"/>;
-        if (type === 'LATE_ENTRY') icon = <Clock className="w-3 h-3 mr-1"/>;
-        else if (type === 'OVERTIME') icon = <Moon className="w-3 h-3 mr-1"/>;
-        else if (type.includes('FORGOT')) icon = <Clock className="w-3 h-3 mr-1"/>;
-
-        return (
-            <span className={`text-[10px] px-2 py-0.5 rounded-lg font-bold border flex items-center ${styles[type] || 'bg-gray-100'}`}>
-                {icon} {labels[type] || type}
-            </span>
-        );
-    };
-
-    const renderReason = (parsed: ParsedReason) => {
-        return (
-            <p className="text-sm text-gray-700 bg-white p-3.5 rounded-2xl border border-black/5 italic leading-relaxed shadow-inner">
-                "{parsed.cleanReason || 'ไม่ได้ระบุเหตุผลเพิ่มเติม'}"
-            </p>
-        );
-    };
-
     return (
         <div className="space-y-4">
-            {/* Filter Tabs */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex bg-white p-1 rounded-xl border border-gray-200 w-fit shadow-sm">
-                    <button 
-                        onClick={() => { setFilterStatus('PENDING'); setDisplayLimit(10); setActiveCategory('ALL'); }}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${filterStatus === 'PENDING' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                        รออนุมัติ 
-                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filterStatus === 'PENDING' ? 'bg-orange-200 text-orange-700' : 'bg-gray-100 text-gray-400'}`}>
-                            {requests.filter(r => r.status === 'PENDING').length}
-                        </span>
-                    </button>
-                    <button 
-                        onClick={() => { setFilterStatus('HISTORY'); setDisplayLimit(10); setActiveCategory('ALL'); }}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterStatus === 'HISTORY' ? 'bg-gray-100 text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                        ประวัติย้อนหลัง
-                    </button>
-                </div>
+            {/* Modular filter bar */}
+            <ApprovalFilterBar 
+                filterStatus={filterStatus}
+                setFilterStatus={setFilterStatus}
+                historySubFilter={historySubFilter}
+                setHistorySubFilter={setHistorySubFilter}
+                pendingCount={requests.filter(r => r.status === 'PENDING').length}
+                isMonthFilterEnabled={isMonthFilterEnabled}
+                setIsMonthFilterEnabled={setIsMonthFilterEnabled}
+                isCustomRangeEnabled={isCustomRangeEnabled}
+                setIsCustomRangeEnabled={setIsCustomRangeEnabled}
+                selectedMonth={selectedMonth}
+                selectedYear={selectedYear}
+                handlePrevMonth={handlePrevMonth}
+                handleNextMonth={handleNextMonth}
+                customRange={customRange}
+                setIsDatePickerOpen={setIsDatePickerOpen}
+                setCurrentPage={setCurrentPage}
+                setActiveCategory={setActiveCategory}
+            />
 
-                {filterStatus === 'HISTORY' && (
-                    <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-gray-200 w-fit shadow-sm">
-                        <button 
-                            onClick={() => { setHistorySubFilter('ALL'); setDisplayLimit(10); setActiveCategory('ALL'); }}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${historySubFilter === 'ALL' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
-                        >
-                            ทั้งหมด
-                        </button>
-                        <button 
-                            onClick={() => { setHistorySubFilter('APPROVED'); setDisplayLimit(10); setActiveCategory('ALL'); }}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${historySubFilter === 'APPROVED' ? 'bg-green-50 text-green-600' : 'text-gray-400 hover:text-gray-600'}`}
-                        >
-                            อนุมัติแล้ว
-                        </button>
-                        <button 
-                            onClick={() => { setHistorySubFilter('REJECTED'); setDisplayLimit(10); setActiveCategory('ALL'); }}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${historySubFilter === 'REJECTED' ? 'bg-red-50 text-red-600' : 'text-gray-400 hover:text-gray-600'}`}
-                        >
-                            ไม่อนุมัติ
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            {/* Category Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {/* General Leaves Card */}
-                <div 
-                    onClick={() => handleCategoryClick('LEAVE')}
-                    className={`bg-rose-50/70 p-4 md:p-5 rounded-2xl border-2 flex items-center justify-between cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-95 transition-all duration-300 ${
-                        isCategoryActive('LEAVE') 
-                            ? 'border-rose-400 ring-4 ring-rose-500/10 opacity-100 scale-[1.02]' 
-                            : isCategoryDimmed('LEAVE')
-                                ? 'border-transparent opacity-40 hover:opacity-100'
-                                : 'border-rose-100/80 opacity-100'
-                    }`}
-                >
-                    <div className="space-y-1">
-                        <p className="text-xs md:text-sm font-semibold text-rose-600 uppercase tracking-wider">การลาและขอ WFH ทั้งหมด</p>
-                        <h3 className="text-2xl md:text-3xl font-black text-rose-950 mt-1"><Counter value={counts.LEAVE} /></h3>
-                    </div>
-                    <div className={`p-2.5 md:p-3 rounded-xl transition-all shrink-0 ${isCategoryActive('LEAVE') ? 'bg-rose-500 text-white shadow-inner' : 'bg-white text-rose-500 shadow-sm'}`}>
-                        <Briefcase className="w-5 h-5 md:w-6 md:h-6" />
-                    </div>
-                </div>
-
-                {/* Late & Missed Punch Card */}
-                <div 
-                    onClick={() => handleCategoryClick('LATE_FORGOT')}
-                    className={`bg-amber-50/70 p-4 md:p-5 rounded-2xl border-2 flex items-center justify-between cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-95 transition-all duration-300 ${
-                        isCategoryActive('LATE_FORGOT') 
-                            ? 'border-amber-400 ring-4 ring-amber-500/10 opacity-100 scale-[1.02]' 
-                            : isCategoryDimmed('LATE_FORGOT')
-                                ? 'border-transparent opacity-40 hover:opacity-100'
-                                : 'border-amber-100/80 opacity-100'
-                    }`}
-                >
-                    <div className="space-y-1">
-                        <p className="text-xs md:text-sm font-semibold text-amber-600 uppercase tracking-wider">เข้าสาย / ลืมบันทึกเวลา</p>
-                        <h3 className="text-2xl md:text-3xl font-black text-amber-950 mt-1"><Counter value={counts.LATE_FORGOT} /></h3>
-                    </div>
-                    <div className={`p-2.5 md:p-3 rounded-xl transition-all shrink-0 ${isCategoryActive('LATE_FORGOT') ? 'bg-amber-500 text-white shadow-inner' : 'bg-white text-amber-500 shadow-sm'}`}>
-                        <Clock className="w-5 h-5 md:w-6 md:h-6" />
-                    </div>
-                </div>
-
-                {/* Overtime Requests Card */}
-                <div 
-                    onClick={() => handleCategoryClick('OT')}
-                    className={`bg-indigo-50/70 p-4 md:p-5 rounded-2xl border-2 flex items-center justify-between cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-95 transition-all duration-300 ${
-                        isCategoryActive('OT') 
-                            ? 'border-indigo-400 ring-4 ring-indigo-500/10 opacity-100 scale-[1.02]' 
-                            : isCategoryDimmed('OT')
-                                ? 'border-transparent opacity-40 hover:opacity-100'
-                                : 'border-indigo-100/80 opacity-100'
-                    }`}
-                >
-                    <div className="space-y-1">
-                        <p className="text-xs md:text-sm font-semibold text-indigo-600 uppercase tracking-wider">เวลาทำงานล่วงเวลา (OT)</p>
-                        <h3 className="text-2xl md:text-3xl font-black text-indigo-950 mt-1"><Counter value={counts.OT} /></h3>
-                    </div>
-                    <div className={`p-2.5 md:p-3 rounded-xl transition-all shrink-0 ${isCategoryActive('OT') ? 'bg-indigo-500 text-white shadow-inner' : 'bg-white text-indigo-500 shadow-sm'}`}>
-                        <Moon className="w-5 h-5 md:w-6 md:h-6" />
-                    </div>
-                </div>
-            </div>
+            {/* Modular Bento category totals */}
+            <ApprovalCategorySelector 
+                counts={counts}
+                activeCategory={activeCategory}
+                onCategoryClick={handleCategoryClick}
+                isCategoryDimmed={isCategoryDimmed}
+            />
 
             {/* List */}
             <div className="grid gap-4">
-                {isLoading ? (
+                {showLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                         <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
                         <p className="text-sm font-bold">กำลังดึงข้อมูลคำขอ...</p>
@@ -442,184 +362,32 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
                         <p className="text-xs mt-1">รายการใหม่ๆ จะปรากฏที่นี่เมื่อพนักงานส่งคำขอ</p>
                     </motion.div>
                 ) : (
-                    <div className="space-y-4">
+                    <motion.div layout className="space-y-4">
                         <AnimatePresence mode="popLayout">
-                            {paginatedRequests.map((req) => {
-                                const cardStyle = getCardStyle(req.type);
-                                const parsed = parseReason(req.reason);
-
-                                return (
-                                    <motion.div 
-                                        key={req.id} 
-                                        layout
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
-                                        onClick={() => setSelectedRequest(req)}
-                                        className={`${cardStyle.bg} ${cardStyle.border} p-5 rounded-3xl border shadow-sm hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all relative overflow-hidden group cursor-pointer`}
-                                    >
-                                        {/* Status Indicator Bar */}
-                                        <div className={`absolute top-0 left-0 w-1.5 h-full ${
-                                            req.status === 'APPROVED' ? 'bg-green-500' : 
-                                            req.status === 'REJECTED' ? 'bg-red-500' : 
-                                            `${cardStyle.accent} animate-pulse`
-                                        }`}></div>
-
-                                        <div className="flex flex-col lg:flex-row gap-6 justify-between">
-                                            <div className="flex gap-5 flex-1">
-                                                <div className="shrink-0 relative">
-                                                    {req.user?.avatarUrl ? (
-                                                        <img src={req.user.avatarUrl} className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md" />
-                                                    ) : (
-                                                        <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center font-black text-indigo-400 border-2 border-white shadow-md">
-                                                            {req.user?.name?.charAt(0)}
-                                                        </div>
-                                                    )}
-                                                    <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center shadow-sm ${
-                                                        req.status === 'APPROVED' ? 'bg-green-500' : 
-                                                        req.status === 'REJECTED' ? 'bg-red-500' : 
-                                                        'bg-orange-400'
-                                                    }`}>
-                                                        {req.status === 'APPROVED' && <CheckCircle2 className="w-3 h-3 text-white" />}
-                                                        {req.status === 'REJECTED' && <XCircle className="w-3 h-3 text-white" />}
-                                                        {req.status === 'PENDING' && <Clock className="w-3 h-3 text-white" />}
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-2">
-                                                    {/* จัดกลุ่มชื่อและตำแหน่งให้เป็นระเบียบในแนวตั้ง */}
-                                                    <div className="flex flex-col justify-center">
-                                                         <h4 className="font-black text-gray-800 text-base leading-tight">
-                                                            {req.user?.name || 'Unknown'}
-                                                        </h4>
-                                                        {req.user?.position && (
-                                                            <span className="text-[11px] text-slate-500 font-semibold tracking-wide mt-0.5 leading-none">
-                                                                {req.user.position}
-                                                            </span>
-                                                         )}
-                                                    </div>
-                                                        
-                                                        {/* Parsed Badges */}
-                                                        {parsed.isLateSubmission && (
-                                                            <span className="text-[10px] px-2 py-0.5 rounded-lg font-bold border bg-amber-100 text-amber-700 border-amber-200/60 flex items-center gap-1">
-                                                                <AlertTriangle className="w-3 h-3" /> ส่งคำขอช้ากว่ากำหนด
-                                                            </span>
-                                                        )}
-
-                                                        {parsed.isLocationMismatch && (
-                                                            <span className="text-[10px] px-2 py-0.5 rounded-lg font-bold border bg-rose-100 text-rose-700 border-rose-200/60 flex items-center gap-1 animate-pulse">
-                                                                <MapPin className="w-3 h-3" /> พิกัดภายนอกพื้นที่ทำงาน
-                                                            </span>
-                                                        )}
-
-                                                        {parsed.forgotCheckoutPenalty && (
-                                                            <span className="text-[10px] px-2 py-0.5 rounded-lg font-bold border bg-orange-100 text-orange-700 border-orange-200/60 flex items-center gap-1">
-                                                                <AlertTriangle className="w-3 h-3" /> ลืมเช็คเอาท์ (ระบบปรับลดคะแนน)
-                                                            </span>
-                                                        )}
-
-                                                        {parsed.time && (
-                                                            <span className="text-[10px] px-2 py-0.5 rounded-lg font-bold border bg-indigo-100 text-indigo-700 border-indigo-200/60 flex items-center gap-1">
-                                                                <Clock className="w-3 h-3" /> เวลา: {parsed.time} น.
-                                                            </span>
-                                                        )}
-
-                                                        {parsed.otHours && (
-                                                            <span className="text-[10px] px-2 py-0.5 rounded-lg font-bold border bg-indigo-100 text-indigo-700 border-indigo-200/60 flex items-center gap-1 animate-pulse">
-                                                                <Moon className="w-3 h-3 text-indigo-500" /> จำนวน: {parsed.otHours} ชม.
-                                                            </span>
-                                                        )}
-
-                                                        {/* Expiration Warning */}
-                                                        {req.status === 'PENDING' && ['LATE_ENTRY', 'FORGOT_CHECKIN', 'FORGOT_CHECKOUT', 'FORGOT_BOTH'].includes(req.type) && (
-                                                            getWorkingDaysDifference(req.createdAt, new Date(), annualHolidays, calendarExceptions) >= 2 && (
-                                                                <span className="text-[10px] px-2 py-0.5 rounded-lg font-bold border bg-red-100 text-red-700 border-red-200/60 flex items-center gap-1 animate-pulse">
-                                                                    <AlertTriangle className="w-3 h-3" /> ใกล้หมดอายุ
-                                                                </span>
-                                                            )
-                                                        )}
-
-                                                        <span className="text-[11px] text-slate-500 font-semibold bg-slate-50/80 px-2 py-0.5 rounded-md border border-slate-100 ml-auto">
-                                                            {format(req.createdAt, 'd MMM HH:mm')}
-                                                        </span>
-                                                    </div>
-                                                    
-                                                    <div className="flex flex-wrap items-center gap-3 mb-4">
-                                                        <div className={`flex items-center gap-2 text-xs font-black px-3 py-1.5 rounded-full shadow-sm ${
-                                                            req.type === 'LATE_ENTRY' ? 'bg-violet-100 text-violet-700' : 
-                                                            req.type.includes('FORGOT') ? 'bg-amber-100 text-amber-700' :
-                                                            'bg-white/80 text-gray-700 border border-black/5'
-                                                        }`}>
-                                                            <Calendar className="w-3.5 h-3.5" />
-                                                            {format(req.startDate, 'd MMM')} 
-                                                            {req.startDate.getTime() !== req.endDate.getTime() && ` - ${format(req.endDate, 'd MMM yyyy')}`}
-                                                        </div>
-
-                                                        {req.attachmentUrl && (
-                                                            <a 
-                                                                href={req.attachmentUrl} 
-                                                                target="_blank" 
-                                                                rel="noreferrer" 
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                className="inline-flex items-center gap-1.5 text-[10px] bg-blue-100 text-blue-700 border border-blue-200/50 px-3 py-1.5 rounded-full font-black hover:bg-blue-200 transition-colors"
-                                                            >
-                                                                <ExternalLink className="w-3 h-3" /> ดูหลักฐาน
-                                                            </a>
-                                                        )}
-                                                    </div>
-
-                                                    {renderReason(parsed)}
-                                                    
-                                                    {/* Rejection Reason Display */}
-                                                    {req.status === 'REJECTED' && req.rejectionReason && (
-                                                        <motion.div 
-                                                            initial={{ opacity: 0, height: 0 }}
-                                                            animate={{ opacity: 1, height: 'auto' }}
-                                                            className="mt-3 text-xs text-red-600 bg-red-50/50 p-3 rounded-2xl border border-red-100/50 flex gap-2"
-                                                        >
-                                                            <XCircle className="w-4 h-4 shrink-0" />
-                                                            <div>
-                                                                <span className="font-black block mb-0.5">เหตุผลที่ปฏิเสธ:</span>
-                                                                <p className="italic">"{req.rejectionReason}"</p>
-                                                            </div>
-                                                        </motion.div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {req.status === 'PENDING' && (
-                                                <div className="flex flex-row lg:flex-col gap-2 shrink-0 lg:w-32 lg:justify-center border-t lg:border-t-0 lg:border-l border-black/5 pt-4 lg:pt-0 lg:pl-6 mt-2 lg:mt-0">
-                                                    <button 
-                                                        onClick={async (e) => { e.stopPropagation(); if(await showConfirm('อนุมัติคำขอนี้?')) onApprove(req); }}
-                                                        className="flex-1 px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-2xl text-xs font-black shadow-lg shadow-green-100 transition-all active:scale-95 flex items-center justify-center gap-2"
-                                                    >
-                                                        <CheckCircle2 className="w-4 h-4" /> อนุมัติ
-                                                    </button>
-                                                    <button 
-                                                        onClick={(e) => { e.stopPropagation(); handleRejectClick(req.id); }}
-                                                        className="flex-1 px-4 py-3 bg-white border-2 border-red-100 text-red-500 hover:bg-red-50 rounded-2xl text-xs font-black transition-all active:scale-95 flex items-center justify-center gap-2"
-                                                    >
-                                                        <XCircle className="w-4 h-4" /> ปฏิเสธ
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                );
-                            })}
+                            {paginatedRequests.map((req) => (
+                                <ApprovalRequestCard 
+                                    key={req.id}
+                                    request={req}
+                                    onApprove={onApprove}
+                                    onRejectClick={handleRejectClick}
+                                    onViewDetail={setSelectedRequest}
+                                    annualHolidays={annualHolidays}
+                                    calendarExceptions={calendarExceptions}
+                                />
+                            ))}
                         </AnimatePresence>
 
-                        {hasMore && (
-                            <button 
-                                onClick={() => setDisplayLimit(prev => prev + 10)}
-                                className="w-full py-4 bg-white border border-gray-200 rounded-2xl text-sm font-bold text-gray-500 hover:text-indigo-600 hover:border-indigo-200 transition-all flex items-center justify-center gap-2 shadow-sm"
-                            >
-                                <ChevronDown className="w-4 h-4" />
-                                โหลดข้อมูลเพิ่มเติม ({filteredRequests.length - displayLimit} รายการ)
-                            </button>
+                        {/* Modular Pagination */}
+                        {filterStatus === 'HISTORY' && (
+                            <ApprovalPagination 
+                                currentPage={currentPage}
+                                setCurrentPage={setCurrentPage}
+                                totalPages={totalPages}
+                                totalItems={filteredRequests.length}
+                                itemsPerPage={itemsPerPage}
+                            />
                         )}
-                    </div>
+                    </motion.div>
                 )}
             </div>
 
@@ -648,19 +416,25 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
                                 value={rejectionReason}
                                 onChange={(e) => setRejectionReason(e.target.value)}
                                 autoFocus
+                                id="rejection-modal-reason-textarea"
                             />
                             
                             <div className="flex gap-3">
                                 <button 
+                                    type="button"
                                     onClick={() => setRejectingId(null)}
-                                    className="flex-1 py-3 text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-2xl text-sm font-black transition-colors"
+                                    disabled={isSubmitting}
+                                    className="flex-1 py-3.5 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-2xl text-xs font-medium transition-colors outline-none cursor-pointer border border-gray-100"
+                                    id="rejection-modal-cancel-btn"
                                 >
                                     ยกเลิก
                                 </button>
                                 <button 
+                                    type="button"
                                     onClick={handleConfirmReject}
                                     disabled={isSubmitting}
-                                    className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-sm font-black shadow-lg shadow-red-100 transition-all active:scale-95 disabled:opacity-50"
+                                    className="flex-1 py-3.5 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-xs font-bold shadow-lg shadow-red-100 transition-all active:scale-95 disabled:opacity-50 outline-none cursor-pointer"
+                                    id="rejection-modal-submit-btn"
                                 >
                                     {isSubmitting ? 'กำลังบันทึก...' : 'ยืนยันปฏิเสธ'}
                                 </button>
@@ -683,6 +457,13 @@ const LeaveApprovalList: React.FC<LeaveApprovalListProps> = ({
                     />
                 )}
             </AnimatePresence>
+
+            {/* Multi Date Picker Modal */}
+            <MultiDatePickerModal 
+                isOpen={isDatePickerOpen}
+                onClose={() => setIsDatePickerOpen(false)}
+                onConfirm={handleCustomRangeConfirm}
+            />
         </div>
     );
 };

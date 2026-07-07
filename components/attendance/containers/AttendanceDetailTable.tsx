@@ -14,6 +14,7 @@ interface AttendanceDetailTableProps {
     cleanNote: (note?: string) => string;
     formatTime: (time: any) => string;
     setPreviewImage: (url: string | null) => void;
+    isStreak?: boolean;
 }
 
 export const AttendanceDetailTable: React.FC<AttendanceDetailTableProps> = ({
@@ -24,6 +25,7 @@ export const AttendanceDetailTable: React.FC<AttendanceDetailTableProps> = ({
     cleanNote,
     formatTime,
     setPreviewImage,
+    isStreak,
 }) => {
     const getOtDetailsForDate = (dateStr: string, userId: string) => {
         if (!leaveRequests) return null;
@@ -134,8 +136,15 @@ export const AttendanceDetailTable: React.FC<AttendanceDetailTableProps> = ({
                                 {/* Date with responsive formats */}
                                 <td className="px-3 sm:px-6 py-3.5 pl-5 sm:pl-7">
                                     <div className="flex items-center gap-2 sm:gap-3">
-                                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-50/60 flex items-center justify-center border border-indigo-100/30 shrink-0">
-                                            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-500" />
+                                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center border shrink-0 transition-colors
+                                            ${isStreak
+                                                ? 'bg-amber-50/70 border-amber-200/50'
+                                                : 'bg-indigo-50/60 border-indigo-100/30'
+                                            }
+                                        `}>
+                                            <Calendar className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors
+                                                ${isStreak ? 'text-amber-500' : 'text-indigo-500'}
+                                            `} />
                                         </div>
                                         <span className="text-xs sm:text-sm font-semibold text-slate-700 whitespace-nowrap">
                                             {/* Longer format for desktop/tablets, compact for mobile */}
@@ -202,7 +211,12 @@ export const AttendanceDetailTable: React.FC<AttendanceDetailTableProps> = ({
                                             </div>
                                         )}
                                         {noteText ? (
-                                            <div className="text-[11px] sm:text-xs text-slate-600 bg-indigo-50/20 border border-indigo-50/40 px-2 sm:px-3 py-1 sm:py-2 rounded-lg sm:rounded-xl flex items-start gap-1 max-w-[120px] sm:max-w-[280px]">
+                                            <div className={`text-[11px] sm:text-xs px-2 sm:px-3 py-1 sm:py-2 rounded-lg sm:rounded-xl flex items-start gap-1 max-w-[120px] sm:max-w-[280px] border transition-colors
+                                                ${isStreak
+                                                    ? 'text-amber-700 bg-amber-50/30 border-amber-100/50'
+                                                    : 'text-slate-600 bg-indigo-50/20 border-indigo-50/40'
+                                                }
+                                            `}>
                                                 <span className="line-clamp-1 sm:line-clamp-2" title={noteText}>{noteText}</span>
                                             </div>
                                         ) : (

@@ -127,12 +127,25 @@ export const parseAttendanceMetadata = (note: string | undefined) => {
         }
     }
 
+    let cleanNoteStr = '';
+    if (note) {
+        const rMatch = note.match(/\[REASON:(.*?)\]/);
+        const aMatch = note.match(/\[ADMIN FIXED:(.*?)\]/);
+        if (rMatch && rMatch[1]) {
+            cleanNoteStr = rMatch[1].trim();
+        } else if (aMatch && aMatch[1]) {
+            cleanNoteStr = `แก้ไขโดยแอดมิน: ${aMatch[1].trim()}`;
+        } else {
+            cleanNoteStr = note.replace(/\[.*?\]/g, '').trim();
+        }
+    }
+
     return {
         proofUrl: proofMatch ? proofMatch[1] : null,
         location: location,
         locationName: locationName,
         reason: reasonMatch ? reasonMatch[1] : null,
-        cleanNote: note.replace(/\[.*?\]/g, '').trim() // Note text without tags
+        cleanNote: cleanNoteStr
     };
 };
 

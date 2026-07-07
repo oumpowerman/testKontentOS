@@ -15,23 +15,27 @@ export const useLeaveRequests = (currentUser?: any, options: { all?: boolean } =
         return {
             requests: adminApprovals.requests,
             isLoading: adminApprovals.isLoading,
+            isLoadingHistorical: adminApprovals.isLoadingHistorical,
             approveRequest: adminApprovals.approveRequest,
             rejectRequest: adminApprovals.rejectRequest,
             submitRequest: myRequests.submitRequest, // Fallback
             leaveUsage: myRequests.leaveUsage, // Fallback
             pendingUsage: myRequests.pendingUsage, // Fallback
-            fetchRequests: adminApprovals.fetchAllRequests
+            fetchRequests: adminApprovals.fetchAllRequests,
+            fetchRequestsForRange: adminApprovals.fetchRequestsForRange
         };
     } else {
         return {
             requests: myRequests.requests,
             isLoading: myRequests.isLoading,
+            isLoadingHistorical: myRequests.isLoadingHistorical,
             approveRequest: adminApprovals.approveRequest, // Fallback
             rejectRequest: adminApprovals.rejectRequest, // Fallback
             submitRequest: myRequests.submitRequest,
             leaveUsage: myRequests.leaveUsage,
             pendingUsage: myRequests.pendingUsage,
-            fetchRequests: myRequests.fetchMyRequests
+            fetchRequests: myRequests.fetchMyRequests,
+            fetchRequestsForRange: myRequests.fetchRequestsForRange
         };
     }
 };

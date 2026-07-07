@@ -152,7 +152,6 @@ const modalVariants = {
 const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveRequest, onClose }) => {
     const [showLightbox, setShowLightbox] = useState(false);
     const [lightboxUrl, setLightboxUrl] = useState('');
-    const [scrollY, setScrollY] = useState(0);
     const isMobile = useIsMobile();
 
     const displayDate = log ? new Date(log.date) : (leaveRequest ? new Date(leaveRequest.start_date) : new Date());
@@ -195,24 +194,15 @@ const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveR
 
                 {/* Natural Scroll Container (No outer padding to allow full-bleed top image) */}
                 <div 
-                    onScroll={(e) => {
-                        setScrollY(e.currentTarget.scrollTop);
-                    }}
-                    className="overflow-y-auto flex-1 flex flex-col min-h-0 overscroll-behavior-y-contain -webkit-overflow-scrolling-touch"
+                    className="overflow-y-auto flex-1 flex flex-col min-h-0 overscroll-behavior-y-contain -webkit-overflow-scrolling-touch scrollbar-none"
                 >
                     {/* Visual Evidence Header (Inside Scrollable list) */}
                     <div 
-                        style={{ 
-                            height: isMobile 
-                                ? `${Math.max(120, 320 - scrollY)}px` 
-                                : `${Math.max(120, 288 - scrollY)}px`
-                        }}
-                        className="relative w-full shrink-0 bg-slate-900 flex items-center justify-center group/img overflow-hidden transition-[height] duration-75 ease-out"
+                        className="relative w-full h-64 sm:h-72 shrink-0 bg-slate-900 flex items-center justify-center group/img overflow-hidden"
                     >
                         {/* Visual drag handle for native mobile sheet feel */}
                         <div 
-                            style={{ opacity: Math.max(0, 1 - scrollY / 60) }}
-                            className="absolute top-[calc(env(safe-area-inset-top,16px)+6px)] left-1/2 -translate-x-1/2 w-12 h-1 bg-white/40 rounded-full z-20 md:hidden" 
+                            className="absolute top-[calc(env(safe-area-inset-top,16px)+6px)] left-1/2 -translate-x-1/2 w-12 h-1 bg-white/30 rounded-full z-20 md:hidden" 
                         />
                         
                         {(() => {
@@ -239,12 +229,8 @@ const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveR
                                             <ZoomIn className="w-8 h-8" />
                                         </div>
                                     </div>
-
+ 
                                     <div 
-                                        style={{ 
-                                            opacity: Math.max(0, 1 - scrollY / 120),
-                                            transform: `translateY(${Math.min(20, scrollY / 6)}px)` 
-                                        }}
                                         className="absolute bottom-4 left-6 flex items-center gap-3 transition-all duration-100"
                                     >
                                         <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 text-white flex items-center gap-2">
@@ -258,7 +244,6 @@ const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveR
                                 </>
                             ) : (
                                 <div 
-                                    style={{ opacity: Math.max(0.2, 1 - scrollY / 120) }}
                                     className="flex flex-col items-center text-slate-500 gap-4"
                                 >
                                     <div className="w-20 h-20 bg-slate-800 rounded-3xl flex items-center justify-center border border-slate-700">
@@ -274,10 +259,10 @@ const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveR
                     <div className="p-6 md:p-8 flex-1 flex flex-col space-y-7 pb-[calc(env(safe-area-inset-bottom,24px)+24px)] min-h-0">
                         <div className="flex justify-between items-start shrink-0">
                             <div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-1">
                                     {log ? 'Time Analysis Log' : 'Leave Request Detail'}
                                 </p>
-                                <h3 className="text-2xl md:text-3xl font-black text-slate-800">
+                                <h3 className="text-2xl md:text-3xl font-bold text-slate-800">
                                     {format(displayDate, 'EEEE d MMMM', { locale: th })}
                                 </h3>
                                 {leaveRequest && (
@@ -348,7 +333,7 @@ const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveR
                     {userReason && (
                         <div className="bg-indigo-900 rounded-[2rem] p-6 text-indigo-100 shadow-2xl relative overflow-hidden shrink-0">
                             <div className="absolute top-0 right-0 p-4 opacity-10"><Info className="w-16 h-16"/></div>
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-indigo-400">เหตุผลคำขอ (Employee Reason)</h4>
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 text-indigo-400">เหตุผลคำขอ (Employee Reason)</h4>
                             <p className="text-sm font-medium leading-relaxed italic">
                                 "{userReason.replace(/\[.*?\]/g, '').trim() || 'ยื่นคำขอโดยไม่มีระบุหมายเหตุเพิ่มเติม'}"
                             </p>
@@ -359,7 +344,7 @@ const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveR
                     {adminRejection && (
                         <div className="bg-red-900 rounded-[2rem] p-6 text-red-100 shadow-2xl relative overflow-hidden shrink-0">
                             <div className="absolute top-0 right-0 p-4 opacity-10"><Info className="w-16 h-16"/></div>
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-red-300">เหตุผลที่ปฏิเสธ (Admin Rejection Reason)</h4>
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 text-red-300">เหตุผลที่ปฏิเสธ (Admin Rejection Reason)</h4>
                             <p className="text-sm font-semibold leading-relaxed">
                                 "{adminRejection}"
                             </p>
@@ -370,7 +355,7 @@ const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveR
                     {systemLogNote && systemLogNote !== userReason.replace(/\[.*?\]/g, '').trim() && (
                         <div className="bg-slate-900 rounded-[2rem] p-6 text-slate-100 shadow-2xl relative overflow-hidden shrink-0">
                             <div className="absolute top-0 right-0 p-4 opacity-10"><Info className="w-16 h-16"/></div>
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-slate-400">บันทึกเพิ่มเติมระบบ (System/Log Note)</h4>
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 text-slate-400">บันทึกเพิ่มเติมระบบ (System/Log Note)</h4>
                             <p className="text-sm font-medium leading-relaxed">
                                 "{systemLogNote}"
                             </p>
@@ -379,12 +364,14 @@ const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveR
 
                     <div className="flex-grow min-h-0" />
 
-                    <button 
-                        onClick={onClose}
-                        className="w-full py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-sm tracking-widest uppercase hover:bg-indigo-600 transition-all active:scale-95 shadow-xl shadow-slate-200 shrink-0"
-                    >
-                        Close Command
-                    </button>
+                    <div className="px-6 pt-2 pb-8 sm:pb-10 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] shrink-0">
+                        <button 
+                            onClick={onClose}
+                            className="w-full py-4 bg-slate-900 text-white rounded-[1.5rem] font-semibold text-sm tracking-widest uppercase hover:bg-indigo-600 transition-all active:scale-95 shadow-xl shadow-slate-200 shrink-0"
+                        >
+                            ปิดรายละเอียด
+                        </button>
+                    </div>
                 </div>
             </div>
         </motion.div>
