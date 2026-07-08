@@ -1,219 +1,407 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import th from 'date-fns/locale/th';
-import { ChevronLeft, ChevronRight, Search, Calendar, Briefcase, UserX, UserCheck, Download } from 'lucide-react';
+import { X, ImageIcon, Download, Clock, MapPin, Info, ArrowRight, ZoomIn, ExternalLink } from 'lucide-react';
+import { AttendanceLog } from '../../../types/attendance';
+import { getDirectDriveUrl } from '../../../lib/imageUtils';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import FilterDropdown from '../../common/FilterDropdown';
 
-interface TimesheetHeaderProps {
-    viewMode: 'WEEK' | 'MONTH';
-    setViewMode: (mode: 'WEEK' | 'MONTH') => void;
-    dateRange: Date[];
-    onNav: (offset: number) => void;
-    searchTerm: string;
-    setSearchTerm: (term: string) => void;
-    filterDepartment: string;
-    setFilterDepartment: (dept: string) => void;
-    departments: string[];
-    showInactive: boolean;
-    setShowInactive: (show: boolean) => void;
-    onExportCSV?: () => void;
-}
+const lightboxBackdropVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+    exit: { opacity: 0 }
+};
 
-const TimesheetHeader: React.FC<TimesheetHeaderProps> = ({
-    viewMode,
-    setViewMode,
-    dateRange,
-    onNav,
-    searchTerm,
-    setSearchTerm,
-    filterDepartment,
-    setFilterDepartment,
-    departments,
-    showInactive,
-    setShowInactive,
-    onExportCSV
-}) => {
-    const containerVariants = {
-        hidden: { opacity: 0, y: -15 },
-        visible: {
-            opacity: 1,
-            y: 0,
-            transition: {
-                duration: 0.6,
-                ease: [0.16, 1, 0.3, 1] as const,
-                staggerChildren: 0.05,
-                delayChildren: 0.1
-            }
+const lightboxImageVariants = {
+    hidden: { scale: 0.9, opacity: 0 },
+    visible: { 
+        scale: 1, 
+        opacity: 1,
+        transition: { 
+            type: "spring" as const, 
+            damping: 25, 
+            stiffness: 240 
         }
-    };
-
-    const itemVariants = {
-        hidden: { opacity: 0, y: -10 },
-        visible: { 
-            opacity: 1, 
-            y: 0,
-            transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const }
+    },
+    exit: { 
+        scale: 0.95, 
+        opacity: 0,
+        transition: { 
+            duration: 0.2,
+            ease: "easeIn" as const
         }
-    };
+    }
+};
 
-    const deptOptions = departments.map(d => ({
-        key: d,
-        label: d
-    }));
-
-    return (
+// --- SUB-COMPONENT: Lightbox Modal (Consistent with TeamChat) ---
+const Lightbox: React.FC<{ url: string; onClose: () => void }> = ({ url, onClose }) => {
+    return createPortal(
         <motion.div 
+            className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-sm flex flex-col items-center justify-center p-4"
             initial="hidden"
             animate="visible"
-            variants={containerVariants}
-            className="bg-white/90 backdrop-blur-md rounded-3xl sm:rounded-[2.5rem] p-4 sm:p-6 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-visible z-[120] group"
-            id="timesheet-header-container"
+            exit="exit"
+            variants={lightboxBackdropVariants}
+            transition={{ duration: 0.25 }}
+            onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+            }}
         >
-            {/* Soft Pastel Background Decors (Clipped to container boundaries) */}
-            <div className="absolute inset-0 rounded-3xl sm:rounded-[2.5rem] overflow-hidden pointer-events-none z-0">
-                <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-br from-indigo-200/20 to-pink-200/20 rounded-full blur-3xl -mr-20 -mt-20"></div>
-                <div className="absolute bottom-0 left-0 w-72 h-72 bg-gradient-to-tr from-sky-100/30 to-indigo-100/20 rounded-full blur-3xl -ml-20 -mb-20"></div>
-            </div>
+            <motion.div 
+                className="absolute top-6 right-6 flex items-center gap-3 z-10"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+            >
+                <a 
+                    href={url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <ExternalLink className="w-5 h-5" />
+                </a>
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onClose();
+                    }}
+                    className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+                >
+                    <X className="w-6 h-6" />
+                </button>
+            </motion.div>
+
+            <motion.div 
+                className="relative max-w-5xl w-full h-full flex items-center justify-center" 
+                onClick={(e) => e.stopPropagation()}
+                variants={lightboxImageVariants}
+            >
+                <img 
+                    src={getDirectDriveUrl(url)} 
+                    alt="Full Preview" 
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                    referrerPolicy="no-referrer"
+                />
+            </motion.div>
             
-            <div className="flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-6 relative z-10">
-                <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                    <motion.div 
-                        whileHover={{ scale: 1.05, rotate: 5 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="p-3 bg-indigo-50/80 rounded-2xl border border-indigo-100 text-indigo-500 shrink-0 shadow-inner cursor-pointer"
-                    >
-                        <Calendar className="w-8 h-8" />
-                    </motion.div>
-                    <div className="w-full text-center sm:text-left">
-                        <div className="flex items-center justify-center sm:justify-start gap-2 mb-1.5">
-                            <h2 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">Timesheet Central</h2>
-                            <span className="px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-extrabold uppercase tracking-widest">{viewMode}</span>
-                        </div>
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
-                            <div className="flex items-center justify-between sm:justify-start gap-3 bg-slate-50/80 p-1 rounded-xl border border-slate-200/50 backdrop-blur-sm w-full sm:w-fit shrink-0">
-                                <button 
-                                    onClick={() => onNav(-1)} 
-                                    className="p-1.5 hover:bg-slate-200/50 text-slate-500 hover:text-slate-800 rounded-lg transition-all active:scale-90 cursor-pointer" 
-                                    aria-label="สัปดาห์ก่อนหน้า"
-                                >
-                                    <ChevronLeft className="w-4 h-4"/>
-                                </button>
-                                <div className="overflow-hidden h-5 flex items-center justify-center min-w-[130px] sm:min-w-[180px]">
-                                    <AnimatePresence mode="wait">
-                                        <motion.span 
-                                            key={dateRange[0].toISOString()}
-                                            initial={{ opacity: 0, y: 8 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -8 }}
-                                            transition={{ duration: 0.15, ease: "easeOut" }}
-                                            className="text-[12px] sm:text-sm font-bold text-center px-1 sm:px-2 text-slate-700 whitespace-nowrap"
-                                        >
-                                            {format(dateRange[0], 'd MMM', { locale: th })} - {format(dateRange[dateRange.length-1], 'd MMM yyyy', { locale: th })}
-                                        </motion.span>
-                                    </AnimatePresence>
+            <motion.div 
+                className="mt-4 text-white/50 text-xs font-medium"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.5 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+            >
+                Click anywhere to close
+            </motion.div>
+        </motion.div>,
+        document.body
+    );
+};
+
+interface TimesheetDetailModalProps {
+    log?: AttendanceLog | null;
+    leaveRequest?: any | null;
+    onClose: () => void;
+}
+
+const useIsMobile = () => {
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    return isMobile;
+};
+
+const backdropVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+    exit: { opacity: 0 }
+};
+
+const modalVariants = {
+    hidden: (isMobile: boolean) => ({
+        y: isMobile ? '100%' : 24,
+        scale: isMobile ? 1 : 0.95,
+        opacity: isMobile ? 1 : 0,
+    }),
+    visible: {
+        y: 0,
+        scale: 1,
+        opacity: 1,
+    },
+    exit: (isMobile: boolean) => ({
+        y: isMobile ? '100%' : 16,
+        scale: isMobile ? 1 : 0.98,
+        opacity: isMobile ? 1 : 0,
+    }),
+};
+
+const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveRequest, onClose }) => {
+    const [showLightbox, setShowLightbox] = useState(false);
+    const [lightboxUrl, setLightboxUrl] = useState('');
+    const isMobile = useIsMobile();
+
+    const displayDate = log ? new Date(log.date) : (leaveRequest ? new Date(leaveRequest.start_date) : new Date());
+    const note = log?.note || leaveRequest?.reason || '';
+    const userReason = leaveRequest?.reason || '';
+    const adminRejection = leaveRequest?.rejectionReason || leaveRequest?.rejection_reason || '';
+    const systemLogNote = log?.note?.replace(/\[.*?\]/g, '').trim() || '';
+
+    const proofMatch = note.match(/\[PROOF:(.*?)\]/);
+    const url = proofMatch ? proofMatch[1] : (leaveRequest?.attachment_url || null);
+    const hasImage = !!url;
+    
+    return createPortal(
+        <motion.div 
+            className="fixed inset-0 z-[150] flex items-end md:items-center justify-center bg-slate-900/80 backdrop-blur-xl p-0 md:p-4"
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={backdropVariants}
+            transition={{ duration: 0.3 }}
+            onClick={onClose}
+        >
+            <motion.div 
+                className={`bg-white w-full ${hasImage ? 'h-[100dvh]' : 'h-auto max-h-[100dvh] rounded-t-[2.5rem]'} md:h-auto md:max-h-[90vh] max-w-xl flex flex-col rounded-none md:rounded-[2.5rem] md:rounded-[3rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden border-0 md:border-4 border-white relative`}
+                custom={isMobile}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={modalVariants}
+                transition={
+                    isMobile 
+                        ? { type: "spring", damping: 30, stiffness: 300 }
+                        : { ease: "easeOut", duration: 0.25 }
+                }
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Visual drag handle for native mobile sheet feel when header is hidden */}
+                {!hasImage && (
+                    <div 
+                        className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1 bg-slate-200 rounded-full z-50 md:hidden" 
+                    />
+                )}
+
+                {/* Floating Close Button */}
+                <button 
+                    onClick={onClose} 
+                    className={`absolute top-[calc(env(safe-area-inset-top,16px)+12px)] md:top-6 right-6 p-2 rounded-full transition-all z-50 ${
+                        hasImage 
+                            ? 'bg-black/40 hover:bg-red-500 text-white border border-white/10 shadow-xl backdrop-blur-md' 
+                            : 'bg-slate-100 hover:bg-red-100 text-slate-500 hover:text-red-600 shadow-md'
+                    }`}
+                >
+                    <X className="w-5 h-5"/>
+                </button>
+
+                {/* Natural Scroll Container (No outer padding to allow full-bleed top image) */}
+                <div 
+                    className="overflow-y-auto flex-1 flex flex-col min-h-0 overscroll-behavior-y-contain -webkit-overflow-scrolling-touch scrollbar-none"
+                >
+                    {/* Visual Evidence Header (Inside Scrollable list) */}
+                    {hasImage && (
+                        <div 
+                            className="relative w-full h-64 sm:h-72 shrink-0 bg-slate-900 flex items-center justify-center group/img overflow-hidden"
+                        >
+                            {/* Visual drag handle for native mobile sheet feel */}
+                            <div 
+                                className="absolute top-[calc(env(safe-area-inset-top,16px)+6px)] left-1/2 -translate-x-1/2 w-12 h-1 bg-white/30 rounded-full z-20 md:hidden" 
+                            />
+                            
+                            <img 
+                                src={getDirectDriveUrl(url)} 
+                                className="w-full h-full object-cover opacity-90 group-hover/img:scale-105 transition-transform duration-700 cursor-pointer" 
+                                alt="Proof"
+                                referrerPolicy="no-referrer"
+                                onClick={() => {
+                                    setLightboxUrl(url);
+                                    setShowLightbox(true);
+                                }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent pointer-events-none"></div>
+                            
+                            {/* Zoom Indicator */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none">
+                                <div className="bg-white/20 backdrop-blur-md p-4 rounded-full border border-white/30 text-white">
+                                    <ZoomIn className="w-8 h-8" />
                                 </div>
-                                <button 
-                                    onClick={() => onNav(1)} 
-                                    className="p-1.5 hover:bg-slate-200/50 text-slate-500 hover:text-slate-800 rounded-lg transition-all active:scale-90 cursor-pointer" 
-                                    aria-label="สัปดาห์ถัดไป"
-                                >
-                                    <ChevronRight className="w-4 h-4"/>
-                                </button>
+                            </div>
+
+                            <div 
+                                className="absolute bottom-4 left-6 flex items-center gap-3 transition-all duration-100"
+                            >
+                                <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 text-white flex items-center gap-2">
+                                    <ImageIcon className="w-4 h-4" />
+                                    <span className="text-xs font-black uppercase tracking-widest">Visual Evidence</span>
+                                </div>
+                                <a href={url} target="_blank" rel="noreferrer" className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-900/50 hover:bg-indigo-500 transition-all">
+                                    <Download className="w-4 h-4" />
+                                </a>
                             </div>
                         </div>
+                    )}
+
+                    {/* Details Content Container (With inner Padding) */}
+                    <div className="p-6 md:p-8 flex-1 flex flex-col space-y-7 pb-[calc(env(safe-area-inset-bottom,24px)+24px)] min-h-0">
+                        {/* Cozy Pastel Info Alert Card when no image exists */}
+                        {!hasImage && (
+                            <div className="bg-amber-50/70 border border-amber-100/80 p-4 rounded-2xl text-amber-800 flex gap-3 items-start shrink-0">
+                                <span className="text-lg leading-none mt-0.5">📷</span>
+                                <div className="flex-1 space-y-1">
+                                    <h5 className="font-bold text-xs text-amber-900 tracking-wide">
+                                        ไม่ได้เปิดใช้งานการบันทึกภาพถ่าย
+                                    </h5>
+                                    <p className="text-[11px] leading-relaxed text-amber-800/80 font-medium font-sans">
+                                        บันทึกเวลานี้ไม่มีไฟล์ภาพ เนื่องจากระบบไม่ได้เปิดใช้งานการถ่ายภาพประกอบ หรือผู้ใช้ไม่ได้อัปโหลดภาพหลักฐานเข้ามาในขณะลงเวลา
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex justify-between items-start shrink-0">
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-1">
+                                    {log ? 'Time Analysis Log' : 'Leave Request Detail'}
+                                </p>
+                                <h3 className="text-2xl md:text-3xl font-bold text-slate-800">
+                                    {format(displayDate, 'EEEE d MMMM', { locale: th })}
+                                </h3>
+                                {leaveRequest && (
+                                    <div className={`mt-2 inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shrink-0
+                                    ${leaveRequest.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 
+                                      leaveRequest.status === 'PENDING' ? 'bg-amber-100 text-amber-700 border-amber-200' : 
+                                      'bg-red-100 text-red-700 border-red-200'}`}>
+                                    {leaveRequest.status} {leaveRequest.type}
+                                </div>
+                            )}
+                            {log && !leaveRequest && (() => {
+                                const leaveMatch = log.note?.match(/\[APPROVED LEAVE: (.*?)\]/);
+                                if (leaveMatch) {
+                                    return (
+                                        <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-[10px] font-black uppercase tracking-widest border border-sky-200 shrink-0">
+                                            {leaveMatch[1]} LEAVE
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
+                        </div>
+                        <div className="p-3 md:p-4 bg-indigo-50 text-indigo-600 rounded-[1.25rem] md:rounded-[1.5rem] shadow-inner shrink-0">
+                            {leaveRequest ? <Info className="w-6 h-6 md:w-8 md:h-8" /> : <Clock className="w-6 h-6 md:w-8 md:h-8" />}
+                        </div>
                     </div>
-                </motion.div>
 
-                <div className="flex flex-col gap-3 w-full xl:w-auto">
-                    {/* Tier 1: View & Actions */}
-                    <div className="flex flex-col sm:flex-row sm:justify-end items-center gap-3 w-full">
-                         {onExportCSV && (
-                             <motion.button 
-                                variants={itemVariants}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={onExportCSV}
-                                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50/80 hover:bg-emerald-100 border border-emerald-100 hover:border-emerald-200 text-emerald-700 rounded-2xl text-xs font-bold transition-all shadow-sm w-full sm:w-auto cursor-pointer select-none shrink-0"
-                                title="ส่งออกไฟล์รายงานในรูปแบบ CSV"
-                             >
-                                <Download className="w-4 h-4 text-emerald-600" />
-                                <span>ส่งออกรายงาน (CSV) 📥</span>
-                             </motion.button>
-                         )}
+                    {log ? (
+                        <div className="grid grid-cols-2 gap-4 md:gap-6 shrink-0">
+                            <div className="bg-slate-50 p-4 md:p-5 rounded-[2rem] border border-slate-100 group hover:border-emerald-200 transition-all">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center"><ArrowRight className="w-3 h-3 mr-1 text-emerald-500" /> Start Mission</p>
+                                <p className="text-2xl md:text-3xl font-black text-indigo-600 font-mono">
+                                    {log.checkInTime ? format(log.checkInTime, 'HH:mm') : '--:--'}
+                                </p>
+                                <p className="text-[10px] text-slate-500 mt-2 font-bold flex items-center"><MapPin className="w-3 h-3 mr-1 text-slate-300"/> {log.locationName || 'Unspecified'}</p>
+                            </div>
+                            <div className="bg-slate-50 p-4 md:p-5 rounded-[2rem] border border-slate-100 group hover:border-orange-200 transition-all">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center"><ArrowRight className="w-3 h-3 mr-1 text-orange-500 rotate-180" /> Mission End</p>
+                                <p className="text-2xl md:text-3xl font-black text-slate-700 font-mono">
+                                    {log.checkOutTime ? format(log.checkOutTime, 'HH:mm') : '--:--'}
+                                </p>
+                                <p className="text-[10px] text-slate-500 mt-2 font-bold flex items-center"><MapPin className="w-3 h-3 mr-1 text-slate-300"/> {log.checkOutLocationName || 'Unspecified'}</p>
+                            </div>
+                        </div>
+                    ) : leaveRequest && (
+                        <div className="bg-slate-50 p-5 md:p-6 rounded-[2rem] border border-slate-100 shrink-0">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-indigo-500" />
+                                    <span className="text-xs font-bold text-slate-600">Duration</span>
+                                </div>
+                                <span className="text-xs font-black text-indigo-600">
+                                    {format(new Date(leaveRequest.start_date), 'd MMM')} - {format(new Date(leaveRequest.end_date), 'd MMM')}
+                                </span>
+                            </div>
+                            <div className="h-[1px] bg-slate-200 w-full mb-4"></div>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Info className="w-4 h-4 text-indigo-500" />
+                                    <span className="text-xs font-bold text-slate-600">Type</span>
+                                </div>
+                                <span className="text-xs font-black text-slate-800 uppercase tracking-widest">{leaveRequest.type}</span>
+                            </div>
+                        </div>
+                    )}
 
-                         <motion.button 
-                            variants={itemVariants}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => setShowInactive(!showInactive)}
-                            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all border w-full sm:w-[185px] shrink-0 cursor-pointer select-none outline-none ${
-                                showInactive 
-                                ? 'bg-rose-50/80 border-rose-100 text-rose-600 hover:bg-rose-100' 
-                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                            }`}
-                            title={showInactive ? "ซ่อนสมาชิกที่ลาออก" : "แสดงสมาชิกที่ลาออก"}
+                    {/* Employee Leave/Edit Time Reason */}
+                    {userReason && (
+                        <div className="bg-indigo-900 rounded-[2rem] p-6 text-indigo-100 shadow-2xl relative overflow-hidden shrink-0">
+                            <div className="absolute top-0 right-0 p-4 opacity-10"><Info className="w-16 h-16"/></div>
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 text-indigo-400">เหตุผลคำขอ (Employee Reason)</h4>
+                            <p className="text-sm font-medium leading-relaxed italic">
+                                "{userReason.replace(/\[.*?\]/g, '').trim() || 'ยื่นคำขอโดยไม่มีระบุหมายเหตุเพิ่มเติม'}"
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Admin Rejection Reason */}
+                    {adminRejection && (
+                        <div className="bg-red-900 rounded-[2rem] p-6 text-red-100 shadow-2xl relative overflow-hidden shrink-0">
+                            <div className="absolute top-0 right-0 p-4 opacity-10"><Info className="w-16 h-16"/></div>
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 text-red-300">เหตุผลที่ปฏิเสธ (Admin Rejection Reason)</h4>
+                            <p className="text-sm font-semibold leading-relaxed">
+                                "{adminRejection}"
+                            </p>
+                        </div>
+                    )}
+
+                    {/* System/Log Additional Note */}
+                    {systemLogNote && systemLogNote !== userReason.replace(/\[.*?\]/g, '').trim() && (
+                        <div className="bg-slate-900 rounded-[2rem] p-6 text-slate-100 shadow-2xl relative overflow-hidden shrink-0">
+                            <div className="absolute top-0 right-0 p-4 opacity-10"><Info className="w-16 h-16"/></div>
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 text-slate-400">บันทึกเพิ่มเติมระบบ (System/Log Note)</h4>
+                            <p className="text-sm font-medium leading-relaxed">
+                                "{systemLogNote}"
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="flex-grow min-h-0" />
+
+                    <div className="px-6 pt-2 pb-8 sm:pb-10 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] shrink-0">
+                        <button 
+                            onClick={onClose}
+                            className="w-full py-4 bg-slate-900 text-white rounded-[1.5rem] font-semibold text-sm tracking-widest uppercase hover:bg-indigo-600 transition-all active:scale-95 shadow-xl shadow-slate-200 shrink-0"
                         >
-                            {showInactive ? <UserCheck className="w-4 h-4 text-rose-500" /> : <UserX className="w-4 h-4 text-slate-400" />}
-                            {showInactive ? 'SHOWING INACTIVE' : 'HIDE INACTIVE'}
-                        </motion.button>
-
-                        <motion.div variants={itemVariants} className="bg-slate-100/80 p-1 rounded-2xl border border-slate-200/50 flex w-full sm:w-auto relative shrink-0">
-                            {(['WEEK', 'MONTH'] as const).map((mode) => {
-                                const isActive = viewMode === mode;
-                                return (
-                                    <button
-                                        key={mode}
-                                        onClick={() => setViewMode(mode)}
-                                        className="relative flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer select-none outline-none z-10"
-                                    >
-                                        <span className={`relative z-20 transition-colors duration-200 ${isActive ? 'text-white' : 'text-slate-500 hover:text-slate-800'}`}>
-                                            {mode === 'WEEK' ? 'WEEKLY' : 'MONTHLY'}
-                                        </span>
-                                        {isActive && (
-                                            <motion.div
-                                                layoutId="activeTimesheetMode"
-                                                className="absolute inset-0 bg-indigo-500 rounded-xl shadow-sm z-10"
-                                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                            />
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </motion.div>
-                    </div>
-
-                    {/* Tier 2: Filters & Search */}
-                    <div className="flex flex-col sm:flex-row sm:justify-end items-center gap-3 w-full">
-                        <motion.div variants={itemVariants} className="w-full sm:w-60 z-20 shrink-0">
-                            <FilterDropdown
-                                label="ทุกแผนก (All Teams)"
-                                options={deptOptions}
-                                value={filterDepartment}
-                                onChange={setFilterDepartment}
-                                icon={<Briefcase className="w-4 h-4" />}
-                                theme="light"
-                                showAllOption={true}
-                                clearable={false}
-                            />
-                        </motion.div>
-
-                        <motion.div variants={itemVariants} className="relative w-full sm:w-64 shrink-0">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input 
-                                type="text" 
-                                placeholder="ค้นหาชื่อลูกทีม..." 
-                                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-300 text-xs font-bold text-slate-700 placeholder-slate-400 transition-all hover:bg-slate-100/50 focus:bg-white"
-                                value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
-                            />
-                        </motion.div>
+                            ปิดรายละเอียด
+                        </button>
                     </div>
                 </div>
             </div>
         </motion.div>
+
+            {/* Lightbox Modal */}
+            <AnimatePresence>
+                {showLightbox && (
+                    <Lightbox 
+                        url={lightboxUrl} 
+                        onClose={() => setShowLightbox(false)} 
+                    />
+                )}
+            </AnimatePresence>
+        </motion.div>,
+        document.body
     );
 };
 
-export default TimesheetHeader;
+export default TimesheetDetailModal;

@@ -78,7 +78,7 @@ function App() {
 
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [showLogin, setShowLogin] = useState(false);
+  const [showLogin, setShowLogin] = useState(true); // Default to true to show login page first
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
 
   // --- INITIAL AUTH CHECK ---

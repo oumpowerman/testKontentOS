@@ -450,16 +450,6 @@ const AuthPage: React.FC<AuthPageProps> = ({
         }}
         className={`relative w-full max-w-5xl bg-white/40 backdrop-blur-3xl rounded-[2.6rem] p-[1px] border border-white/70 transition-all duration-700 h-full max-h-[92dvh] md:h-[min(780px,88dvh)] my-auto flex flex-col md:flex-row overflow-hidden ${dynamicShadow}`}
       >
-        {/* Buttery dynamic glass refraction reflection effect */}
-        <motion.div 
-          className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-30 z-30"
-          style={{
-            background: useTransform(
-              [tiltX, tiltY],
-              ([tx, ty]) => `radial-gradient(circle 350px at ${(Number(tx) + 0.5) * 100}% ${(Number(ty) + 0.5) * 100}%, rgba(255,255,255,0.95) 0%, transparent 100%)`
-            )
-          }}
-        />
 
         {onBack && (
             <button 

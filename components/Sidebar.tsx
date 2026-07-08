@@ -340,7 +340,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       'WORKSPACE': true,
       'PRODUCTION': true,
       'OFFICE': true,
-      'ADMIN': false
+      'ADMIN': true
   });
 
   const toggleGroup = (groupId: string) => {

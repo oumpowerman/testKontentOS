@@ -159,6 +159,10 @@ const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveR
     const userReason = leaveRequest?.reason || '';
     const adminRejection = leaveRequest?.rejectionReason || leaveRequest?.rejection_reason || '';
     const systemLogNote = log?.note?.replace(/\[.*?\]/g, '').trim() || '';
+
+    const proofMatch = note.match(/\[PROOF:(.*?)\]/);
+    const url = proofMatch ? proofMatch[1] : (leaveRequest?.attachment_url || null);
+    const hasImage = !!url;
     
     return createPortal(
         <motion.div 
@@ -171,7 +175,7 @@ const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveR
             onClick={onClose}
         >
             <motion.div 
-                className="bg-white w-full h-[100dvh] md:h-auto md:max-h-[90vh] max-w-xl flex flex-col rounded-none md:rounded-[2.5rem] md:rounded-[3rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden border-0 md:border-4 border-white relative"
+                className={`bg-white w-full ${hasImage ? 'h-[100dvh]' : 'h-auto max-h-[100dvh] rounded-t-[2.5rem]'} md:h-auto md:max-h-[90vh] max-w-xl flex flex-col rounded-none md:rounded-[2.5rem] md:rounded-[3rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden border-0 md:border-4 border-white relative`}
                 custom={isMobile}
                 initial="hidden"
                 animate="visible"
@@ -184,10 +188,21 @@ const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveR
                 }
                 onClick={e => e.stopPropagation()}
             >
+                {/* Visual drag handle for native mobile sheet feel when header is hidden */}
+                {!hasImage && (
+                    <div 
+                        className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1 bg-slate-200 rounded-full z-50 md:hidden" 
+                    />
+                )}
+
                 {/* Floating Close Button */}
                 <button 
                     onClick={onClose} 
-                    className="absolute top-[calc(env(safe-area-inset-top,16px)+12px)] md:top-6 right-6 p-2 bg-black/40 hover:bg-red-500 text-white rounded-full transition-all shadow-xl backdrop-blur-md z-50 border border-white/10"
+                    className={`absolute top-[calc(env(safe-area-inset-top,16px)+12px)] md:top-6 right-6 p-2 rounded-full transition-all z-50 ${
+                        hasImage 
+                            ? 'bg-black/40 hover:bg-red-500 text-white border border-white/10 shadow-xl backdrop-blur-md' 
+                            : 'bg-slate-100 hover:bg-red-100 text-slate-500 hover:text-red-600 shadow-md'
+                    }`}
                 >
                     <X className="w-5 h-5"/>
                 </button>
@@ -197,66 +212,65 @@ const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveR
                     className="overflow-y-auto flex-1 flex flex-col min-h-0 overscroll-behavior-y-contain -webkit-overflow-scrolling-touch scrollbar-none"
                 >
                     {/* Visual Evidence Header (Inside Scrollable list) */}
-                    <div 
-                        className="relative w-full h-64 sm:h-72 shrink-0 bg-slate-900 flex items-center justify-center group/img overflow-hidden"
-                    >
-                        {/* Visual drag handle for native mobile sheet feel */}
+                    {hasImage && (
                         <div 
-                            className="absolute top-[calc(env(safe-area-inset-top,16px)+6px)] left-1/2 -translate-x-1/2 w-12 h-1 bg-white/30 rounded-full z-20 md:hidden" 
-                        />
-                        
-                        {(() => {
-                            const proofMatch = note.match(/\[PROOF:(.*?)\]/);
-                            const url = proofMatch ? proofMatch[1] : (leaveRequest?.attachment_url || null);
+                            className="relative w-full h-64 sm:h-72 shrink-0 bg-slate-900 flex items-center justify-center group/img overflow-hidden"
+                        >
+                            {/* Visual drag handle for native mobile sheet feel */}
+                            <div 
+                                className="absolute top-[calc(env(safe-area-inset-top,16px)+6px)] left-1/2 -translate-x-1/2 w-12 h-1 bg-white/30 rounded-full z-20 md:hidden" 
+                            />
                             
-                            return url ? (
-                                <>
-                                    <img 
-                                        src={getDirectDriveUrl(url)} 
-                                        className="w-full h-full object-cover opacity-90 group-hover/img:scale-105 transition-transform duration-700 cursor-pointer" 
-                                        alt="Proof"
-                                        referrerPolicy="no-referrer"
-                                        onClick={() => {
-                                            setLightboxUrl(url);
-                                            setShowLightbox(true);
-                                        }}
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent pointer-events-none"></div>
-                                    
-                                    {/* Zoom Indicator */}
-                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none">
-                                        <div className="bg-white/20 backdrop-blur-md p-4 rounded-full border border-white/30 text-white">
-                                            <ZoomIn className="w-8 h-8" />
-                                        </div>
-                                    </div>
- 
-                                    <div 
-                                        className="absolute bottom-4 left-6 flex items-center gap-3 transition-all duration-100"
-                                    >
-                                        <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 text-white flex items-center gap-2">
-                                            <ImageIcon className="w-4 h-4" />
-                                            <span className="text-xs font-black uppercase tracking-widest">Visual Evidence</span>
-                                        </div>
-                                        <a href={url} target="_blank" rel="noreferrer" className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-900/50 hover:bg-indigo-500 transition-all">
-                                            <Download className="w-4 h-4" />
-                                        </a>
-                                    </div>
-                                </>
-                            ) : (
-                                <div 
-                                    className="flex flex-col items-center text-slate-500 gap-4"
-                                >
-                                    <div className="w-20 h-20 bg-slate-800 rounded-3xl flex items-center justify-center border border-slate-700">
-                                        <ImageIcon className="w-10 h-10 opacity-20" />
-                                    </div>
-                                    <p className="text-xs font-black uppercase tracking-[0.2em] opacity-50">No Visual Record</p>
+                            <img 
+                                src={getDirectDriveUrl(url)} 
+                                className="w-full h-full object-cover opacity-90 group-hover/img:scale-105 transition-transform duration-700 cursor-pointer" 
+                                alt="Proof"
+                                referrerPolicy="no-referrer"
+                                onClick={() => {
+                                    setLightboxUrl(url);
+                                    setShowLightbox(true);
+                                }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent pointer-events-none"></div>
+                            
+                            {/* Zoom Indicator */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none">
+                                <div className="bg-white/20 backdrop-blur-md p-4 rounded-full border border-white/30 text-white">
+                                    <ZoomIn className="w-8 h-8" />
                                 </div>
-                            );
-                        })()}
-                    </div>
+                            </div>
+
+                            <div 
+                                className="absolute bottom-4 left-6 flex items-center gap-3 transition-all duration-100"
+                            >
+                                <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 text-white flex items-center gap-2">
+                                    <ImageIcon className="w-4 h-4" />
+                                    <span className="text-xs font-black uppercase tracking-widest">Visual Evidence</span>
+                                </div>
+                                <a href={url} target="_blank" rel="noreferrer" className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-900/50 hover:bg-indigo-500 transition-all">
+                                    <Download className="w-4 h-4" />
+                                </a>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Details Content Container (With inner Padding) */}
-                    <div className="p-6 md:p-8 flex-1 flex flex-col space-y-7 pb-[calc(env(safe-area-inset-bottom,24px)+24px)] min-h-0">
+                    <div className={`p-6 md:p-8 flex-1 flex flex-col space-y-7 ${hasImage ? 'pb-[calc(env(safe-area-inset-bottom,24px)+24px)]' : 'pb-2'} min-h-0`}>
+                        {/* Cozy Pastel Info Alert Card when no image exists */}
+                        {!hasImage && (
+                            <div className="bg-amber-50/70 border border-amber-100/80 p-4 rounded-2xl text-amber-800 flex gap-3 items-start shrink-0">
+                                <span className="text-lg leading-none mt-0.5">📷</span>
+                                <div className="flex-1 space-y-1">
+                                    <h5 className="font-bold text-xs text-amber-900 tracking-wide">
+                                        ไม่ได้เปิดใช้งานการบันทึกภาพถ่าย
+                                    </h5>
+                                    <p className="text-[11px] leading-relaxed text-amber-800/80 font-medium font-sans">
+                                        บันทึกเวลานี้ไม่มีไฟล์ภาพ เนื่องจากระบบไม่ได้เปิดใช้งานการถ่ายภาพประกอบ หรือผู้ใช้ไม่ได้อัปโหลดภาพหลักฐานเข้ามาในขณะลงเวลา
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="flex justify-between items-start shrink-0">
                             <div>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-1">
@@ -362,9 +376,9 @@ const TimesheetDetailModal: React.FC<TimesheetDetailModalProps> = ({ log, leaveR
                         </div>
                     )}
 
-                    <div className="flex-grow min-h-0" />
+                    {hasImage && <div className="flex-grow min-h-0" />}
 
-                    <div className="px-6 pt-2 pb-8 sm:pb-10 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] shrink-0">
+                    <div className={`px-6 pt-2 shrink-0 ${hasImage ? 'pb-8 sm:pb-10 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]' : 'pb-4'}`}>
                         <button 
                             onClick={onClose}
                             className="w-full py-4 bg-slate-900 text-white rounded-[1.5rem] font-semibold text-sm tracking-widest uppercase hover:bg-indigo-600 transition-all active:scale-95 shadow-xl shadow-slate-200 shrink-0"

@@ -3,7 +3,7 @@
 // https://deno.land/manual/getting_started/setup_your_environment
 // This code runs on Supabase Edge Functions.
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 
 declare const Deno: any;
 
