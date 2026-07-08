@@ -9,6 +9,7 @@ import { MENU_GROUPS } from '../components/Sidebar';
 import PendingApprovalScreen from '../components/PendingApprovalScreen';
 import InactiveScreen from '../components/InactiveScreen';
 import DeathScreen from '../components/gamification/DeathScreen';
+import { MissingProfileScreen } from '../components/auth/MissingProfileScreen';
 import AppShell from '../components/layout/AppShell';
 import { useTaskManager } from '../hooks/useTaskManager';
 import { useAuth } from '../hooks/useAuth';
@@ -330,7 +331,11 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
 
   // Sync URL with default view - Enhanced stability with custom member redirect
   useEffect(() => {
+    // Prevent redirecting before metadata and masterOptions are loaded
+    if (isManagerLoading) return;
+
     const view = searchParams.get('view');
+    
     // If we are at root and no view is set, determine default view
     if (!view && location.pathname === '/' && defaultView) {
       setSearchParams((next: any) => {
@@ -339,8 +344,17 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
         next.set('view', defaultView);
         return next;
       }, { replace: true });
+      return;
     }
-  }, [location.pathname, searchParams, setSearchParams, defaultView]);
+
+    // If a view is specified in URL but it is NOT allowed, redirect to default view!
+    if (view && allowedViews.length > 0 && !allowedViews.includes(view)) {
+      setSearchParams((next: any) => {
+        next.set('view', defaultView);
+        return next;
+      }, { replace: true });
+    }
+  }, [location.pathname, searchParams, setSearchParams, defaultView, isManagerLoading, allowedViews]);
 
   // --- TASK OPENER (Robust ID Resolution) ---
   const handleOpenTaskById = useCallback(async (taskOrId: any, currentViewMode?: string) => {
@@ -442,7 +456,7 @@ const AppRouterInner: React.FC<AppRouterProps> = ({ user }) => {
   }
 
   if (!currentUserProfile) {
-     return <div className="p-10 text-center text-gray-500">ไม่พบข้อมูลโปรไฟล์ผู้ใช้ (User Profile Not Found)</div>;
+     return <MissingProfileScreen onLogout={handleForceLogout} />;
   }
   
   if (!currentUserProfile.isApproved) {

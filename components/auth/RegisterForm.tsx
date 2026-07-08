@@ -76,6 +76,21 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const [isPolicyModalOpen, setIsPolicyModalOpen] = React.useState(false);
   const [acceptedTerms, setAcceptedTerms] = React.useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = React.useState(false);
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+
+  const FORM_FIELDS_ORDER = [
+    'avatarPreview',
+    'firstName',
+    'lastName',
+    'nickname',
+    'position',
+    'employmentType',
+    'email',
+    'phone',
+    'password',
+    'selectedEmoji',
+    'acceptedTerms'
+  ];
 
   React.useEffect(() => {
     const fetchPolicy = async () => {
@@ -99,6 +114,118 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     fetchPolicy();
   }, []);
 
+  // Dynamic Error Clearing via useEffect hooks
+  React.useEffect(() => {
+    if (avatarPreview && errors.avatarPreview) {
+      setErrors(prev => {
+        const copy = { ...prev };
+        delete copy.avatarPreview;
+        return copy;
+      });
+    }
+  }, [avatarPreview, errors.avatarPreview]);
+
+  React.useEffect(() => {
+    if (firstName && firstName.trim() && errors.firstName) {
+      setErrors(prev => {
+        const copy = { ...prev };
+        delete copy.firstName;
+        return copy;
+      });
+    }
+  }, [firstName, errors.firstName]);
+
+  React.useEffect(() => {
+    if (lastName && lastName.trim() && errors.lastName) {
+      setErrors(prev => {
+        const copy = { ...prev };
+        delete copy.lastName;
+        return copy;
+      });
+    }
+  }, [lastName, errors.lastName]);
+
+  React.useEffect(() => {
+    if (name && name.trim() && errors.nickname) {
+      setErrors(prev => {
+        const copy = { ...prev };
+        delete copy.nickname;
+        return copy;
+      });
+    }
+  }, [name, errors.nickname]);
+
+  React.useEffect(() => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && emailRegex.test(email) && errors.email) {
+      setErrors(prev => {
+        const copy = { ...prev };
+        delete copy.email;
+        return copy;
+      });
+    }
+  }, [email, errors.email]);
+
+  React.useEffect(() => {
+    if (phone && phone.trim() && errors.phone) {
+      setErrors(prev => {
+        const copy = { ...prev };
+        delete copy.phone;
+        return copy;
+      });
+    }
+  }, [phone, errors.phone]);
+
+  React.useEffect(() => {
+    if (password && password.length >= 8 && errors.password) {
+      setErrors(prev => {
+        const copy = { ...prev };
+        delete copy.password;
+        return copy;
+      });
+    }
+  }, [password, errors.password]);
+
+  React.useEffect(() => {
+    if (position && position !== 'ALL' && errors.position) {
+      setErrors(prev => {
+        const copy = { ...prev };
+        delete copy.position;
+        return copy;
+      });
+    }
+  }, [position, errors.position]);
+
+  React.useEffect(() => {
+    if (employmentType && errors.employmentType) {
+      setErrors(prev => {
+        const copy = { ...prev };
+        delete copy.employmentType;
+        return copy;
+      });
+    }
+  }, [employmentType, errors.employmentType]);
+
+  React.useEffect(() => {
+    if (selectedEmoji && !takenEmojis.includes(selectedEmoji) && errors.selectedEmoji) {
+      setErrors(prev => {
+        const copy = { ...prev };
+        delete copy.selectedEmoji;
+        return copy;
+      });
+    }
+  }, [selectedEmoji, takenEmojis, errors.selectedEmoji]);
+
+  React.useEffect(() => {
+    if (acceptedTerms && errors.acceptedTerms) {
+      setErrors(prev => {
+        const copy = { ...prev };
+        delete copy.acceptedTerms;
+        return copy;
+      });
+    }
+  }, [acceptedTerms, errors.acceptedTerms]);
+
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     const difference = target.scrollHeight - target.scrollTop - target.clientHeight;
@@ -109,24 +236,100 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const newErrors: Record<string, string> = {};
+
+    if (!avatarPreview) {
+      newErrors.avatarPreview = 'กรุณาอัปโหลดรูปภาพโปรไฟล์ของคุณนะครับ';
+    }
+    if (!firstName || !firstName.trim()) {
+      newErrors.firstName = 'กรุณากรอกชื่อจริงนะครับ';
+    }
+    if (!lastName || !lastName.trim()) {
+      newErrors.lastName = 'กรุณากรอกนามสกุลนะครับ';
+    }
+    if (!name || !name.trim()) {
+      newErrors.nickname = 'กรุณากรอกชื่อเล่นนะครับ';
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+      newErrors.email = 'กรุณากรอกอีเมลนะครับ';
+    } else if (!emailRegex.test(email)) {
+      newErrors.email = 'กรุณากรอกอีเมลในรูปแบบที่ถูกต้องนะครับ';
+    }
+
+    if (!phone || !phone.trim()) {
+      newErrors.phone = 'กรุณากรอกเบอร์โทรศัพท์นะครับ';
+    }
+
+    if (!password) {
+      newErrors.password = 'กรุณากรอกรหัสผ่านนะครับ';
+    } else if (password.length < 8) {
+      newErrors.password = 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษรนะครับ';
+    }
+
+    if (!position || position === 'ALL') {
+      newErrors.position = 'กรุณาเลือกตำแหน่งงานนะครับ';
+    }
+
+    if (!employmentType) {
+      newErrors.employmentType = 'กรุณาเลือกประเภทพนักงานนะครับ';
+    }
+
+    if (!selectedEmoji) {
+      newErrors.selectedEmoji = 'กรุณาเลือกอิโมจิประจำตัวนะครับ';
+    } else if (takenEmojis.includes(selectedEmoji)) {
+      newErrors.selectedEmoji = 'อิโมจินี้ถูกเพื่อนในทีมเลือกไปแล้ว โปรดเลือกอิโมจิอื่นนะครับ';
+    }
+
     if (!acceptedTerms) {
-      alert('กรุณาเปิดอ่านและกดยอมรับข้อตกลงและระเบียบปฏิบัติการทำงานก่อนส่งใบสมัคร');
+      newErrors.acceptedTerms = 'กรุณายอมรับข้อตกลงและระเบียบปฏิบัติการทำงานนะครับ';
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      const firstInvalidKey = FORM_FIELDS_ORDER.find(key => newErrors[key]);
+      if (firstInvalidKey) {
+        const containerId = `register-${firstInvalidKey}-container`;
+        const element = document.getElementById(containerId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          setTimeout(() => {
+            const input = element.querySelector('input:not([type="file"]):not([type="checkbox"]), button, textarea, #terms-checkbox') as HTMLElement;
+            if (input) {
+              input.focus();
+            }
+          }, 350);
+        }
+      }
       return;
     }
+
     onSubmit(e);
+  };
+
+  const getInputClass = (hasError: boolean, extraClasses = '') => {
+    const base = `w-full py-3 rounded-xl outline-none transition-all duration-300 font-bold text-sm ${extraClasses}`;
+    
+    if (hasError) {
+      return `${base} bg-red-50/50 border-2 border-red-200 text-red-900 placeholder:text-red-350 focus:bg-white focus:border-red-400 focus:ring-2 focus:ring-red-100 shadow-[0_0_10px_rgba(239,68,68,0.05)]`;
+    }
+    return `${base} bg-slate-50 border-2 border-transparent focus:bg-white focus:border-pink-400 text-slate-700`;
   };
 
   // EMOJI_POOL is imported from central constants
   return (
     <>
-      <form onSubmit={handleFormSubmit} className="space-y-4">
+      <form onSubmit={handleFormSubmit} className="space-y-4" noValidate>
       {/* Avatar Image Selection */}
-      <div className="flex justify-center mb-6">
+      <div id="register-avatarPreview-container" className="flex flex-col items-center mb-6">
         <div 
           className="relative group cursor-pointer" 
           onClick={() => !isConvertingImg && fileInputRef.current?.click()}
         >
-          <div className={`w-24 h-24 rounded-full border-4 ${avatarPreview ? 'border-pink-300' : 'border-slate-100'} bg-slate-50 flex items-center justify-center overflow-hidden transition-all group-hover:border-pink-400 group-hover:scale-105 shadow-sm`}>
+          <div className={`w-24 h-24 rounded-full border-4 ${errors.avatarPreview ? 'border-red-200 bg-red-50/30' : avatarPreview ? 'border-pink-300' : 'border-slate-100'} bg-slate-50 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:border-pink-400 group-hover:scale-105 shadow-sm`}>
             {isConvertingImg ? (
               <div className="flex flex-col items-center justify-center text-slate-400">
                 <Loader2 className="w-8 h-8 animate-spin" />
@@ -136,8 +339,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               <img src={avatarPreview} alt="Avatar Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             ) : (
               <div className="flex flex-col items-center text-slate-400 select-none">
-                <Camera className="w-8 h-8 mb-1" />
-                <span className="text-[10px] font-bold text-red-400">รูปโปรไฟล์ *</span>
+                <Camera className={`w-8 h-8 mb-1 transition-colors duration-300 ${errors.avatarPreview ? 'text-red-400' : 'text-slate-400'}`} />
+                <span className={`text-[10px] font-bold transition-colors duration-300 ${errors.avatarPreview ? 'text-red-500' : 'text-red-400'}`}>รูปโปรไฟล์ *</span>
               </div>
             )}
           </div>
@@ -153,51 +356,64 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             disabled={isConvertingImg}
           />
         </div>
+        {errors.avatarPreview && (
+          <p className="text-xs font-bold text-red-500 mt-2 animate-in fade-in duration-300">
+            {errors.avatarPreview}
+          </p>
+        )}
       </div>
 
       {/* First Name & Last Name Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* First Name */}
-        <div className="space-y-1">
+        <div id="register-firstName-container" className="space-y-1">
           <label className="text-xs font-bold text-slate-500 ml-1 uppercase">ชื่อจริง *</label>
           <div className="relative group">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-              <User className="w-5 h-5 text-slate-400 group-focus-within:text-pink-500 transition-colors" />
+              <User className={`w-5 h-5 transition-colors duration-300 ${errors.firstName ? 'text-red-400 group-focus-within:text-red-500' : 'text-slate-400 group-focus-within:text-pink-500'}`} />
             </div>
             <input 
               type="text" 
               value={firstName} 
               onChange={(e) => setFirstName(e.target.value)} 
-              className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-pink-400 rounded-xl outline-none transition-all font-bold text-slate-700 text-sm" 
+              className={getInputClass(!!errors.firstName, "pl-11 pr-4")}
               placeholder="ชื่อจริง" 
-              required 
             />
           </div>
+          {errors.firstName && (
+            <p className="text-xs font-bold text-red-500 mt-1 ml-1 animate-in fade-in duration-300">
+              {errors.firstName}
+            </p>
+          )}
         </div>
 
         {/* Last Name */}
-        <div className="space-y-1">
+        <div id="register-lastName-container" className="space-y-1">
           <label className="text-xs font-bold text-slate-500 ml-1 uppercase">นามสกุล *</label>
           <div className="relative group">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-              <User className="w-5 h-5 text-slate-400 group-focus-within:text-pink-500 transition-colors" />
+              <User className={`w-5 h-5 transition-colors duration-300 ${errors.lastName ? 'text-red-400 group-focus-within:text-red-500' : 'text-slate-400 group-focus-within:text-pink-500'}`} />
             </div>
             <input 
               type="text" 
               value={lastName} 
               onChange={(e) => setLastName(e.target.value)} 
-              className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-pink-400 rounded-xl outline-none transition-all font-bold text-slate-700 text-sm" 
+              className={getInputClass(!!errors.lastName, "pl-11 pr-4")}
               placeholder="นามสกุล" 
-              required 
             />
           </div>
+          {errors.lastName && (
+            <p className="text-xs font-bold text-red-500 mt-1 ml-1 animate-in fade-in duration-300">
+              {errors.lastName}
+            </p>
+          )}
         </div>
       </div>
 
       {/* Nickname and Rank Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Nickname */}
-        <div className="space-y-1">
+        <div id="register-nickname-container" className="space-y-1">
           <label className="text-xs font-bold text-slate-500 ml-1 uppercase">ชื่อเล่น *</label>
           <div className="relative group">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
@@ -205,22 +421,26 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                 animate={{ rotate: [0, -10, 10, -10, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               >
-                <User className="w-5 h-5 text-slate-400 group-focus-within:text-pink-500 transition-colors" />
+                <User className={`w-5 h-5 transition-colors duration-300 ${errors.nickname ? 'text-red-400 group-focus-within:text-red-500' : 'text-slate-400 group-focus-within:text-pink-500'}`} />
               </motion.div>
             </div>
             <input 
               type="text" 
               value={name} 
               onChange={(e) => setName(e.target.value)} 
-              className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-pink-400 rounded-xl outline-none transition-all font-bold text-slate-700 text-sm" 
+              className={getInputClass(!!errors.nickname, "pl-11 pr-4")}
               placeholder="ชื่อเล่น" 
-              required 
             />
           </div>
+          {errors.nickname && (
+            <p className="text-xs font-bold text-red-500 mt-1 ml-1 animate-in fade-in duration-300">
+              {errors.nickname}
+            </p>
+          )}
         </div>
 
         {/* Position */}
-        <div className="space-y-1">
+        <div id="register-position-container" className="space-y-1">
           <label className="text-xs font-bold text-slate-500 ml-1 uppercase">ตำแหน่งงาน *</label>
           <FilterDropdown 
             label="ตำแหน่งงาน"
@@ -234,12 +454,18 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             clearable={false}
             icon={<Briefcase className="w-5 h-5" />}
             activeColorClass="bg-pink-50 border-pink-200 text-pink-700 font-bold"
+            hasError={!!errors.position}
           />
+          {errors.position && (
+            <p className="text-xs font-bold text-red-500 mt-1 ml-1 animate-in fade-in duration-300">
+              {errors.position}
+            </p>
+          )}
         </div>
       </div>
 
       {/* Employment Type */}
-      <div className="space-y-1">
+      <div id="register-employmentType-container" className="space-y-1">
         <label className="text-xs font-bold text-slate-500 ml-1 uppercase">ประเภทพนักงาน *</label>
         <FilterDropdown 
           label="ประเภทพนักงาน"
@@ -254,11 +480,17 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           clearable={false}
           icon={<User className="w-5 h-5" />}
           activeColorClass="bg-pink-50 border-pink-200 text-pink-700 font-bold"
+          hasError={!!errors.employmentType}
         />
+        {errors.employmentType && (
+          <p className="text-xs font-bold text-red-500 mt-1 ml-1 animate-in fade-in duration-300">
+            {errors.employmentType}
+          </p>
+        )}
       </div>
 
       {/* Email Input */}
-      <div className="space-y-1">
+      <div id="register-email-container" className="space-y-1">
         <label className="text-xs font-bold text-slate-500 ml-1 uppercase">อีเมล *</label>
         <div className="relative group">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
@@ -266,38 +498,46 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               animate={{ y: [0, -2, 0] }}
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
             >
-              <Mail className="w-5 h-5 text-slate-400 group-focus-within:text-pink-500 transition-colors" />
+              <Mail className={`w-5 h-5 transition-colors duration-300 ${errors.email ? 'text-red-400 group-focus-within:text-red-500' : 'text-slate-400 group-focus-within:text-pink-500'}`} />
             </motion.div>
           </div>
           <input 
             type="email" 
             value={email} 
             onChange={(e) => setEmail(e.target.value)} 
-            className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-pink-400 rounded-xl outline-none transition-all font-bold text-slate-700" 
+            className={getInputClass(!!errors.email, "pl-11 pr-4")}
             placeholder="email@example.com" 
-            required 
           />
         </div>
+        {errors.email && (
+          <p className="text-xs font-bold text-red-500 mt-1 ml-1 animate-in fade-in duration-300">
+            {errors.email}
+          </p>
+        )}
       </div>
 
       {/* Phone Number */}
-      <div className="space-y-1">
+      <div id="register-phone-container" className="space-y-1">
         <label className="text-xs font-bold text-slate-500 ml-1 uppercase">เบอร์โทรศัพท์ *</label>
         <div className="relative group">
-          <Phone className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-pink-500 transition-colors" />
+          <Phone className={`w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${errors.phone ? 'text-red-400 group-focus-within:text-red-500' : 'text-slate-400 group-focus-within:text-pink-500'}`} />
           <input 
             type="tel" 
             value={phone} 
             onChange={(e) => setPhone(e.target.value)} 
-            className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-pink-400 rounded-xl outline-none transition-all font-bold text-slate-700" 
+            className={getInputClass(!!errors.phone, "pl-11 pr-4")}
             placeholder="08x-xxx-xxxx" 
-            required 
           />
         </div>
+        {errors.phone && (
+          <p className="text-xs font-bold text-red-500 mt-1 ml-1 animate-in fade-in duration-300">
+            {errors.phone}
+          </p>
+        )}
       </div>
 
       {/* Password Input */}
-      <div className="space-y-1">
+      <div id="register-password-container" className="space-y-1">
         <label className="text-xs font-bold text-slate-500 ml-1 uppercase">รหัสผ่าน *</label>
         <div className="relative group">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
@@ -308,16 +548,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               }}
               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
             >
-              <Lock className="w-5 h-5 text-slate-400 group-focus-within:text-pink-500 transition-colors" />
+              <Lock className={`w-5 h-5 transition-colors duration-300 ${errors.password ? 'text-red-400 group-focus-within:text-red-500' : 'text-slate-400 group-focus-within:text-pink-500'}`} />
             </motion.div>
           </div>
           <input 
             type={showPassword ? "text" : "password"} 
             value={password} 
             onChange={(e) => setPassword(e.target.value)} 
-            className="w-full pl-11 pr-12 py-3 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-pink-400 rounded-xl outline-none transition-all font-bold text-slate-700 [&::-ms-reveal]:hidden [&::-webkit-password-reveal-button]:hidden" 
+            className={getInputClass(!!errors.password, "pl-11 pr-12 [&::-ms-reveal]:hidden [&::-webkit-password-reveal-button]:hidden")}
             placeholder="••••••••" 
-            required 
           />
           <button
             type="button"
@@ -327,6 +566,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
+        {errors.password && (
+          <p className="text-xs font-bold text-red-500 mt-1 ml-1 animate-in fade-in duration-300">
+            {errors.password}
+          </p>
+        )}
       </div>
 
       {/* Bio / Quote Area */}
@@ -345,7 +589,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       </div>
 
       {/* 8-bit Emoji Picker Selection */}
-      <div className="space-y-2 bg-indigo-50/20 border-2 border-indigo-100/50 p-4 shadow-inner rounded-2xl">
+      <div id="register-selectedEmoji-container" className={`space-y-2 p-4 shadow-inner rounded-2xl border-2 transition-all duration-300 ${errors.selectedEmoji ? 'bg-red-50/20 border-red-200/60' : 'bg-indigo-50/20 border-indigo-100/50'}`}>
         <div className="flex justify-between items-center">
           <label className="text-xs font-black text-indigo-950 flex items-center gap-1.5 uppercase">
             <span>✨ เลือกอิโมจิประจำตัว *</span>
@@ -380,10 +624,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             );
           })}
         </div>
+        {errors.selectedEmoji && (
+          <p className="text-xs font-bold text-red-500 mt-1 ml-1 animate-in fade-in duration-300">
+            {errors.selectedEmoji}
+          </p>
+        )}
       </div>
 
       {/* Terms & Conditions Checkbox */}
-      <div className="flex items-start gap-3 bg-indigo-50/25 p-4 rounded-2xl border border-indigo-100/50">
+      <div id="register-acceptedTerms-container" className={`flex items-start gap-3 p-4 rounded-2xl border transition-all duration-300 ${errors.acceptedTerms ? 'bg-red-50/20 border-red-200/60' : 'bg-indigo-50/25 border-indigo-100/50'}`}>
         <input
           id="terms-checkbox"
           type="checkbox"
@@ -425,13 +674,18 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           ขององค์กรครบถ้วน และตกลงที่จะปฏิบัติตามนโยบายนี้ทุกประการ *
         </label>
       </div>
+      {errors.acceptedTerms && (
+        <p className="text-xs font-bold text-red-500 mt-1 ml-3 animate-in fade-in duration-300">
+          {errors.acceptedTerms}
+        </p>
+      )}
 
       {/* Submit Button */}
       <div className="pt-4">
         <button 
           type="submit" 
-          disabled={isLoading || isConvertingImg || !acceptedTerms}
-          className={`w-full py-4 rounded-xl font-black text-white text-base shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${isLoading || isConvertingImg || !acceptedTerms ? 'opacity-50 cursor-not-allowed' : ''} bg-gradient-to-r from-pink-500 to-rose-500 shadow-pink-200`}
+          disabled={isLoading || isConvertingImg}
+          className={`w-full py-4 rounded-xl font-black text-white text-base shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${isLoading || isConvertingImg ? 'opacity-50 cursor-not-allowed' : ''} bg-gradient-to-r from-pink-500 to-rose-500 shadow-pink-200`}
         >
           {isLoading || isConvertingImg ? (
             <>

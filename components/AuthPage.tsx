@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { ArrowRight, LogIn, UserPlus, AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import SuccessModal from './SuccessModal';
@@ -14,6 +14,7 @@ import { LoginForm } from './auth/LoginForm';
 import { RegisterForm } from './auth/RegisterForm';
 import { ForgotPasswordForm } from './auth/ForgotPasswordForm';
 import { UpdatePasswordForm } from './auth/UpdatePasswordForm';
+import { AuthDynamicBackground } from './auth/AuthDynamicBackground';
 
 interface AuthPageProps {
   onLoginSuccess: () => void;
@@ -386,8 +387,44 @@ const AuthPage: React.FC<AuthPageProps> = ({
     }
   };
 
+  // Mouse movement 3D tilt logic using performance-optimized Framer Motion
+  const tiltX = useMotionValue(0);
+  const tiltY = useMotionValue(0);
+  
+  // Spring settings for buttery smooth reactive physics (perfectly 120Hz smooth)
+  const rotateXSpring = useSpring(useTransform(tiltY, [-0.5, 0.5], [5, -5]), { stiffness: 85, damping: 22 });
+  const rotateYSpring = useSpring(useTransform(tiltX, [-0.5, 0.5], [-5, 5]), { stiffness: 85, damping: 22 });
+  
+  // Dynamic scale and reflection light translation
+  const containerScale = useSpring(1, { stiffness: 120, damping: 25 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only apply 3D tilt on desktop screens for comfortable ergonomics
+    if (window.innerWidth < 768) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    tiltX.set(x);
+    tiltY.set(y);
+    containerScale.set(1.006);
+  };
+
+  const handleMouseLeave = () => {
+    tiltX.set(0);
+    tiltY.set(0);
+    containerScale.set(1);
+  };
+
+  const dynamicShadow = 
+    authMode === 'LOGIN' 
+      ? 'shadow-[0_45px_100px_-25px_rgba(59,130,246,0.18),0_20px_45px_-15px_rgba(0,0,0,0.05),0_0_80px_rgba(59,130,246,0.06),inset_0_1px_1px_rgba(255,255,255,0.85)]'
+      : authMode === 'REGISTER'
+      ? 'shadow-[0_45px_100px_-25px_rgba(244,63,94,0.18),0_20px_45px_-15px_rgba(0,0,0,0.05),0_0_80px_rgba(244,63,94,0.06),inset_0_1px_1px_rgba(255,255,255,0.85)]'
+      : 'shadow-[0_45px_100px_-25px_rgba(168,85,247,0.18),0_20px_45px_-15px_rgba(0,0,0,0.05),0_0_80px_rgba(168,85,247,0.06),inset_0_1px_1px_rgba(255,255,255,0.85)]';
+
   return (
-    <div className="min-h-[100dvh] md:h-[100dvh] bg-[#f0f4f8] flex items-center justify-center p-4 md:p-6 font-sans relative overflow-y-auto md:overflow-hidden">
+    <div className="min-h-[100dvh] md:h-[100dvh] flex items-center justify-center p-4 md:p-6 font-sans relative overflow-y-auto md:overflow-hidden perspective-1000">
       
       {/* Dynamic Crop Overlay */}
       {cropImageSrc && (
@@ -398,17 +435,36 @@ const AuthPage: React.FC<AuthPageProps> = ({
           />
       )}
 
-      {/* Modern Radial and Floating Background Graphics */}
-      <div className={`absolute top-0 left-0 w-full h-full bg-gradient-to-br transition-all duration-1000 ${authMode === 'LOGIN' ? 'from-blue-50 to-white' : authMode === 'REGISTER' ? 'from-pink-50 to-white' : 'from-indigo-50 to-white'}`}></div>
-      <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-gradient-to-tr from-purple-200/40 to-blue-200/40 rounded-full blur-3xl animate-float"></div>
-      <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-gradient-to-tr from-yellow-100/40 to-pink-200/40 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
+      {/* Premium Fluid Aura Background Component */}
+      <AuthDynamicBackground authMode={authMode} />
 
-      {/* Main Container card */}
-      <div className="relative w-full max-w-5xl bg-white/80 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_20px_60px_-10px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col md:flex-row border border-white/60 transition-all duration-700 h-full max-h-[92dvh] md:h-[min(780px,88dvh)] my-auto">
+      {/* Outer Glow Wrapper (First Border Layer) */}
+      <motion.div
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{
+          rotateX: rotateXSpring,
+          rotateY: rotateYSpring,
+          scale: containerScale,
+          transformStyle: "preserve-3d"
+        }}
+        className={`relative w-full max-w-5xl bg-white/40 backdrop-blur-3xl rounded-[2.6rem] p-[1px] border border-white/70 transition-all duration-700 h-full max-h-[92dvh] md:h-[min(780px,88dvh)] my-auto flex flex-col md:flex-row overflow-hidden ${dynamicShadow}`}
+      >
+        {/* Buttery dynamic glass refraction reflection effect */}
+        <motion.div 
+          className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-30 z-30"
+          style={{
+            background: useTransform(
+              [tiltX, tiltY],
+              ([tx, ty]) => `radial-gradient(circle 350px at ${(Number(tx) + 0.5) * 100}% ${(Number(ty) + 0.5) * 100}%, rgba(255,255,255,0.95) 0%, transparent 100%)`
+            )
+          }}
+        />
+
         {onBack && (
             <button 
                 onClick={onBack}
-                className="absolute top-6 left-6 z-50 flex items-center gap-2 text-slate-500 hover:text-slate-800 font-bold text-sm bg-white/50 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/60 transition-all active:scale-95 shadow-sm"
+                className="absolute top-6 left-6 z-50 flex items-center gap-2 text-slate-500 hover:text-slate-800 font-bold text-sm bg-white/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/75 transition-all active:scale-95 shadow-sm"
             >
                 <ArrowRight className="w-4 h-4 rotate-180" /> กลับหน้าหลัก
             </button>
@@ -418,11 +474,11 @@ const AuthPage: React.FC<AuthPageProps> = ({
         <BrandSection authMode={authMode} />
 
         {/* Right input forms handler */}
-        <div className="w-full md:w-7/12 p-6 md:p-12 flex flex-col flex-1 relative overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+        <div className="w-full md:w-7/12 p-6 md:p-12 flex flex-col flex-1 relative overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent z-10 bg-white/75 rounded-r-[2.5rem] rounded-l-[2.5rem] md:rounded-l-none">
             
             {(isLogin || isRegister) && (
                 <div className="flex justify-center mb-8">
-                     <div className="bg-slate-100/80 p-1.5 rounded-2xl flex items-center border border-slate-200/80 shadow-inner w-full max-w-[340px] relative">
+                     <div className="bg-slate-100/70 p-1.5 rounded-2xl flex items-center border border-slate-200/50 shadow-inner w-full max-w-[340px] relative">
                           <button 
                             type="button"
                             onClick={() => toggleMode('LOGIN')}
@@ -556,7 +612,7 @@ const AuthPage: React.FC<AuthPageProps> = ({
                 </AnimatePresence>
             </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Shared success responses modal (Sign up submission | password update completion) */}
       <SuccessModal 

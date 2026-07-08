@@ -20,6 +20,7 @@ type FilterDropdownProps = {
     disabled?: boolean;
     theme?: 'light' | 'dark';
     align?: 'left' | 'center' | 'right';
+    hasError?: boolean;
 } & (
     | { multiSelect?: false; value: string; onChange: (value: string) => void }
     | { multiSelect: true; value: string[]; onChange: (value: string[]) => void }
@@ -37,7 +38,8 @@ const FilterDropdown: React.FC<FilterDropdownProps> = (props) => {
         multiSelect = false,
         disabled = false,
         theme = 'light',
-        align = 'left'
+        align = 'left',
+        hasError = false
     } = props;
 
     const value = props.value;
@@ -129,16 +131,20 @@ const FilterDropdown: React.FC<FilterDropdownProps> = (props) => {
                 disabled={disabled}
                 title={getDisplayLabel()}
                 className={`
-                    flex items-center justify-between px-5 py-3.5 border rounded-2xl text-sm font-bold transition-all active:scale-95 w-full
+                    flex items-center justify-between px-5 py-3.5 border rounded-2xl text-sm font-bold transition-all duration-300 active:scale-95 w-full
                     ${disabled 
                         ? isDark 
                             ? 'bg-slate-950/20 border-white/5 text-slate-700 pointer-events-none' 
                             : 'bg-slate-50 border-slate-100 text-slate-300 pointer-events-none cursor-not-allowed' 
                         : isActive 
                             ? resolvedActiveColor 
-                            : isDark 
-                                ? 'bg-slate-900/60 border-white/10 text-gray-300 hover:bg-slate-800/60 hover:border-white/20 shadow-lg' 
-                                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 shadow-sm'}
+                            : hasError
+                                ? isDark
+                                    ? 'bg-red-950/20 border-red-500/50 text-red-300 hover:bg-red-900/20 hover:border-red-400 shadow-md ring-2 ring-red-500/10'
+                                    : 'bg-red-50/50 border-red-200 text-red-900 hover:bg-red-100/50 hover:border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100 shadow-sm'
+                                : isDark 
+                                    ? 'bg-slate-900/60 border-white/10 text-gray-300 hover:bg-slate-800/60 hover:border-white/20 shadow-lg' 
+                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 shadow-sm'}
                 `}
             >
                 <div className="flex items-center gap-3 truncate">
