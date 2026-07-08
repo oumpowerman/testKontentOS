@@ -339,7 +339,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
       'WORKSPACE': true,
       'PRODUCTION': true,
-      'OFFICE': false,
+      'OFFICE': true,
       'ADMIN': false
   });
 
