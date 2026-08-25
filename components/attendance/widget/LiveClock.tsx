@@ -57,6 +57,7 @@ const LiveClock: React.FC<LiveClockProps> = ({ hp }) => {
 
     const hpValue = hp !== undefined ? hp : 100;
     const badge = getHpBadge(hpValue);
+    const showHp = BRAND_CONFIG.showLiveClockHpMode !== 2;
 
     return (
         <div className="flex justify-between items-start mb-4 relative z-10">
@@ -64,10 +65,12 @@ const LiveClock: React.FC<LiveClockProps> = ({ hp }) => {
                 <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 flex-wrap">
                     <Clock className="w-5 h-5 text-indigo-600" />
                     <span>ลงเวลาทำงาน</span>
-                    <div className={`${badge.className} inline-flex items-center`}>
-                        {badge.icon}
-                        <span>{badge.label}</span>
-                    </div>
+                    {showHp && (
+                        <div className={`${badge.className} inline-flex items-center`}>
+                            {badge.icon}
+                            <span>{badge.label}</span>
+                        </div>
+                    )}
                 </h3>
                 <p className="text-gray-400 text-xs mt-1 font-mono">
                     {format(time, 'EEEE, d MMM yyyy')}

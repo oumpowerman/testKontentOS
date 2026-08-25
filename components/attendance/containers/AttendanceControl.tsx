@@ -347,7 +347,7 @@ const AttendanceControl: React.FC<AttendanceControlProps> = ({
                     onClick={() => onOpenLeave()}
                     className="px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-xl text-[12px] font-kanit font-medium uppercase tracking-widest transition-all flex items-center gap-1.5 border border-orange-100 shadow-sm active:scale-95"
                 >
-                    <AlertTriangle className="w-3 h-3" /> แจ้งลา / สาย
+                    <AlertTriangle className="w-3 h-3" /> ยื่นคำขอ
                 </button>
             </div>
 

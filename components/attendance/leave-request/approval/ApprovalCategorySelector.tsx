@@ -56,7 +56,7 @@ export const ApprovalCategorySelector: React.FC<ApprovalCategorySelectorProps> =
                 id="category-card-leave"
             >
                 <div className="space-y-1">
-                    <p className="text-xs md:text-sm font-semibold text-rose-600 uppercase tracking-wider">การลาและขอ WFH ทั้งหมด</p>
+                    <p className="text-xs md:text-sm font-semibold text-rose-600 uppercase tracking-wider">การลาและขอ Onsite ทั้งหมด</p>
                     <h3 className="text-2xl md:text-3xl font-bold text-rose-950 mt-1">
                         <Counter value={counts.LEAVE} />
                     </h3>

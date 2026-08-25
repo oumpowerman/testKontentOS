@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Calendar, ArrowRight, Filter, RefreshCw, Briefcase } from 'lucide-react';
 import FilterDropdown from '../../../common/FilterDropdown';
 import DatePickerModal, { formatDisplayDate } from '../../../ui/DatePickerModal';
+import { BRAND_CONFIG } from '../../../../config/brand';
 
 interface AttendanceFiltersProps {
     filters: {
@@ -15,10 +16,12 @@ interface AttendanceFiltersProps {
     isFetching: boolean;
 }
 
+const isWfhEnabled = BRAND_CONFIG.showWfhOptionMode !== 2;
+
 const workTypeOptions = [
     { key: 'ALL', label: 'ทุกรูปแบบ (All Types)' },
     { key: 'OFFICE', label: 'เข้าออฟฟิศ' },
-    { key: 'WFH', label: 'Work From Home' },
+    ...(isWfhEnabled ? [{ key: 'WFH', label: 'Work From Home' }] : []),
     { key: 'SITE', label: 'On Site (ข้างนอก)' },
     { key: 'LEAVE', label: 'การลา (Leaves)' }
 ];

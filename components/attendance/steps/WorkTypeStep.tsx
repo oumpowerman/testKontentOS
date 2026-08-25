@@ -3,6 +3,7 @@ import { Building2, Home, Briefcase, ChevronRight, Check, MapPin, AlertTriangle,
 import { motion, AnimatePresence } from 'framer-motion';
 import { WorkLocation, LocationDef } from '../../../types/attendance';
 import { useGlobalDialog } from '../../../context/GlobalDialogContext';
+import { BRAND_CONFIG } from '../../../config/brand';
 
 interface WorkTypeStepProps {
     matchedLocation?: LocationDef;
@@ -30,13 +31,16 @@ const WorkTypeStep: React.FC<WorkTypeStepProps> = ({
     const [customOnsiteText, setCustomOnsiteText] = useState('');
     const [provisionalReason, setProvisionalReason] = useState('');
 
+    const isWfhEnabled = BRAND_CONFIG.showWfhOptionMode !== 2;
+
     const handleSelectOffice = () => {
         if (isSubmitting) return;
         if (!matchedLocation && !isGpsAppealActive) {
-            showAlert(
-                'คุณไม่ได้อยู่ในพิกัดของออฟฟิศหลักที่ลงทะเบียนไว้ในระบบครับ\n\nหากคุณกำลังออกปฏิบัติงานนอกสถานที่ (เช่น ถ่ายทำภาพยนตร์, นัดประชุม) กรุณาเลือก "ทำงานนอกสถานที่ (On Site)" หรือหากอนุมัติการทำงานระยะไกลให้เลือก "Work From Home"',
-                'อยู่นอกพื้นที่พิกัดออฟฟิศ'
-            );
+            const outOfOfficeMessage = isWfhEnabled
+                ? 'คุณไม่ได้อยู่ในพิกัดของออฟฟิศหลักที่ลงทะเบียนไว้ในระบบครับ\n\nหากคุณกำลังออกปฏิบัติงานนอกสถานที่ (เช่น ถ่ายทำภาพยนตร์, นัดประชุม) กรุณาเลือก "ทำงานนอกสถานที่ (On Site)" หรือหากอนุมัติการทำงานระยะไกลให้เลือก "Work From Home"'
+                : 'คุณไม่ได้อยู่ในพิกัดของออฟฟิศหลักที่ลงทะเบียนไว้ในระบบครับ\n\nหากคุณกำลังออกปฏิบัติงานนอกสถานที่ (เช่น ถ่ายทำภาพยนตร์, นัดประชุม) กรุณาเลือก "ทำงานนอกสถานที่ (On Site)"';
+            
+            showAlert(outOfOfficeMessage, 'อยู่นอกพื้นที่พิกัดออฟฟิศ');
             return;
         }
         onSelect('OFFICE');
@@ -341,58 +345,60 @@ const WorkTypeStep: React.FC<WorkTypeStepProps> = ({
                             </motion.button>
 
                             {/* 2. Work From Home Option */}
-                            <motion.button 
-                                disabled={isSubmitting}
-                                whileHover={isSubmitting ? {} : { scale: 1.02, y: -1 }}
-                                whileTap={isSubmitting ? {} : { scale: 0.98 }}
-                                style={{ originX: 0.5, originY: 0.5 }}
-                                onClick={() => {
-                                    if (approvedWFH) {
-                                        onSelect('WFH');
-                                    } else {
-                                        setShowWfhWarning(true);
-                                    }
-                                }}
-                                className={`w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all group relative z-0 hover:z-10 ${
-                                    isSubmitting
-                                    ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed shadow-none'
-                                    : approvedWFH 
-                                        ? 'border-blue-500 bg-blue-50 shadow-md ring-1 ring-blue-200' 
-                                        : 'border-blue-100 bg-blue-50/50 hover:border-blue-300 shadow-sm hover:shadow'
-                                }`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-xl shadow-sm ${approvedWFH ? 'bg-blue-500 text-white' : 'bg-white text-blue-600'}`}>
-                                        <Home className="w-6 h-6"/>
+                            {isWfhEnabled && (
+                                <motion.button 
+                                    disabled={isSubmitting}
+                                    whileHover={isSubmitting ? {} : { scale: 1.02, y: -1 }}
+                                    whileTap={isSubmitting ? {} : { scale: 0.98 }}
+                                    style={{ originX: 0.5, originY: 0.5 }}
+                                    onClick={() => {
+                                        if (approvedWFH) {
+                                            onSelect('WFH');
+                                        } else {
+                                            setShowWfhWarning(true);
+                                        }
+                                    }}
+                                    className={`w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all group relative z-0 hover:z-10 ${
+                                        isSubmitting
+                                        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed shadow-none'
+                                        : approvedWFH 
+                                            ? 'border-blue-500 bg-blue-50 shadow-md ring-1 ring-blue-200' 
+                                            : 'border-blue-100 bg-blue-50/50 hover:border-blue-300 shadow-sm hover:shadow'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-xl shadow-sm ${approvedWFH ? 'bg-blue-500 text-white' : 'bg-white text-blue-600'}`}>
+                                            <Home className="w-6 h-6"/>
+                                        </div>
+                                        <div className="text-left">
+                                            <h4 className="font-bold text-gray-800 text-sm sm:text-base flex items-center gap-2">
+                                                Work From Home
+                                                {approvedWFH && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full border border-green-200 font-bold leading-none whitespace-nowrap h-fit">อนุมัติแล้ว</span>}
+                                                {!approvedWFH && pendingWFHRequest && <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full border border-amber-200 font-bold leading-none whitespace-nowrap h-fit">รออนุมัติ</span>}
+                                            </h4>
+                                            <p className="text-xs text-gray-500">
+                                                {approvedWFH 
+                                                    ? 'สิทธิ์ได้รับการอนุมัติในระบบแล้ว' 
+                                                    : pendingWFHRequest 
+                                                        ? 'ℹ️ มีคำขอยื่นไว้แล้ว (จะใช้คำขอเดิมลงเวลาจำลอง)' 
+                                                        : '⚠️ ไม่ได้รับสิทธิ์ล่วงหน้า (ลงเวลาจำลอง)'}
+                                            </p>
+                                            {!approvedWFH && !pendingWFHRequest && onSwitchToLeave && (
+                                                <span 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onSwitchToLeave('WFH');
+                                                    }}
+                                                    className="mt-1 block text-[10px] font-bold text-blue-600 underline hover:text-blue-800 transition-colors cursor-pointer"
+                                                >
+                                                    ยื่นคำขออนุมัติ WFH ล่วงหน้าคลิกที่นี่ 🏠
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="text-left">
-                                        <h4 className="font-bold text-gray-800 text-sm sm:text-base flex items-center gap-2">
-                                            Work From Home
-                                            {approvedWFH && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full border border-green-200 font-bold leading-none whitespace-nowrap h-fit">อนุมัติแล้ว</span>}
-                                            {!approvedWFH && pendingWFHRequest && <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full border border-amber-200 font-bold leading-none whitespace-nowrap h-fit">รออนุมัติ</span>}
-                                        </h4>
-                                        <p className="text-xs text-gray-500">
-                                            {approvedWFH 
-                                                ? 'สิทธิ์ได้รับการอนุมัติในระบบแล้ว' 
-                                                : pendingWFHRequest 
-                                                    ? 'ℹ️ มีคำขอยื่นไว้แล้ว (จะใช้คำขอเดิมลงเวลาจำลอง)' 
-                                                    : '⚠️ ไม่ได้รับสิทธิ์ล่วงหน้า (ลงเวลาจำลอง)'}
-                                        </p>
-                                        {!approvedWFH && !pendingWFHRequest && onSwitchToLeave && (
-                                            <span 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onSwitchToLeave('WFH');
-                                                }}
-                                                className="mt-1 block text-[10px] font-bold text-blue-600 underline hover:text-blue-800 transition-colors cursor-pointer"
-                                            >
-                                                ยื่นคำขออนุมัติ WFH ล่วงหน้าคลิกที่นี่ 🏠
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                                {approvedWFH ? <Check className="w-6 h-6 text-blue-600 animate-bounce" /> : <ChevronRight className="w-5 h-5 text-gray-300" />}
-                            </motion.button>
+                                    {approvedWFH ? <Check className="w-6 h-6 text-blue-600 animate-bounce" /> : <ChevronRight className="w-5 h-5 text-gray-300" />}
+                                </motion.button>
+                            )}
 
                             {/* 3. On-site (Outside) option */}
                             <motion.button 

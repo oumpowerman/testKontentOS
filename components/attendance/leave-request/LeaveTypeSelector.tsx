@@ -3,6 +3,7 @@ import React from 'react';
 import { MasterOption } from '../../../types';
 import { LEAVE_THEMES } from './constants';
 import * as LucideIcons from 'lucide-react';
+import { BRAND_CONFIG } from '../../../config/brand';
 
 interface Props {
     masterOptions: MasterOption[];
@@ -28,7 +29,11 @@ const LeaveTypeSelector: React.FC<Props> = ({ masterOptions, onSelect }) => {
         }
     };
 
-    const specialOptions = leaveOptions.filter(o => getMetadata(o.description).category === 'SPECIAL');
+    const isWfhEnabled = BRAND_CONFIG.showWfhOptionMode !== 2;
+
+    const specialOptions = leaveOptions
+        .filter(o => getMetadata(o.description).category === 'SPECIAL')
+        .filter(o => isWfhEnabled || o.key !== 'WFH');
     const standardOptions = leaveOptions.filter(o => getMetadata(o.description).category === 'STANDARD');
     const correctionOptions = leaveOptions.filter(o => getMetadata(o.description).category === 'CORRECTION');
     const otherOptions = leaveOptions.filter(o => !['SPECIAL', 'STANDARD', 'CORRECTION'].includes(getMetadata(o.description).category));
@@ -106,10 +111,10 @@ const LeaveTypeSelector: React.FC<Props> = ({ masterOptions, onSelect }) => {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         {(() => {
-                            // Reorder options to place FORGOT_CHECKIN, FORGOT_CHECKOUT, and FORGOT_BOTH at the absolute end
+                            // Reorder options to place FORGOT_CHECKIN, FORGOT_CHECKOUT, FORGOT_BOTH, and LATE_ENTRY at the absolute end
                             const reorderedOptions = [...correctionOptions].sort((a, b) => {
-                                const aIsDisabled = a.key === 'FORGOT_CHECKIN' || a.key === 'FORGOT_CHECKOUT' || a.key === 'FORGOT_BOTH';
-                                const bIsDisabled = b.key === 'FORGOT_CHECKIN' || b.key === 'FORGOT_CHECKOUT' || b.key === 'FORGOT_BOTH';
+                                const aIsDisabled = a.key === 'FORGOT_CHECKIN' || a.key === 'FORGOT_CHECKOUT' || a.key === 'FORGOT_BOTH' || a.key === 'LATE_ENTRY';
+                                const bIsDisabled = b.key === 'FORGOT_CHECKIN' || b.key === 'FORGOT_CHECKOUT' || b.key === 'FORGOT_BOTH' || b.key === 'LATE_ENTRY';
                                 if (aIsDisabled && !bIsDisabled) return 1;
                                 if (!aIsDisabled && bIsDisabled) return -1;
                                 return 0;
@@ -122,19 +127,24 @@ const LeaveTypeSelector: React.FC<Props> = ({ masterOptions, onSelect }) => {
                                 const isForgotCheckIn = opt.key === 'FORGOT_CHECKIN';
                                 const isForgotCheckOut = opt.key === 'FORGOT_CHECKOUT';
                                 const isForgotBoth = opt.key === 'FORGOT_BOTH';
-                                const isDisabled = isForgotCheckIn || isForgotCheckOut || isForgotBoth;
+                                const isLateEntry = opt.key === 'LATE_ENTRY';
+                                const isDisabled = isForgotCheckIn || isForgotCheckOut || isForgotBoth || isLateEntry;
 
                                 if (isDisabled) {
                                     const tooltipTitle = isForgotCheckIn 
                                         ? "ลืมลงเวลาเข้างาน" 
                                         : isForgotCheckOut 
                                             ? "ลืมลงเวลาออกงาน" 
-                                            : "ลืมทั้งเข้าและออก";
+                                            : isForgotBoth
+                                                ? "ลืมทั้งเข้าและออก"
+                                                : "แจ้งเข้าสาย / ลงเวลาล่วงหน้า";
                                     const tooltipText = isForgotCheckIn 
                                         ? "ระบบปิดส่วนนี้เพื่อป้องกันการระบุวันผิดพลาด กรุณาทำรายการผ่าน 'ปุ่มสีส้มที่หน้าแรก' เฉพาะวันปัจจุบัน เพื่อความถูกต้องของแต้มกิลด์และผลงาน"
                                         : isForgotCheckOut 
                                             ? "กรุณาแจ้งเวลาออกย้อนหลังผ่านกล่องแจ้งเตือน 'เวลาค้างคา (Outdated Logs)' ที่จะแสดงในวันถัดไป เพื่อเก็บบันทึกสถิติอย่างถูกต้อง"
-                                            : "ไม่อนุญาตให้ยื่นคำขอรวบยอดตามนโยบาย กรุณายื่นคำขอเวลา 'เข้า' และ 'ออก' แยกกันเท่านั้น";
+                                            : isForgotBoth
+                                                ? "ไม่อนุญาตให้ยื่นคำขอรวบยอดตามนโยบาย กรุณายื่นคำขอเวลา 'เข้า' และ 'ออก' แยกกันเท่านั้น"
+                                                : "ขณะนี้ระบบปิดการยื่นขอแจ้งเข้าสายผ่านช่องทางนี้ชั่วคราว กรุณาเข้างานผ่านระบบตอกบัตรเช้าปกติเพื่อความแม่นยำของพิกัดและประวัติเวลาการทำงานจริง";
 
                                     const isLeftColumn = idx % 2 === 0;
                                     const tooltipAlignClass = isLeftColumn
