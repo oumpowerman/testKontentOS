@@ -3406,7 +3406,9 @@ CREATE OR REPLACE TRIGGER "trg_sync_analytics_on_log" AFTER INSERT OR DELETE OR 
 
 
 
+
 CREATE OR REPLACE TRIGGER "trigger-line-noti" AFTER INSERT ON "public"."notifications" FOR EACH ROW EXECUTE FUNCTION "supabase_functions"."http_request"('https://xgsvxgsrasznszvpysat.supabase.co/functions/v1/push-to-line', 'POST', '{}', '{}', '5000');
+
 
 
 
