@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { WorkLocation, LocationDef, ShiftSlotResult } from '../../../../types/attendance';
+import { BRAND_CONFIG } from '../../../../config/brand';
 import { getRandomPose, OFFICE_COORDS } from '../../../../lib/locationUtils';
 import { compressImage } from '../../../../lib/imageUtils';
 import { useGlobalDialog } from '../../../../context/GlobalDialogContext';
@@ -231,50 +232,6 @@ export function useCheckInState({
         return getMatchedShiftSlot(now, shiftsList, lateBuffer, true);
     }, [isShiftsEnabled, shiftsList, lateBuffer, isOpen, todayRequests, isBeforeTransitionPoint, minHours]);
 
-    const isExceededLastShift = useMemo(() => {
-        if (approvedLateTime) return false;
-        if (isShiftsEnabled && shiftResult) {
-            return !!shiftResult.isExceededLastShift;
-        }
-        if (!startTime) return false;
-        const effectiveStartTime = approvedLateTime || startTime;
-        const [h, m] = effectiveStartTime.split(':').map(Number);
-        const limitWithBuffer = new Date();
-        limitWithBuffer.setHours(h, m + lateBuffer, 0, 0);
-        return new Date() > limitWithBuffer;
-    }, [isShiftsEnabled, shiftResult, approvedLateTime, startTime, lateBuffer]);
-
-    const isUserLate = useMemo(() => {
-        if (hasAcceptedLateness) return false;
-        if (hasLateRequest && !approvedLateTime) return false;
-
-        if (isShiftsEnabled && shiftResult) {
-            return !!shiftResult.isRawLate;
-        }
-
-        if (!startTime) return false;
-        
-        const now = new Date();
-        if (pendingLateTime) {
-            const [ph, pm] = pendingLateTime.split(':').map(Number);
-            const pendingLimit = new Date();
-            pendingLimit.setHours(ph, pm, 0, 0);
-            const isPendingLatePast = now > pendingLimit;
-            
-            if (!isPendingLatePast) {
-                return false;
-            } else {
-                return true;
-            }
-        }
-        
-        const effectiveStartTime = approvedLateTime || startTime;
-        const [h, m] = effectiveStartTime.split(':').map(Number);
-        const limit = new Date();
-        limit.setHours(h, m, 0, 0);
-        return now > limit;
-    }, [isShiftsEnabled, shiftResult, startTime, lateBuffer, hasLateRequest, approvedLateTime, pendingLateTime, hasAcceptedLateness]);
-
     const lateMinutes = useMemo(() => {
         if (isShiftsEnabled && shiftResult) {
             return shiftResult.lateMinutes;
@@ -302,18 +259,82 @@ export function useCheckInState({
         return Math.max(0, diff);
     }, [isShiftsEnabled, shiftResult, startTime, approvedLateTime, pendingLateTime, lateBuffer]);
 
+    const isExceededLastShift = useMemo(() => {
+        if (approvedLateTime) return false;
+
+        // Bypass if 4-stage late rules are enabled and the lateness is within Stage 1 (<= max mins)
+        if (BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig) {
+            const maxMins = (BRAND_CONFIG as any).fourStageLateConfig.stage1MaxMins || 5;
+            return lateMinutes > maxMins;
+        }
+
+        if (isShiftsEnabled && shiftResult) {
+            return !!shiftResult.isExceededLastShift;
+        }
+        if (!startTime) return false;
+        const effectiveStartTime = approvedLateTime || startTime;
+        const [h, m] = effectiveStartTime.split(':').map(Number);
+        const limitWithBuffer = new Date();
+        limitWithBuffer.setHours(h, m + lateBuffer, 0, 0);
+        return new Date() > limitWithBuffer;
+    }, [isShiftsEnabled, shiftResult, approvedLateTime, startTime, lateBuffer, lateMinutes]);
+
+    const isUserLate = useMemo(() => {
+        if (hasAcceptedLateness) return false;
+        if (hasLateRequest && !approvedLateTime) return false;
+
+        // Bypass if 4-stage late rules are enabled and the lateness is within Stage 1 (<= max mins)
+        if (BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig) {
+            const maxMins = (BRAND_CONFIG as any).fourStageLateConfig.stage1MaxMins || 5;
+            if (lateMinutes <= maxMins) {
+                return false;
+            }
+        }
+
+        if (isShiftsEnabled && shiftResult) {
+            // 🟢 ถ้าเปิดกฎ 4 ขั้นบันไดให้นับสายย้อนหลังแบบดิบ ๆ (isRawLate)
+            // 🟢 แต่ถ้าปิดกฎ 4 ขั้น (แบบดั้งเดิม) ให้เช็คจากความสายจริงหลังพ้นสิทธิ์ผ่อนผันแล้วเท่านั้น (isLate)
+            return BRAND_CONFIG.enableFourStageLateRules ? !!shiftResult.isRawLate : !!shiftResult.isLate;
+        }
+
+        if (!startTime) return false;
+        
+        const now = new Date();
+        // 🟢 ถ้าปิดกฎ 4 ขั้นบันได ให้บวกค่าผ่อนผัน (lateBuffer) คุ้มครองพนักงานไว้ก่อน
+        const bufferToApply = BRAND_CONFIG.enableFourStageLateRules ? 0 : lateBuffer;
+
+        if (pendingLateTime) {
+            const [ph, pm] = pendingLateTime.split(':').map(Number);
+            const pendingLimit = new Date();
+            pendingLimit.setHours(ph, pm + bufferToApply, 0, 0);
+            const isPendingLatePast = now > pendingLimit;
+            
+            if (!isPendingLatePast) {
+                return false;
+            } else {
+                return true;
+            }
+        }
+        
+        const effectiveStartTime = approvedLateTime || startTime;
+        const [h, m] = effectiveStartTime.split(':').map(Number);
+        const limit = new Date();
+        limit.setHours(h, m + bufferToApply, 0, 0);
+        return now > limit;
+    }, [isShiftsEnabled, shiftResult, startTime, lateBuffer, hasLateRequest, approvedLateTime, pendingLateTime, hasAcceptedLateness, lateMinutes]);
+
     useEffect(() => {
-        if (isOpen && isExceededLastShift && !showLateIntervention) {
+        if (isOpen && isExceededLastShift && !showLateIntervention && !hasAcceptedLateness) {
             setShowLateIntervention(true);
             return;
         }
-        if (step === 'CONFIRM_LOCATION' && isGpsSecure && isUserLate && isOpen && !showLateIntervention && !showLatePenaltyBreakdown) {
+        if (step === 'CONFIRM_LOCATION' && isGpsSecure && isUserLate && isOpen && !showLateIntervention && !showLatePenaltyBreakdown && !hasAcceptedLateness) {
             const timer = setTimeout(() => {
                 setShowLateIntervention(true);
             }, 3000);
             return () => clearTimeout(timer);
         }
-    }, [step, isGpsSecure, isUserLate, isOpen, showLateIntervention, showLatePenaltyBreakdown, isExceededLastShift]);
+    }, [step, isGpsSecure, isUserLate, isOpen, showLateIntervention, showLatePenaltyBreakdown, isExceededLastShift, hasAcceptedLateness]);
 
     const checkLocation = () => {
         runCheckLocation(
@@ -392,7 +413,7 @@ export function useCheckInState({
             }
         }
 
-        if (isExceededLastShift && !approvedLateTime) {
+        if (isExceededLastShift && !approvedLateTime && !forceCheckIn && !hasAcceptedLateness) {
             if (typeToSubmit) setSelectedType(typeToSubmit);
             setShowLateIntervention(true);
             return;
@@ -430,8 +451,18 @@ export function useCheckInState({
                 } else if (effectiveCheckStartTime) {
                     const [h, m] = effectiveCheckStartTime.split(':').map(Number);
                     const limit = new Date();
-                    limit.setHours(h, m, 0, 0);
+                    // ถ้าปิดกฎ 4 ขั้นบันได (แบบดั้งเดิม) ให้ใช้ lateBuffer (เวลาแถม) เข้ามาช่วยพนักงาน
+                    const bufferToApply = BRAND_CONFIG.enableFourStageLateRules ? 0 : lateBuffer;
+                    limit.setHours(h, m + bufferToApply, 0, 0);
                     isLateCheck = now > limit;
+                }
+
+                // Bypass if 4-stage late rules are enabled and the lateness is within Stage 1 (<= max mins)
+                if (isLateCheck && BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig) {
+                    const maxMins = (BRAND_CONFIG as any).fourStageLateConfig.stage1MaxMins || 5;
+                    if (lateMinutes <= maxMins) {
+                        isLateCheck = false;
+                    }
                 }
 
                 if (isLateCheck) {

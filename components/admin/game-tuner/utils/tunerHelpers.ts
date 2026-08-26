@@ -22,7 +22,7 @@ export const PRETTY_LABELS: Record<string, string> = {
     HP_PENALTY_DUTY_LATE_SUBMIT: "โทษหัก HP ส่งเวรสาย",
     HP_REFUND_DUTY_REDEEM: "รางวัล HP เมื่อแก้ตัวที่ศาล (Redeem)",
     HP_PENALTY_EARLY_LEAVE_RATE: "อัตราหัก HP กลับก่อนเวลา",
-    HP_PENALTY_UNAUTHORIZED_WFH: "โทษหัก HP WFH ไม่ได้รับอนุญาต",
+    HP_PENALTY_UNAUTHORIZED_WFH: "โทษหัก HP ไม่ได้รับอนุญาต",
     HP_PENALTY_EARLY_LEAVE_INTERVAL: "ช่วงเวลาหัก HP กลับก่อน (นาที)",
     COIN_PENALTY_LATE_PER_DAY: "โทษหัก Coins มาสายรายวัน",
     LATE_MODE_DYNAMIC: "ระบบหักแต้มสาย Dynamic (0=Flat, 1=Dynamic)",

@@ -65,8 +65,17 @@ export const useGameEventListener = (currentUser: User | null, onEvent?: () => v
         for (const [groupKey, logs] of logsToProcess) {
             if (logs.length === 0) continue;
 
-            const firstLog = logs[0];
-            const count = logs.length;
+            // Filter out unauthorized check-in logs with 0 hp change to prevent showing unnecessary warning toasts
+            const filteredLogs = logs.filter(l => {
+                if ((l.action_type === 'ATTENDANCE_UNAUTHORIZED_WFH' || l.action_type === 'ATTENDANCE_UNAUTHORIZED_ONSITE') && Number(l.hp_change || 0) === 0) {
+                    return false;
+                }
+                return true;
+            });
+            if (filteredLogs.length === 0) continue;
+
+            const firstLog = filteredLogs[0];
+            const count = filteredLogs.length;
             const actionType = firstLog.action_type;
             // ✅ KEY LOGIC: ใช้ข้อความจาก Database เลย ไม่ต้อง Hardcode ใน Frontend
             const message = firstLog.description || 'มีการอัปเดตข้อมูล';
@@ -101,7 +110,7 @@ export const useGameEventListener = (currentUser: User | null, onEvent?: () => v
             } else {
                 // Individual User: แสดงข้อความตรงๆ
                 // กรองเฉพาะของตัวเอง หรือถ้าเป็น Admin ก็ให้เห็นของทุกคน (แบบทีละรายการถ้าไม่เยอะ)
-                const myLogs = logs.filter(l => {
+                const myLogs = filteredLogs.filter(l => {
                     if (l.user_id === currentUser.id) return true;
                     if (isAdmin) {
                         // For Admin: Only show "Important" events for other users to reduce spam

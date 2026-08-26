@@ -8,6 +8,7 @@ import { setHours, setMinutes, addMinutes, addHours, isWithinInterval } from 'da
 import { useMasterData } from '../../../hooks/useMasterData';
 import { useCheckInLocation } from '../../../hooks/attendance/useCheckInLocation';
 import { OFFICE_COORDS } from '../../../lib/locationUtils';
+import { BRAND_CONFIG } from '../../../config/brand';
 
 interface ForgotCheckInControlProps {
     startTime: string; // "HH:mm" from MasterData
@@ -30,9 +31,11 @@ const ForgotCheckInControl: React.FC<ForgotCheckInControlProps> = ({
     availableLocations = [],
     isDesktop = false
 }) => {
+    const { masterOptions } = useMasterData();
+    const isWfhEnabled = BRAND_CONFIG.showWfhOptionMode !== 2;
+
     const [isVisible, setIsVisible] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const { masterOptions } = useMasterData();
 
     const [gpsCheckStatus, setGpsCheckStatus] = useState<'IDLE' | 'SCANNING' | 'SECURE_ERROR' | 'OFFSITE_ALERT' | 'SUCCESS_TRANSITION' | 'READY_FORM' | 'DETECTED_LINK'>('IDLE');
     const [gpsErrorReason, setGpsErrorReason] = useState('');
@@ -207,7 +210,7 @@ const ForgotCheckInControl: React.FC<ForgotCheckInControlProps> = ({
                 
                 // Smart Decider: check if user has approved/pending WFH or ONSITE request today
                 if (todayActiveLeave && 
-                    (todayActiveLeave.type === 'WFH' || todayActiveLeave.type === 'ONSITE') &&
+                    ((isWfhEnabled && todayActiveLeave.type === 'WFH') || todayActiveLeave.type === 'ONSITE') &&
                     (todayActiveLeave.status === 'APPROVED' || todayActiveLeave.status === 'PENDING')
                 ) {
                     setSelectedRemoteType(todayActiveLeave.type);
@@ -227,8 +230,8 @@ const ForgotCheckInControl: React.FC<ForgotCheckInControlProps> = ({
         }
 
         const effectiveRemoteType = selectedRemoteType || (
-            todayActiveLeave && (todayActiveLeave.type === 'WFH' || todayActiveLeave.type === 'ONSITE')
-                ? todayActiveLeave.type
+            todayActiveLeave && ((isWfhEnabled && todayActiveLeave.type === 'WFH') || todayActiveLeave.type === 'ONSITE')
+                ? todayActiveLeave.type as 'WFH' | 'ONSITE'
                 : undefined
         );
 
@@ -468,37 +471,43 @@ const ForgotCheckInControl: React.FC<ForgotCheckInControlProps> = ({
                                                 <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider text-left pl-1">
                                                     กรุณาเลือกรูปแบบการทำงานของวันนี้:
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-3 w-full">
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.03, y: -4, borderColor: '#a5b4fc', boxShadow: '0 8px 16px rgba(99,102,241,0.08)' }}
-                                                        whileTap={{ scale: 0.97 }}
-                                                        transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                                                        onClick={() => {
-                                                            setSelectedRemoteType('WFH');
-                                                            setGpsCheckStatus('READY_FORM');
-                                                            setIsModalOpen(true);
-                                                        }}
-                                                        className="p-4 bg-[#f8fafc] border-2 border-gray-100 rounded-2xl flex flex-col items-center gap-2 transition-all cursor-pointer group text-center"
-                                                    >
-                                                        <span className="text-lg">🏡</span>
-                                                        <span className="text-xs font-bold text-gray-700 group-hover:text-indigo-600">Work From Home</span>
-                                                        <span className="text-[9px] text-gray-400 font-medium">ทำงานที่บ้าน</span>
-                                                    </motion.button>
+                                                <div className={`grid ${isWfhEnabled ? 'grid-cols-2' : 'grid-cols-1'} gap-3 w-full`}>
+                                                    {isWfhEnabled && (
+                                                        <motion.button
+                                                            whileHover={{ scale: 1.03, y: -4, borderColor: '#a5b4fc', boxShadow: '0 8px 16px rgba(99,102,241,0.08)' }}
+                                                            whileTap={{ scale: 0.97 }}
+                                                            transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                                                            onClick={() => {
+                                                                setSelectedRemoteType('WFH');
+                                                                setGpsCheckStatus('READY_FORM');
+                                                                setIsModalOpen(true);
+                                                            }}
+                                                            className="p-4 bg-[#f8fafc] border-2 border-gray-100 rounded-2xl flex flex-col items-center gap-2 transition-all cursor-pointer group text-center"
+                                                        >
+                                                            <span className="text-lg">🏡</span>
+                                                            <span className="text-xs font-bold text-gray-700 group-hover:text-indigo-600">Work From Home</span>
+                                                            <span className="text-[9px] text-gray-400 font-medium">ทำงานที่บ้าน</span>
+                                                        </motion.button>
+                                                    )}
 
                                                     <motion.button
-                                                        whileHover={{ scale: 1.03, y: -4, borderColor: '#6ee7b7', boxShadow: '0 8px 16px rgba(16,185,129,0.08)' }}
-                                                        whileTap={{ scale: 0.97 }}
+                                                        whileHover={{ scale: 1.02, y: -2, borderColor: '#6ee7b7', boxShadow: '0 8px 16px rgba(16,185,129,0.08)' }}
+                                                        whileTap={{ scale: 0.98 }}
                                                         transition={{ type: 'spring', stiffness: 400, damping: 15 }}
                                                         onClick={() => {
                                                             setSelectedRemoteType('ONSITE');
                                                             setGpsCheckStatus('READY_FORM');
                                                             setIsModalOpen(true);
                                                         }}
-                                                        className="p-4 bg-[#f8fafc] border-2 border-gray-100 rounded-2xl flex flex-col items-center gap-2 transition-all cursor-pointer group text-center"
+                                                        className={`p-4 bg-[#f8fafc] border-2 border-gray-100 rounded-2xl flex flex-col items-center gap-2 transition-all cursor-pointer group text-center w-full ${!isWfhEnabled ? 'py-5' : ''}`}
                                                     >
-                                                        <span className="text-lg">📍</span>
-                                                        <span className="text-xs font-bold text-gray-700 group-hover:text-emerald-600">On-Site</span>
-                                                        <span className="text-[9px] text-gray-400 font-medium">ปฏิบัติงานนอกสถานที่</span>
+                                                        <span className={isWfhEnabled ? 'text-lg' : 'text-xl'}>📍</span>
+                                                        <span className="text-xs font-bold text-gray-700 group-hover:text-emerald-600">
+                                                            {isWfhEnabled ? 'On-Site' : 'ปฏิบัติงานนอกสถานที่ (On-site)'}
+                                                        </span>
+                                                        <span className="text-[9px] text-gray-400 font-medium">
+                                                            {isWfhEnabled ? 'ปฏิบัติงานนอกสถานที่' : 'ยืนยันขอลงเวลากรณีปฏิบัติงานนอกสถานที่ / ออกกอง'}
+                                                        </span>
                                                     </motion.button>
                                                 </div>
                                             </div>
@@ -623,7 +632,7 @@ const ForgotCheckInControl: React.FC<ForgotCheckInControlProps> = ({
                     if (isInOffice) {
                         setGpsCheckStatus('IDLE');
                     } else if (todayActiveLeave && 
-                        (todayActiveLeave.type === 'WFH' || todayActiveLeave.type === 'ONSITE') &&
+                        ((isWfhEnabled && todayActiveLeave.type === 'WFH') || todayActiveLeave.type === 'ONSITE') &&
                         (todayActiveLeave.status === 'APPROVED' || todayActiveLeave.status === 'PENDING')
                     ) {
                         setGpsCheckStatus('DETECTED_LINK');

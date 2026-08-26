@@ -100,7 +100,17 @@ export const calculateCheckOutStatus = (
             const shiftStartTime = new Date(checkInTime);
             shiftStartTime.setHours(sh, sm, 0, 0);
 
-            if (isBefore(checkInTime, shiftStartTime) || useShiftEndTimeForLate) {
+            // Check if 4-stage late entry rule allows normal checkout (Stage 1 & 2: late <= 30 mins)
+            let isFourStageEligible = false;
+            if (BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig) {
+                const stage2MaxMins = (BRAND_CONFIG as any).fourStageLateConfig.stage2MaxMins || 30;
+                const lateMins = differenceInMinutes(checkInTime, shiftStartTime);
+                if (lateMins > 0 && lateMins <= stage2MaxMins) {
+                    isFourStageEligible = true;
+                }
+            }
+
+            if (isBefore(checkInTime, shiftStartTime) || useShiftEndTimeForLate || isFourStageEligible) {
                 baseTime = shiftStartTime;
             }
         } catch (e) {
@@ -300,7 +310,7 @@ export const checkIsLate = (
 ): boolean => {
     if (!checkInTime) return false;
     try {
-        const actualBuffer = BRAND_CONFIG.lateCalculationMode === 2 ? 0 : bufferMinutes;
+        const actualBuffer = (BRAND_CONFIG.lateCalculationMode === 2 || BRAND_CONFIG.enableFourStageLateRules) ? 0 : bufferMinutes;
         const effectiveStartTime = getEffectiveStartTime(checkInTime, startTimeStr, note, multipleShifts);
         const { totalMinutes } = getICTTime(checkInTime);
         const [sh, sm] = effectiveStartTime.split(':').map(Number);
@@ -326,7 +336,7 @@ export const getLateMinutes = (
 ): number => {
     if (!checkInTime) return 0;
     try {
-        const actualBuffer = BRAND_CONFIG.lateCalculationMode === 2 ? 0 : bufferMinutes;
+        const actualBuffer = (BRAND_CONFIG.lateCalculationMode === 2 || BRAND_CONFIG.enableFourStageLateRules) ? 0 : bufferMinutes;
         const effectiveStartTime = getEffectiveStartTime(checkInTime, startTimeStr, note, multipleShifts);
         const { totalMinutes } = getICTTime(checkInTime);
         const [sh, sm] = effectiveStartTime.split(':').map(Number);
@@ -480,7 +490,7 @@ export const getMatchedShiftSlot = (
     bufferMinutes: number = 15,
     ignoreBrandMode: boolean = false
 ): ShiftSlotResult => {
-    const actualBuffer = (ignoreBrandMode || BRAND_CONFIG.lateCalculationMode !== 2) ? bufferMinutes : 0;
+    const actualBuffer = (ignoreBrandMode || (BRAND_CONFIG.lateCalculationMode !== 2 && !BRAND_CONFIG.enableFourStageLateRules)) ? bufferMinutes : 0;
     if (!shiftsList || shiftsList.length === 0) {
         return {
             targetStartTime: '08:00',

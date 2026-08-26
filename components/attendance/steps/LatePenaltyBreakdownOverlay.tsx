@@ -4,6 +4,7 @@ import { AlertTriangle, Clock, ArrowRight, Heart, Activity, ShieldAlert, Zap } f
 import { useGameConfig } from '../../../context/GameConfigContext';
 import { useUserSession } from '../../../context/UserSessionContext';
 import { DEFAULT_GAME_CONFIG } from '../../../lib/gameLogic';
+import { BRAND_CONFIG } from '../../../config/brand';
 
 // 1 = โหมดเดิม (แสดงหลอดเลือด HP / คำนวณพลังชีวิตจาก 100 เหลือ 0 / แสดงคำเตือนตัวละครตาย)
 // 2 = โหมดใหม่ (ซ่อนหลอดเลือด HP / เน้นแสดงจำนวนคะแนนโทษที่โดนหักสะสม เพื่อรองรับระบบเริ่มต้นที่ 0 และสะสมติดลบ)
@@ -35,10 +36,38 @@ const LatePenaltyBreakdownOverlay: React.FC<LatePenaltyBreakdownOverlayProps> = 
     const interval = penalties.HP_PENALTY_LATE_INTERVAL || 10;
     const rate = penalties.HP_PENALTY_LATE_RATE || 1;
 
-    // Calculate penalty value
-    const penaltyValue = lateModeDynamic === 1 
-        ? Math.ceil(lateMinutes / interval) * rate 
-        : baseFlatPenalty;
+    // Retrieve 4-stage late rule configurations safely
+    const cfg4 = (BRAND_CONFIG as any).fourStageLateConfig || {
+        stage1MaxMins: 5,
+        stage2MaxMins: 30,
+        stage3MaxMins: 60,
+        stage4BaseHp: 300,
+        hpPerMinuteRate: 1
+    };
+
+    // Calculate penalty value based on 4-stage rules if active
+    let penaltyValue = 0;
+    let isFourStageActive = false;
+
+    if (BRAND_CONFIG.enableFourStageLateRules) {
+        isFourStageActive = true;
+        const activeRate = penalties.HP_PENALTY_LATE_RATE || cfg4.hpPerMinuteRate || 1;
+
+        if (lateMinutes <= (cfg4.stage1MaxMins || 5)) {
+            penaltyValue = 0;
+        } else if (lateMinutes <= (cfg4.stage2MaxMins || 30)) {
+            penaltyValue = lateMinutes * activeRate;
+        } else if (lateMinutes <= (cfg4.stage3MaxMins || 60)) {
+            penaltyValue = lateMinutes * activeRate;
+        } else {
+            const basePenalty = cfg4.stage4BaseHp || 300;
+            penaltyValue = basePenalty + (lateMinutes * activeRate);
+        }
+    } else {
+        penaltyValue = lateModeDynamic === 1 
+            ? Math.ceil(lateMinutes / interval) * rate 
+            : baseFlatPenalty;
+    }
 
     // HP levels
     const currentHp = currentUserProfile?.hp ?? 100;
@@ -99,59 +128,101 @@ const LatePenaltyBreakdownOverlay: React.FC<LatePenaltyBreakdownOverlayProps> = 
                 </div>
 
                 {/* 2. Active Penalty Policy Banner */}
-                {lateModeDynamic === 1 ? (
-                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 rounded-2xl p-4 text-left relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-1 bg-purple-500 text-white rounded-bl-xl text-[8px] font-bold tracking-wider uppercase">
-                            Dynamic Mode
+                {isFourStageActive ? (
+                    <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 rounded-2xl p-4 text-left relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-1 bg-red-600 text-white rounded-bl-xl text-[8px] font-bold tracking-wider uppercase">
+                            4-Stage Rule Active
                         </div>
-                        <h4 className="text-xs font-bold text-purple-900 flex items-center gap-1.5 mb-1">
-                            <Zap className="w-4 h-4 text-purple-600" /> นโยบายหักคะแนนรายนาทีจริง
+                        <h4 className="text-xs font-bold text-red-900 flex items-center gap-1.5 mb-1">
+                            <Zap className="w-4 h-4 text-red-600 animate-pulse" /> นโยบายคำนวณสายแบบ 4 ระดับ
                         </h4>
-                        <p className="text-[11px] text-purple-700 leading-normal">
-                            ยิ่งสายมาก ยิ่งโดนหักมาก โดยระบบจะคำนวณหัก <span className="font-bold text-purple-900">{rate} HP ทุกๆ {interval} นาที</span> ที่มาสายจริง
+                        <p className="text-[11px] text-red-700 leading-normal">
+                            ระบบกำลังทำงานในกฎการเข้าสายแบบแบ่งเกณฑ์ตามขั้นสะสมรายนาที เพื่อความเป็นระเบียบและวินัยสูงสุด
                         </p>
                     </div>
                 ) : (
-                    <div className="bg-gradient-to-r from-blue-50 to-sky-50 border border-blue-100 rounded-2xl p-4 text-left relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-1 bg-blue-600 text-white rounded-bl-xl text-[8px] font-bold tracking-wider uppercase">
-                            Flat Mode
+                    lateModeDynamic === 1 ? (
+                        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 rounded-2xl p-4 text-left relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-1 bg-purple-500 text-white rounded-bl-xl text-[8px] font-bold tracking-wider uppercase">
+                                Dynamic Mode
+                            </div>
+                            <h4 className="text-xs font-bold text-purple-900 flex items-center gap-1.5 mb-1">
+                                <Zap className="w-4 h-4 text-purple-600" /> นโยบายหักคะแนนรายนาทีจริง
+                            </h4>
+                            <p className="text-[11px] text-purple-700 leading-normal">
+                                ยิ่งสายมาก ยิ่งโดนหักมาก โดยระบบจะคำนวณหัก <span className="font-bold text-purple-900">{rate} HP ทุกๆ {interval} นาที</span> ที่มาสายจริง
+                            </p>
                         </div>
-                        <h4 className="text-xs font-bold text-blue-900 flex items-center gap-1.5 mb-1">
-                            <Activity className="w-4 h-4 text-blue-600" /> นโยบายหักคะแนนคงที่
-                        </h4>
-                        <p className="text-[11px] text-blue-700 leading-normal">
-                            ระบบจะหักคะแนนคงที่ทันทีเมื่อตรวจพบว่าสาย โดยไม่สนใจจำนวนนาทีที่เกิน <span className="font-bold text-blue-900">(-{baseFlatPenalty} HP ต่อครั้ง)</span>
-                        </p>
-                    </div>
+                    ) : (
+                        <div className="bg-gradient-to-r from-blue-50 to-sky-50 border border-blue-100 rounded-2xl p-4 text-left relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-1 bg-blue-600 text-white rounded-bl-xl text-[8px] font-bold tracking-wider uppercase">
+                                Flat Mode
+                            </div>
+                            <h4 className="text-xs font-bold text-blue-900 flex items-center gap-1.5 mb-1">
+                                <Activity className="w-4 h-4 text-blue-600" /> นโยบายหักคะแนนคงที่
+                            </h4>
+                            <p className="text-[11px] text-blue-700 leading-normal">
+                                ระบบจะหักคะแนนคงที่ทันทีเมื่อตรวจพบว่าสาย โดยไม่สนใจจำนวนนาทีที่เกิน <span className="font-bold text-blue-900">(-{baseFlatPenalty} HP ต่อครั้ง)</span>
+                            </p>
+                        </div>
+                    )
                 )}
 
                 {/* 3. Detailed Calculation */}
-                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 space-y-2 text-left">
-                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">สมการคำนวณผลลัพธ์</span>
-                    {lateModeDynamic === 1 ? (
-                        <div className="space-y-1.5 font-mono text-xs">
-                            <div className="flex justify-between text-gray-500">
-                                <span>สูตร: ปัดขึ้น(นาทีสาย / ช่วงนาที) * อัตรา</span>
-                                <span className="text-purple-600">Math.ceil(M / {interval}) * {rate}</span>
+                {isFourStageActive ? (
+                    <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 space-y-2 text-left">
+                        <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">วิเคราะห์สูตรคำนวณ (กฎ 4 ขั้น)</span>
+                        <div className="space-y-1.5 text-xs text-gray-600">
+                            <div className="flex justify-between items-center py-0.5 border-b border-gray-100">
+                                <span className={lateMinutes <= (cfg4.stage1MaxMins || 5) ? "font-bold text-emerald-600" : ""}>🟢 1 - {cfg4.stage1MaxMins || 5} นาที (ขั้น 1):</span>
+                                <span className={lateMinutes <= (cfg4.stage1MaxMins || 5) ? "font-bold text-emerald-600 font-mono" : "font-mono text-gray-400"}>หัก 0 HP</span>
                             </div>
-                            <div className="flex justify-between font-bold text-gray-700">
-                                <span>คำนวณจริง: ปัดขึ้น({lateMinutes} / {interval}) * {rate}</span>
-                                <span className="text-rose-600">-{penaltyValue} HP</span>
+                            <div className="flex justify-between items-center py-0.5 border-b border-gray-100">
+                                <span className={(lateMinutes >= ((cfg4.stage1MaxMins || 5) + 1) && lateMinutes <= (cfg4.stage2MaxMins || 30)) ? "font-bold text-amber-600" : ""}>🟡 {(cfg4.stage1MaxMins || 5) + 1} - {cfg4.stage2MaxMins || 30} นาที (ขั้น 2):</span>
+                                <span className={(lateMinutes >= ((cfg4.stage1MaxMins || 5) + 1) && lateMinutes <= (cfg4.stage2MaxMins || 30)) ? "font-bold text-amber-600 font-mono" : "font-mono text-gray-400"}>หักนาทีละ {cfg4.hpPerMinuteRate || 1} HP</span>
+                            </div>
+                            <div className="flex justify-between items-center py-0.5 border-b border-gray-100">
+                                <span className={(lateMinutes >= ((cfg4.stage2MaxMins || 30) + 1) && lateMinutes <= (cfg4.stage3MaxMins || 60)) ? "font-bold text-orange-600" : ""}>🟠 {(cfg4.stage2MaxMins || 30) + 1} - {cfg4.stage3MaxMins || 60} นาที (ขั้น 3):</span>
+                                <span className={(lateMinutes >= ((cfg4.stage2MaxMins || 30) + 1) && lateMinutes <= (cfg4.stage3MaxMins || 60)) ? "font-bold text-orange-600 font-mono" : "font-mono text-gray-400"}>หักนาทีละ {cfg4.hpPerMinuteRate || 1} HP + ชดเชยเวลา</span>
+                            </div>
+                            <div className="flex justify-between items-center py-0.5">
+                                <span className={lateMinutes >= ((cfg4.stage3MaxMins || 60) + 1) ? "font-bold text-red-600 animate-pulse" : ""}>🔴 {((cfg4.stage3MaxMins || 60) + 1)} นาทีขึ้นไป (ขั้น 4):</span>
+                                <span className={lateMinutes >= ((cfg4.stage3MaxMins || 60) + 1) ? "font-bold text-red-600 font-mono" : "font-mono text-gray-400"}>ปรับ {cfg4.stage4BaseHp || 300} HP + นาทีละ {cfg4.hpPerMinuteRate || 1} HP</span>
+                            </div>
+                            <div className="mt-2 pt-2 border-t border-dashed border-gray-200 flex justify-between font-bold text-gray-800 font-mono text-xs">
+                                <span>คำนวณจริง (สาย {lateMinutes} นาที):</span>
+                                <span className="text-rose-600 font-black">-{penaltyValue} HP</span>
                             </div>
                         </div>
-                    ) : (
-                        <div className="space-y-1.5 font-mono text-xs">
-                            <div className="flex justify-between text-gray-500">
-                                <span>สูตร: อัตราคงที่สำหรับสถานะสาย</span>
-                                <span className="text-blue-600">Flat Rate</span>
+                    </div>
+                ) : (
+                    <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 space-y-2 text-left">
+                        <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">สมการคำนวณผลลัพธ์</span>
+                        {lateModeDynamic === 1 ? (
+                            <div className="space-y-1.5 font-mono text-xs">
+                                <div className="flex justify-between text-gray-500">
+                                    <span>สูตร: ปัดขึ้น(นาทีสาย / ช่วงนาที) * อัตรา</span>
+                                    <span className="text-purple-600">Math.ceil(M / {interval}) * {rate}</span>
+                                </div>
+                                <div className="flex justify-between font-bold text-gray-700">
+                                    <span>คำนวณจริง: ปัดขึ้น({lateMinutes} / {interval}) * {rate}</span>
+                                    <span className="text-rose-600">-{penaltyValue} HP</span>
+                                </div>
                             </div>
-                            <div className="flex justify-between font-bold text-gray-700">
-                                <span>คำนวณจริง: โทษสายคงที่</span>
-                                <span className="text-rose-600">-{penaltyValue} HP</span>
+                        ) : (
+                            <div className="space-y-1.5 font-mono text-xs">
+                                <div className="flex justify-between text-gray-500">
+                                    <span>สูตร: อัตราคงที่สำหรับสถานะสาย</span>
+                                    <span className="text-blue-600">Flat Rate</span>
+                                </div>
+                                <div className="flex justify-between font-bold text-gray-700">
+                                    <span>คำนวณจริง: โทษสายคงที่</span>
+                                    <span className="text-rose-600">-{penaltyValue} HP</span>
+                                </div>
                             </div>
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
 
                 {/* 4. HP Damage Preview (RPG Style / Penalty Accumulator) */}
                 <div className="bg-rose-50/40 border border-rose-100/60 rounded-2xl p-4 space-y-3">
@@ -245,7 +316,7 @@ const LatePenaltyBreakdownOverlay: React.FC<LatePenaltyBreakdownOverlayProps> = 
                     onClick={onGoBack}
                     className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-2xl font-bold transition-all flex items-center justify-center gap-1.5 text-xs"
                 >
-                    ย้อนกลับไปเปลี่ยนประเภทงาน (WFH / ลา)
+                    ย้อนกลับไปเปลี่ยนประเภทงาน
                 </motion.button>
             </div>
         </motion.div>
