@@ -46,7 +46,7 @@ export const BRAND_CONFIG = {
   lateCalculationMode: 1,
 
   // สวิตช์เปิดใช้งานกฎการเข้าสายแบบ 4 ระดับ (ถ้า false จะทำงานเป็นโหมด 1 ดั้งเดิม 100%)
-  enableFourStageLateRules: false,
+  enableFourStageLateRules: true,
 
   // กำหนดเกณฑ์วินัย 4 ระดับแบบรวมศูนย์ (ไม่กระจายตัวเลข Hardcode)
   fourStageLateConfig: {
