@@ -36,7 +36,7 @@ export const useTaskManager = (
   const { channels, fetchChannels, handleAddChannel, handleUpdateChannel, handleDeleteChannel } = useChannels();
 
   // 5. Tasks Hook (Now with Range Controls)
-  const { tasks, fetchTasks, fetchTaskById, handleSaveTask: saveTaskInternal, handleDeleteTask, handleDelayTask, checkAndExpandRange, fetchAllTasks, isFetching, fetchCompletedTasks } = useTasks(setIsModalOpen);
+  const { tasks, fetchTasks, fetchTaskById, handleSaveTask: saveTaskInternal, handleDeleteTask, handleDelayTask, checkAndExpandRange, fetchAllTasks, isFetching, hasFetchedInitial, fetchCompletedTasks } = useTasks(setIsModalOpen);
 
   // 6. Checklist Hook
   const { 
@@ -99,7 +99,7 @@ export const useTaskManager = (
   );
 
   return {
-    isLoading: isLoading || (tasks.length === 0 && isFetching), // Show load on initial empty
+    isLoading: isLoading || (!hasFetchedInitial && isFetching), // Show load on initial empty
     isTaskFetching: isFetching, // Expose fetch state
     currentUserProfile,
     allUsers: mergedUsers,

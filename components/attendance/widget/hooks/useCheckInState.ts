@@ -216,9 +216,9 @@ export function useCheckInState({
             };
         } else if (session === 'PM') {
             if (isBeforeTransitionPoint) {
-                return getMatchedShiftSlot(now, shiftsList, lateBuffer, true);
+                return getMatchedShiftSlot(now, shiftsList, lateBuffer, false);
             } else {
-                const normalSlot = getMatchedShiftSlot(now, shiftsList, lateBuffer, true);
+                const normalSlot = getMatchedShiftSlot(now, shiftsList, lateBuffer, false);
                 return {
                     ...normalSlot,
                     isLate: true,
@@ -229,7 +229,7 @@ export function useCheckInState({
             }
         }
 
-        return getMatchedShiftSlot(now, shiftsList, lateBuffer, true);
+        return getMatchedShiftSlot(now, shiftsList, lateBuffer, false);
     }, [isShiftsEnabled, shiftsList, lateBuffer, isOpen, todayRequests, isBeforeTransitionPoint, minHours]);
 
     const lateMinutes = useMemo(() => {
@@ -240,6 +240,7 @@ export function useCheckInState({
         if (!startTime) return 0;
         
         const now = new Date();
+        now.setSeconds(0, 0);
         let effectiveStartTime = startTime;
         if (approvedLateTime) {
             effectiveStartTime = approvedLateTime;
@@ -262,10 +263,10 @@ export function useCheckInState({
     const isExceededLastShift = useMemo(() => {
         if (approvedLateTime) return false;
 
-        // Bypass if 4-stage late rules are enabled and the lateness is within Stage 1 (<= max mins)
+        // Under 4-stage late rules, we only block (isExceededLastShift) if lateness is Stage 4 (> stage3MaxMins, i.e., > 60 mins)
         if (BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig) {
-            const maxMins = (BRAND_CONFIG as any).fourStageLateConfig.stage1MaxMins || 5;
-            return lateMinutes > maxMins;
+            const stage3MaxMins = (BRAND_CONFIG as any).fourStageLateConfig.stage3MaxMins || 60;
+            return lateMinutes > stage3MaxMins;
         }
 
         if (isShiftsEnabled && shiftResult) {
@@ -275,8 +276,11 @@ export function useCheckInState({
         const effectiveStartTime = approvedLateTime || startTime;
         const [h, m] = effectiveStartTime.split(':').map(Number);
         const limitWithBuffer = new Date();
+        // Give a lateBuffer minutes window before fully blocking
         limitWithBuffer.setHours(h, m + lateBuffer, 0, 0);
-        return new Date() > limitWithBuffer;
+        const nowNormalized = new Date();
+        nowNormalized.setSeconds(0, 0);
+        return nowNormalized > limitWithBuffer;
     }, [isShiftsEnabled, shiftResult, approvedLateTime, startTime, lateBuffer, lateMinutes]);
 
     const isUserLate = useMemo(() => {
@@ -300,6 +304,7 @@ export function useCheckInState({
         if (!startTime) return false;
         
         const now = new Date();
+        now.setSeconds(0, 0);
         // 🟢 ถ้าปิดกฎ 4 ขั้นบันได ให้บวกค่าผ่อนผัน (lateBuffer) คุ้มครองพนักงานไว้ก่อน
         const bufferToApply = BRAND_CONFIG.enableFourStageLateRules ? 0 : lateBuffer;
 
@@ -324,17 +329,13 @@ export function useCheckInState({
     }, [isShiftsEnabled, shiftResult, startTime, lateBuffer, hasLateRequest, approvedLateTime, pendingLateTime, hasAcceptedLateness, lateMinutes]);
 
     useEffect(() => {
-        if (isOpen && isExceededLastShift && !showLateIntervention && !hasAcceptedLateness) {
-            setShowLateIntervention(true);
-            return;
-        }
         if (step === 'CONFIRM_LOCATION' && isGpsSecure && isUserLate && isOpen && !showLateIntervention && !showLatePenaltyBreakdown && !hasAcceptedLateness) {
             const timer = setTimeout(() => {
                 setShowLateIntervention(true);
             }, 3000);
             return () => clearTimeout(timer);
         }
-    }, [step, isGpsSecure, isUserLate, isOpen, showLateIntervention, showLatePenaltyBreakdown, isExceededLastShift, hasAcceptedLateness]);
+    }, [step, isGpsSecure, isUserLate, isOpen, showLateIntervention, showLatePenaltyBreakdown, hasAcceptedLateness]);
 
     const checkLocation = () => {
         runCheckLocation(
@@ -429,6 +430,7 @@ export function useCheckInState({
 
         if (effectiveCheckStartTime && !forceCheckIn && !showLateIntervention && !showLatePenaltyBreakdown && !hasAcceptedLateness) {
             const now = new Date();
+            now.setSeconds(0, 0);
             let shouldBypass = false;
             
             if (pendingLateTime) {

@@ -15,6 +15,7 @@ interface TaskContextType {
     dateRange: { start: Date; end: Date };
     setDateRange: React.Dispatch<React.SetStateAction<{ start: Date; end: Date }>>;
     isFetching: boolean;
+    hasFetchedInitial: boolean;
     isAllLoaded: boolean;
     fetchTasks: (forceFull?: boolean) => Promise<void>;
     fetchAllTasks: () => void;
@@ -30,6 +31,7 @@ const TaskContext = createContext<TaskContextType | undefined>(undefined);
 export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isFetching, setIsFetching] = useState(false);
+    const [hasFetchedInitial, setHasFetchedInitial] = useState(false);
     const isFetchingRef = useRef(false);
     const isInitialLoadRef = useRef(true);
     const [isAllLoaded, setIsAllLoaded] = useState(false);
@@ -295,6 +297,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error('Fetch error:', err);
         } finally {
             setIsFetching(false);
+            setHasFetchedInitial(true);
             isFetchingRef.current = false;
             isInitialLoadRef.current = false;
         }
@@ -663,7 +666,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         <TaskContext.Provider value={{
             tasks, setTasks,
             dateRange, setDateRange,
-            isFetching, isAllLoaded,
+            isFetching, hasFetchedInitial, isAllLoaded,
             fetchTasks, fetchAllTasks, checkAndExpandRange, fetchSubTasks, fetchTaskById, fetchSubTasksCount,
             fetchCompletedTasks
         }}>

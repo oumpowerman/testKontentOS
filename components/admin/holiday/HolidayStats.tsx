@@ -5,9 +5,10 @@ interface HolidayStatsProps {
     totalCount: number;
     monthStats: { name: string; count: number; label?: string };
     typeBreakdown: { label: string; count: number };
+    onCurrentMonthClick?: () => void;
 }
 
-const HolidayStats: React.FC<HolidayStatsProps> = ({ totalCount, monthStats, typeBreakdown }) => {
+const HolidayStats: React.FC<HolidayStatsProps> = ({ totalCount, monthStats, typeBreakdown, onCurrentMonthClick }) => {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white border border-slate-200/70 rounded-3xl p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-all duration-300">
@@ -23,7 +24,10 @@ const HolidayStats: React.FC<HolidayStatsProps> = ({ totalCount, monthStats, typ
                 </div>
             </div>
 
-            <div className="bg-white border border-slate-200/70 rounded-3xl p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-all duration-300">
+            <div 
+                onClick={onCurrentMonthClick}
+                className="bg-white border border-slate-200/70 rounded-3xl p-5 flex items-center gap-4 shadow-sm hover:shadow-md cursor-pointer hover:border-amber-400/80 active:scale-98 transition-all duration-300"
+            >
                 <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100/60 flex items-center justify-center text-amber-600 shrink-0">
                     <Sunset className="w-6 h-6" />
                 </div>

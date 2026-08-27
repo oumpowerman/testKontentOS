@@ -51,6 +51,7 @@ const HolidayGridView: React.FC<HolidayGridViewProps> = ({
                 return (
                     <motion.div 
                         key={m.num}
+                        id={`holiday-month-grid-${m.num}`}
                         initial={{ opacity: 0, y: 10 }}
                         animate={shouldGlow ? {
                             opacity: 1,

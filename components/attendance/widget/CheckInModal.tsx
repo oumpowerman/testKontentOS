@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { AlertTriangle, CheckCircle2, Loader2, Settings } from 'lucide-react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { WorkLocation, LocationDef } from '../../../types/attendance';
+import { BRAND_CONFIG } from '../../../config/brand';
 import CameraView from './CameraView';
 
 // Sub-steps components
@@ -238,7 +239,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
 
                             <AnimatePresence initial={false} custom={direction} mode="wait">
                                 <motion.div
-                                    key={isShiftsEnabled && shiftResult?.isBlocked ? 'blocked' : step}
+                                    key={isShiftsEnabled && shiftResult?.isBlocked && BRAND_CONFIG.allowLateAppealMode !== 2 ? 'blocked' : step}
                                     custom={direction}
                                     variants={stepVariants}
                                     initial="enter"
@@ -246,7 +247,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                     exit="exit"
                                     className="w-full flex-1 flex flex-col justify-between min-h-0"
                                 >
-                                    {isShiftsEnabled && shiftResult?.isBlocked ? (
+                                    {isShiftsEnabled && shiftResult?.isBlocked && BRAND_CONFIG.allowLateAppealMode !== 2 ? (
                                         <div className="flex-1 flex flex-col justify-between h-full">
                                             <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
                                                 <div className="bg-rose-50 p-4 rounded-full mb-4 border border-rose-100 animate-bounce">

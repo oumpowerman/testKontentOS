@@ -1,5 +1,5 @@
 export const BRAND_CONFIG = {
-  name: 'Kontent OS',
+  name: 'Test-Kontent OS',
   companyName: 'Kontent OS Co., Ltd.',
   title: 'Kontent OS',
   tagline: 'เปลี่ยนความวุ่นวายหลังบ้านให้เป็นระบบระเบียบ',
@@ -46,7 +46,7 @@ export const BRAND_CONFIG = {
   lateCalculationMode: 1,
 
   // สวิตช์เปิดใช้งานกฎการเข้าสายแบบ 4 ระดับ (ถ้า false จะทำงานเป็นโหมด 1 ดั้งเดิม 100%)
-  enableFourStageLateRules: true,
+  enableFourStageLateRules: false,
 
   // กำหนดเกณฑ์วินัย 4 ระดับแบบรวมศูนย์ (ไม่กระจายตัวเลข Hardcode)
   fourStageLateConfig: {
@@ -111,4 +111,9 @@ export const BRAND_CONFIG = {
   // 1 = แสดงและอนุญาตให้ยื่นคำขอเข้าสายได้ตามปกติ (ค่าเริ่มต้น)
   // 2 = ปิดการแสดงผลและปิดการยื่นคำขอเข้าสายทั้งหมด (ซ่อน/เปลี่ยนปุ่ม และปรับข้อความออก)
   allowLateAppealMode: 2,
+
+    // โหมดระดับพลังชีวิตตั้งต้นเมื่อยื่นใบสมัครสำเร็จ
+  // 1 = เริ่มต้นที่ 100 HP (ค่าเริ่มต้นปกติ)
+  // 2 = เริ่มต้นที่ 0 HP (สำหรับสายเริ่มจากศูนย์ และสามารถติดลบลงไปเรื่อย ๆ ได้ตามกติกาสะสมความเสียหาย)
+  initialHpMode: 2,
 };

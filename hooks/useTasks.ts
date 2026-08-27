@@ -189,7 +189,7 @@ export const useTasks = (setIsModalOpen?: (isOpen: boolean) => void) => {
         tasks, setTasks, 
         fetchTasks, fetchSubTasks, fetchTaskById,
         checkAndExpandRange, fetchAllTasks, 
-        isFetching, fetchCompletedTasks
+        isFetching, hasFetchedInitial, fetchCompletedTasks
     } = useTaskContext();
     
     const { showToast } = useToast();
@@ -632,6 +632,7 @@ export const useTasks = (setIsModalOpen?: (isOpen: boolean) => void) => {
         checkAndExpandRange,
         fetchAllTasks,
         isFetching,
+        hasFetchedInitial,
         fetchCompletedTasks
     };
 };

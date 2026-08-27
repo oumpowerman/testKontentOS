@@ -91,38 +91,25 @@ const LateInterventionOverlay: React.FC<LateInterventionOverlayProps> = ({
                     >
                         ยอมรับโทษและเช็คอินทันที <ArrowRight className="w-4 h-4" />
                     </motion.button>
-                ) : (
-                    !isExceededLastShift && (
-                        <motion.button 
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={onConfirm}
-                            className="w-full py-3.5 bg-white border-2 border-orange-100 text-orange-600 hover:bg-orange-50 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
-                        >
-                            เช็คอินทันที (ยอมรับเงื่อนไขการสาย) <ArrowRight className="w-4 h-4" />
-                        </motion.button>
-                    )
+                ) : !(isExceededLastShift && !isMode2) && (
+                    <motion.button 
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={onConfirm}
+                        className="w-full py-3.5 bg-white border-2 border-orange-100 text-orange-600 hover:bg-orange-50 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                    >
+                        เช็คอินทันที (ยอมรับเงื่อนไขการสาย) <ArrowRight className="w-4 h-4" />
+                    </motion.button>
                 )}
 
-                {(isMode2 || !isExceededLastShift) ? (
-                    <motion.button 
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={onGoBack}
-                        className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs"
-                    >
-                        ย้อนกลับไปเลือกประเภทงาน
-                    </motion.button>
-                ) : (
-                    <motion.button 
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={onClose}
-                        className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs"
-                    >
-                        ปิดหน้าต่าง
-                    </motion.button>
-                )}
+                <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={onGoBack}
+                    className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs"
+                >
+                    ย้อนกลับไปเลือกประเภทงาน
+                </motion.button>
             </div>
         </motion.div>
     );

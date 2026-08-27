@@ -205,6 +205,22 @@ const AnnualHolidayManager: React.FC<AnnualHolidayManagerProps> = ({ masterOptio
         };
     }, [annualHolidays, eventTypeOptions]);
 
+    const handleScrollToCurrentMonth = () => {
+        const currentMonthNum = new Date().getMonth() + 1; // 1-12
+        if (viewMode !== 'GRID') {
+            setViewMode('GRID');
+        }
+        setTimeout(() => {
+            const targetElement = document.getElementById(`holiday-month-grid-${currentMonthNum}`);
+            if (targetElement) {
+                targetElement.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+            }
+        }, 100);
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
             
@@ -213,6 +229,7 @@ const AnnualHolidayManager: React.FC<AnnualHolidayManagerProps> = ({ masterOptio
                 totalCount={annualHolidays.length}
                 monthStats={monthStats}
                 typeBreakdown={typeBreakdown}
+                onCurrentMonthClick={handleScrollToCurrentMonth}
             />
 
             {/* Split layout workspace */}

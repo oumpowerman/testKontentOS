@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import SuccessModal from './SuccessModal';
 import ImageCropper from './ImageCropper';
 import heic2any from 'heic2any';
+import { BRAND_CONFIG } from '../config/brand';
 
 import { EMOJI_POOL, DEFAULT_EMOJI } from '../constants/emojis';
 
@@ -423,7 +424,7 @@ const AuthPage: React.FC<AuthPageProps> = ({
           bio: reason,
           role: 'MEMBER',
           work_days: [1, 2, 3, 4, 5],
-          hp: 100,
+          hp: BRAND_CONFIG.initialHpMode === 2 ? 0 : 100,
           max_hp: 100,
           xp: 0,
           level: 1,

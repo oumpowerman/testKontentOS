@@ -532,8 +532,12 @@ export const getMatchedShiftSlot = (
     const lastShiftTotalMinutes = lastH * 60 + lastM;
 
     const diff = currentTotalMinutes - lastShiftTotalMinutes;
-    const isExceededLastShift = diff > actualBuffer;
-    const isLate = isExceededLastShift;
+    const isExceededLastShift = BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig
+        ? diff > ((BRAND_CONFIG as any).fourStageLateConfig.stage3MaxMins || 60)
+        : diff > bufferMinutes;
+    const isLate = BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig
+        ? diff > ((BRAND_CONFIG as any).fourStageLateConfig.stage1MaxMins || 5)
+        : diff > actualBuffer;
     const isRawLate = diff > 0;
     const isBlocked = isExceededLastShift;
 

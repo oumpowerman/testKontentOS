@@ -178,7 +178,7 @@ const MasterDataManager: React.FC = () => {
                     </div>
 
                     {/* View Switcher */}
-                    <div className="min-h-[400px] overflow-hidden">
+                    <div className="min-h-[400px] overflow-visible">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={activeTab}
