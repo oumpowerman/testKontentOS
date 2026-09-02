@@ -88,7 +88,8 @@ export const calculateCheckOutStatus = (
     effectiveStartTimeStr?: string,
     isHalfDay: boolean = false,
     halfDaySession?: 'AM' | 'PM',
-    useShiftEndTimeForLate: boolean = false
+    useShiftEndTimeForLate: boolean = false,
+    masterOptions?: any[]
 ): CheckOutCalculationResult => {
     // Determine the base time for required checkout time calculation.
     // If checkInTime is earlier than shift start time or if useShiftEndTimeForLate is enabled for late entry cases, use shiftStartTime.
@@ -102,8 +103,12 @@ export const calculateCheckOutStatus = (
 
             // Check if 4-stage late entry rule allows normal checkout (Stage 1 & 2: late <= 30 mins)
             let isFourStageEligible = false;
-            if (BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig) {
-                const stage2MaxMins = (BRAND_CONFIG as any).fourStageLateConfig.stage2MaxMins || 30;
+            const enableOpt = masterOptions?.find(o => o.type === 'WORK_CONFIG' && o.key === 'ENABLE_FOUR_STAGE_LATE');
+            const enableFourStage = enableOpt ? enableOpt.label === 'true' : ((BRAND_CONFIG as any).enableFourStageLateRules ?? true);
+
+            if (enableFourStage) {
+                const stage2MaxOpt = masterOptions?.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE2_MAX');
+                const stage2MaxMins = stage2MaxOpt ? Number(stage2MaxOpt.label) : ((BRAND_CONFIG as any).fourStageLateConfig?.stage2MaxMins || 30);
                 const lateMins = differenceInMinutes(checkInTime, shiftStartTime);
                 if (lateMins > 0 && lateMins <= stage2MaxMins) {
                     isFourStageEligible = true;
@@ -261,7 +266,8 @@ export const getEffectiveStartTime = (
     checkInTime: Date | string | null,
     defaultStartTimeStr: string,
     note?: string | null,
-    multipleShifts?: MultipleShiftsConfig
+    multipleShifts?: MultipleShiftsConfig,
+    minHours?: number
 ): string => {
     // 1. Check for [TARGET_SHIFT:HH:mm] tag in note
     if (note) {
@@ -272,6 +278,49 @@ export const getEffectiveStartTime = (
         const timeMatch = note.match(/\[TIME:(\d{1,2}:\d{2})(?:-\d{1,2}:\d{2})?\]/);
         if (timeMatch && timeMatch[1]) {
             return timeMatch[1];
+        }
+    }
+
+    // Robust fallback for [HALF_DAY:AM] (AM Leave)
+    if (note && /\[HALF_DAY:AM\]/i.test(note)) {
+        const resolvedMinHours = minHours && minHours > 0 ? minHours : 9;
+        const halfDayOffsetHours = Math.ceil(resolvedMinHours / 2);
+        const halfDayOffsetMinutes = halfDayOffsetHours * 60;
+
+        let morningStart = defaultStartTimeStr || '08:00';
+        if (multipleShifts && multipleShifts.enabled && checkInTime) {
+            let shiftsArray: string[] = [];
+            if (Array.isArray(multipleShifts.shiftsList)) {
+                shiftsArray = multipleShifts.shiftsList;
+            } else if (typeof multipleShifts.shiftsList === 'string') {
+                shiftsArray = multipleShifts.shiftsList.split(',').map(s => s.trim()).filter(Boolean);
+            }
+            if (shiftsArray.length > 0) {
+                const checkInDate = typeof checkInTime === 'string' ? new Date(checkInTime) : checkInTime;
+                const { totalMinutes } = getICTTime(checkInDate);
+                const adjustedMins = (totalMinutes - halfDayOffsetMinutes + 1440) % 1440;
+                const adjH = Math.floor(adjustedMins / 60);
+                const adjM = adjustedMins % 60;
+                const adjTimeStr = `${adjH.toString().padStart(2, '0')}:${adjM.toString().padStart(2, '0')}`;
+                
+                const result = calculateShiftAndActualTime(adjTimeStr, shiftsArray);
+                if (result && result.targetShift) {
+                    morningStart = result.targetShift;
+                }
+            }
+        }
+        try {
+            return addMinutesToTimeString(morningStart, halfDayOffsetMinutes);
+        } catch (e) {
+            try {
+                const [mh, mm] = morningStart.split(':').map(Number);
+                const fallbackMin = mh * 60 + mm + halfDayOffsetMinutes;
+                const fbH = Math.floor(fallbackMin / 60) % 24;
+                const fbM = fallbackMin % 60;
+                return `${fbH.toString().padStart(2, '0')}:${fbM.toString().padStart(2, '0')}`;
+            } catch {
+                return '13:00';
+            }
         }
     }
 
@@ -306,11 +355,14 @@ export const checkIsLate = (
     startTimeStr: string, 
     bufferMinutes: number = 0,
     note?: string | null,
-    multipleShifts?: MultipleShiftsConfig
+    multipleShifts?: MultipleShiftsConfig,
+    masterOptions?: any[]
 ): boolean => {
     if (!checkInTime) return false;
     try {
-        const actualBuffer = (BRAND_CONFIG.lateCalculationMode === 2 || BRAND_CONFIG.enableFourStageLateRules) ? 0 : bufferMinutes;
+        const enableOpt = masterOptions?.find(o => o.type === 'WORK_CONFIG' && o.key === 'ENABLE_FOUR_STAGE_LATE');
+        const enableFourStage = enableOpt ? enableOpt.label === 'true' : ((BRAND_CONFIG as any).enableFourStageLateRules ?? true);
+        const actualBuffer = (BRAND_CONFIG.lateCalculationMode === 2 || enableFourStage) ? 0 : bufferMinutes;
         const effectiveStartTime = getEffectiveStartTime(checkInTime, startTimeStr, note, multipleShifts);
         const { totalMinutes } = getICTTime(checkInTime);
         const [sh, sm] = effectiveStartTime.split(':').map(Number);
@@ -332,11 +384,14 @@ export const getLateMinutes = (
     startTimeStr: string, 
     bufferMinutes: number = 0,
     note?: string | null,
-    multipleShifts?: MultipleShiftsConfig
+    multipleShifts?: MultipleShiftsConfig,
+    masterOptions?: any[]
 ): number => {
     if (!checkInTime) return 0;
     try {
-        const actualBuffer = (BRAND_CONFIG.lateCalculationMode === 2 || BRAND_CONFIG.enableFourStageLateRules) ? 0 : bufferMinutes;
+        const enableOpt = masterOptions?.find(o => o.type === 'WORK_CONFIG' && o.key === 'ENABLE_FOUR_STAGE_LATE');
+        const enableFourStage = enableOpt ? enableOpt.label === 'true' : ((BRAND_CONFIG as any).enableFourStageLateRules ?? true);
+        const actualBuffer = (BRAND_CONFIG.lateCalculationMode === 2 || enableFourStage) ? 0 : bufferMinutes;
         const effectiveStartTime = getEffectiveStartTime(checkInTime, startTimeStr, note, multipleShifts);
         const { totalMinutes } = getICTTime(checkInTime);
         const [sh, sm] = effectiveStartTime.split(':').map(Number);
@@ -414,7 +469,10 @@ export const getAttendanceSummary = (
         minHours = 4; // ปรับลดเกณฑ์ชั่วโมงการทำงานลงครึ่งหนึ่งเหลือ 4 ชั่วโมง
         if (halfDaySession === 'AM') {
             // ปรับเวลาเข้างานบ่ายแบบ Dynamic ตามเวลาเริ่มกะจริงของพนักงาน
-            startTime = addMinutesToTimeString(config.startTime, 300); // บวก 5 ชั่วโมง (ทำงาน 4 ชม. + พัก 1 ชม.)
+            const fullMinHours = config.minHours && config.minHours > 0 ? config.minHours : 9;
+            const halfDayOffsetHours = Math.ceil(fullMinHours / 2);
+            const halfDayOffsetMinutes = halfDayOffsetHours * 60;
+            startTime = addMinutesToTimeString(config.startTime, halfDayOffsetMinutes);
         }
     }
 
@@ -434,12 +492,14 @@ export const getAttendanceSummary = (
 
     if (checkIn) {
         let baseTime = checkIn;
-        if (!isHalfDay) {
+        const isAMHalfDay = isHalfDay && halfDaySession === 'AM';
+        if (!isHalfDay || isAMHalfDay) {
             const effectiveStartTimeStr = getEffectiveStartTime(
                 checkIn,
                 config.startTime,
                 config.note,
-                config.multipleShifts
+                config.multipleShifts,
+                config.minHours
             );
             try {
                 const [sh, sm] = effectiveStartTimeStr.split(':').map(Number);
@@ -488,9 +548,12 @@ export const getMatchedShiftSlot = (
     now: Date,
     shiftsList: string[],
     bufferMinutes: number = 15,
-    ignoreBrandMode: boolean = false
+    ignoreBrandMode: boolean = false,
+    masterOptions?: any[]
 ): ShiftSlotResult => {
-    const actualBuffer = (ignoreBrandMode || (BRAND_CONFIG.lateCalculationMode !== 2 && !BRAND_CONFIG.enableFourStageLateRules)) ? bufferMinutes : 0;
+    const enableOpt = masterOptions?.find(o => o.type === 'WORK_CONFIG' && o.key === 'ENABLE_FOUR_STAGE_LATE');
+    const enableFourStage = enableOpt ? enableOpt.label === 'true' : ((BRAND_CONFIG as any).enableFourStageLateRules ?? true);
+    const actualBuffer = (ignoreBrandMode || (BRAND_CONFIG.lateCalculationMode !== 2 && !enableFourStage)) ? bufferMinutes : 0;
     if (!shiftsList || shiftsList.length === 0) {
         return {
             targetStartTime: '08:00',
@@ -532,11 +595,22 @@ export const getMatchedShiftSlot = (
     const lastShiftTotalMinutes = lastH * 60 + lastM;
 
     const diff = currentTotalMinutes - lastShiftTotalMinutes;
-    const isExceededLastShift = BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig
-        ? diff > ((BRAND_CONFIG as any).fourStageLateConfig.stage3MaxMins || 60)
+    
+    let enableFourStageValue = enableFourStage;
+    let stage1MaxMins = 5;
+    let stage3MaxMins = 60;
+    if (enableFourStageValue) {
+        const stage1Opt = masterOptions?.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE1_MAX');
+        const stage3Opt = masterOptions?.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE3_MAX');
+        stage1MaxMins = stage1Opt ? Number(stage1Opt.label) : ((BRAND_CONFIG as any).fourStageLateConfig?.stage1MaxMins || 5);
+        stage3MaxMins = stage3Opt ? Number(stage3Opt.label) : ((BRAND_CONFIG as any).fourStageLateConfig?.stage3MaxMins || 60);
+    }
+
+    const isExceededLastShift = enableFourStageValue
+        ? diff > stage3MaxMins
         : diff > bufferMinutes;
-    const isLate = BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig
-        ? diff > ((BRAND_CONFIG as any).fourStageLateConfig.stage1MaxMins || 5)
+    const isLate = enableFourStageValue
+        ? diff > stage1MaxMins
         : diff > actualBuffer;
     const isRawLate = diff > 0;
     const isBlocked = isExceededLastShift;

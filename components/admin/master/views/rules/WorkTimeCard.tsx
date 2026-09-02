@@ -1,5 +1,6 @@
 import React from 'react';
 import { Clock, Sparkles, Save } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import TimePickerModal from '../../../../ui/TimePickerModal';
 import ServerAddonsSection from './ServerAddonsSection';
 import MultipleShiftsCard from './MultipleShiftsCard';
@@ -42,6 +43,12 @@ export interface WorkTimeConfig {
     monthlyOTSummaryDay?: string;
     monthlyOTSummaryMode?: string;
     lateEntryStrictEndTime?: string;
+    enableFourStageLate?: string;
+    lateStage1Max?: string;
+    lateStage2Max?: string;
+    lateStage3Max?: string;
+    lateStage4BaseHp?: string;
+    lateHpPerMinute?: string;
 }
 
 interface WorkTimeCardProps {
@@ -132,12 +139,24 @@ const WorkTimeCard: React.FC<WorkTimeCardProps> = ({
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">อนุโลมสายได้ (Late Buffer)</label>
+                    <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-gray-500">อนุโลมสายได้ (Late Buffer)</label>
+                        {tempTimeConfig.enableFourStageLate === 'true' && (
+                            <span className="text-[10px] font-semibold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded">
+                                ล็อกอยู่🔒
+                            </span>
+                        )}
+                    </div>
                     <div className="relative">
                         <input 
                             id="input-late-buffer"
                             type="number" 
-                            className="w-full pl-4 pr-14 py-3 border border-gray-200 rounded-xl font-bold text-gray-800 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/70 outline-none transition-all"
+                            disabled={tempTimeConfig.enableFourStageLate === 'true'}
+                            className={`w-full pl-4 pr-14 py-3 border rounded-xl font-bold outline-none transition-all ${
+                                tempTimeConfig.enableFourStageLate === 'true'
+                                    ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed select-none'
+                                    : 'bg-white text-gray-800 border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/70'
+                            }`}
                             value={tempTimeConfig.buffer}
                             onChange={e => setTempTimeConfig(prev => ({ ...prev, buffer: e.target.value }))}
                         />
@@ -223,6 +242,143 @@ const WorkTimeCard: React.FC<WorkTimeCardProps> = ({
                         />
                     </button>
                 </div>
+            </div>
+
+            {/* 4-Stage Late Rules Configuration */}
+            <div className="mt-6 border border-indigo-100 bg-indigo-50/10 rounded-2xl p-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-indigo-50 pb-4 mb-4">
+                    <div className="space-y-1">
+                        <h4 className="font-bold text-indigo-900 flex items-center gap-2 text-sm">
+                            <Sparkles className="w-5 h-5 text-indigo-500 shrink-0" />
+                            กฎการเข้าสายแบบ 4 ระดับ (4-Stage Late Rules)
+                        </h4>
+                        <p className="text-xs text-indigo-700/70">
+                            กำหนดเวลาสูงสุดของสเต็ปที่ 1, 2, 3 และการลงโทษหัก HP ของระดับที่ 4
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-indigo-100/80 shrink-0 self-end sm:self-auto shadow-sm">
+                        <span className={`text-xs font-bold ${tempTimeConfig.enableFourStageLate === 'true' ? 'text-indigo-600' : 'text-gray-400'}`}>
+                            {tempTimeConfig.enableFourStageLate === 'true' ? 'เปิดใช้งาน' : 'ปิดการใช้งาน'}
+                        </span>
+                        <button
+                            id="btn-toggle-enable-four-stage-late"
+                            type="button"
+                            onClick={() => setTempTimeConfig(prev => ({
+                                ...prev,
+                                enableFourStageLate: prev.enableFourStageLate === 'true' ? 'false' : 'true'
+                            }))}
+                            className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-all ${
+                                tempTimeConfig.enableFourStageLate === 'true' ? 'bg-indigo-600' : 'bg-gray-300'
+                            }`}
+                            aria-label="Toggle four stage late mode"
+                        >
+                            <div
+                                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-all duration-300 ${
+                                    tempTimeConfig.enableFourStageLate === 'true' ? 'translate-x-5' : 'translate-x-0'
+                                }`}
+                            />
+                        </button>
+                    </div>
+                </div>
+
+                <AnimatePresence>
+                    {tempTimeConfig.enableFourStageLate === 'true' && (
+                        <motion.div 
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                            style={{ overflow: 'hidden' }}
+                        >
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 pt-4 pb-2">
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-bold text-gray-600">ระดับที่ 1 สูงสุด (นาที)</label>
+                                    <div className="relative">
+                                        <input
+                                            id="input-late-stage1-max"
+                                            type="number"
+                                            className="w-full pl-3 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl font-bold text-gray-800 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                                            value={tempTimeConfig.lateStage1Max || '5'}
+                                            onChange={e => setTempTimeConfig(prev => ({ ...prev, lateStage1Max: e.target.value }))}
+                                        />
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">Min</span>
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 leading-tight">
+                                        สายสูงสุดไม่หัก HP และเลิกงานปกติ (กะปกติ)
+                                    </p>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-bold text-gray-600">ระดับที่ 2 สูงสุด (นาที)</label>
+                                    <div className="relative">
+                                        <input
+                                            id="input-late-stage2-max"
+                                            type="number"
+                                            className="w-full pl-3 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl font-bold text-gray-800 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                                            value={tempTimeConfig.lateStage2Max || '30'}
+                                            onChange={e => setTempTimeConfig(prev => ({ ...prev, lateStage2Max: e.target.value }))}
+                                        />
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">Min</span>
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 leading-tight">
+                                        สายสูงสุดโดนหัก HP ตามนาที และเลิกงานปกติ
+                                    </p>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-bold text-gray-600">ระดับที่ 3 สูงสุด (นาที)</label>
+                                    <div className="relative">
+                                        <input
+                                            id="input-late-stage3-max"
+                                            type="number"
+                                            className="w-full pl-3 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl font-bold text-gray-800 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                                            value={tempTimeConfig.lateStage3Max || '60'}
+                                            onChange={e => setTempTimeConfig(prev => ({ ...prev, lateStage3Max: e.target.value }))}
+                                        />
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">Min</span>
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 leading-tight">
+                                        สายสูงสุดโดนหัก HP ตามนาที และต้องทำงานชดเชยเวลา
+                                    </p>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-bold text-gray-600">ระดับที่ 4 หักตั้งต้น (HP)</label>
+                                    <div className="relative">
+                                        <input
+                                            id="input-late-stage4-base-hp"
+                                            type="number"
+                                            className="w-full pl-3 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl font-bold text-gray-800 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                                            value={tempTimeConfig.lateStage4BaseHp || '300'}
+                                            onChange={e => setTempTimeConfig(prev => ({ ...prev, lateStage4BaseHp: e.target.value }))}
+                                        />
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">HP</span>
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 leading-tight">
+                                        สายเกินระดับ 3 ขึ้นไป หักตั้งต้นทันที
+                                    </p>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-bold text-gray-600">หักเพิ่ม (HP/นาที)</label>
+                                    <div className="relative">
+                                        <input
+                                            id="input-late-hp-per-minute"
+                                            type="number"
+                                            className="w-full pl-3 pr-14 py-2.5 bg-white border border-gray-200 rounded-xl font-bold text-gray-800 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                                            value={tempTimeConfig.lateHpPerMinute || '1'}
+                                            onChange={e => setTempTimeConfig(prev => ({ ...prev, lateHpPerMinute: e.target.value }))}
+                                        />
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">HP / นาที</span>
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 leading-tight">
+                                        อัตราหักแต้มสะสม HP ต่อทุกนาทีที่มาสาย
+                                    </p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* Weekly Attendance Race (Gamification) */}

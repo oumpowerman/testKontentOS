@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, Clock, ArrowRight, Heart, Activity, ShieldAlert, Zap } from 'lucide-react';
 import { useGameConfig } from '../../../context/GameConfigContext';
 import { useUserSession } from '../../../context/UserSessionContext';
+import { useMasterData } from '../../../hooks/useMasterData';
 import { DEFAULT_GAME_CONFIG } from '../../../lib/gameLogic';
 import { BRAND_CONFIG } from '../../../config/brand';
 
@@ -25,6 +26,7 @@ const LatePenaltyBreakdownOverlay: React.FC<LatePenaltyBreakdownOverlayProps> = 
 }) => {
     const { config } = useGameConfig();
     const { currentUserProfile } = useUserSession();
+    const { masterOptions } = useMasterData();
 
     // Safely get penalty rates and attendance rules
     const penalties = config?.PENALTY_RATES || DEFAULT_GAME_CONFIG.PENALTY_RATES;
@@ -36,21 +38,44 @@ const LatePenaltyBreakdownOverlay: React.FC<LatePenaltyBreakdownOverlayProps> = 
     const interval = penalties.HP_PENALTY_LATE_INTERVAL || 10;
     const rate = penalties.HP_PENALTY_LATE_RATE || 1;
 
-    // Retrieve 4-stage late rule configurations safely
-    const cfg4 = (BRAND_CONFIG as any).fourStageLateConfig || {
-        stage1MaxMins: 5,
-        stage2MaxMins: 30,
-        stage3MaxMins: 60,
-        stage4BaseHp: 300,
-        hpPerMinuteRate: 1
-    };
+    // Retrieve 4-stage late rule configurations dynamically
+    const cfg4 = React.useMemo(() => {
+        if (!masterOptions || masterOptions.length === 0) {
+            return (BRAND_CONFIG as any).fourStageLateConfig || {
+                stage1MaxMins: 5,
+                stage2MaxMins: 30,
+                stage3MaxMins: 60,
+                stage4BaseHp: 300,
+                hpPerMinuteRate: 1
+            };
+        }
+        const stage1MaxOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE1_MAX');
+        const stage2MaxOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE2_MAX');
+        const stage3MaxOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE3_MAX');
+        const stage4BaseHpOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE4_BASE_HP');
+        const hpPerMinuteRateOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_HP_PER_MINUTE');
+
+        return {
+            stage1MaxMins: stage1MaxOpt ? Number(stage1MaxOpt.label) : 5,
+            stage2MaxMins: stage2MaxOpt ? Number(stage2MaxOpt.label) : 30,
+            stage3MaxMins: stage3MaxOpt ? Number(stage3MaxOpt.label) : 60,
+            stage4BaseHp: stage4BaseHpOpt ? Number(stage4BaseHpOpt.label) : 300,
+            hpPerMinuteRate: hpPerMinuteRateOpt ? Number(hpPerMinuteRateOpt.label) : 1
+        };
+    }, [masterOptions]);
+
+    const isFourStageActive = React.useMemo(() => {
+        if (!masterOptions || masterOptions.length === 0) {
+            return (BRAND_CONFIG as any).enableFourStageLateRules ?? true;
+        }
+        const enableOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'ENABLE_FOUR_STAGE_LATE');
+        return enableOpt ? enableOpt.label === 'true' : ((BRAND_CONFIG as any).enableFourStageLateRules ?? true);
+    }, [masterOptions]);
 
     // Calculate penalty value based on 4-stage rules if active
     let penaltyValue = 0;
-    let isFourStageActive = false;
 
-    if (BRAND_CONFIG.enableFourStageLateRules) {
-        isFourStageActive = true;
+    if (isFourStageActive) {
         const activeRate = penalties.HP_PENALTY_LATE_RATE || cfg4.hpPerMinuteRate || 1;
 
         if (lateMinutes <= (cfg4.stage1MaxMins || 5)) {

@@ -114,6 +114,24 @@ export function useCheckInState({
         return checkNeedsSelfieVerification(userId || '', selfieMode, selfieDays, new Date(), currentUserProfile?.workDays);
     }, [masterOptions, userId, currentUserProfile]);
 
+    const fourStageConfig = useMemo(() => {
+        const enableOpt = masterOptions?.find(o => o.type === 'WORK_CONFIG' && o.key === 'ENABLE_FOUR_STAGE_LATE');
+        const stage1MaxOpt = masterOptions?.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE1_MAX');
+        const stage2MaxOpt = masterOptions?.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE2_MAX');
+        const stage3MaxOpt = masterOptions?.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE3_MAX');
+        const stage4BaseHpOpt = masterOptions?.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE4_BASE_HP');
+        const hpPerMinuteRateOpt = masterOptions?.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_HP_PER_MINUTE');
+
+        return {
+            enableFourStageLateRules: enableOpt ? enableOpt.label === 'true' : ((BRAND_CONFIG as any).enableFourStageLateRules ?? true),
+            stage1MaxMins: stage1MaxOpt ? Number(stage1MaxOpt.label) : 5,
+            stage2MaxMins: stage2MaxOpt ? Number(stage2MaxOpt.label) : 30,
+            stage3MaxMins: stage3MaxOpt ? Number(stage3MaxOpt.label) : 60,
+            stage4BaseHp: stage4BaseHpOpt ? Number(stage4BaseHpOpt.label) : 300,
+            hpPerMinuteRate: hpPerMinuteRateOpt ? Number(hpPerMinuteRateOpt.label) : 1
+        };
+    }, [masterOptions]);
+
     useEffect(() => {
         let timer: ReturnType<typeof setInterval>;
         if (isSubmitting && timeLeft > 0) {
@@ -183,22 +201,28 @@ export function useCheckInState({
     }, [transitionPointMins]);
 
     const shiftResult = useMemo(() => {
-        if (!isShiftsEnabled) return null;
         const now = new Date();
 
-        // Check if there is an AM half-day leave and we are in the PM session
+        // Check if there is an AM half-day leave and we are in the PM session (case-insensitive checking)
         const halfDayLeave = todayRequests?.find(req => {
-            const type = req.type || req.leave_type;
+            const type = (req.type || req.leave_type || '').toUpperCase();
             const isHalf = req.isHalfDay || req.is_half_day === true || req.is_half_day === 'true';
             const isLeaveType = ['SICK', 'VACATION', 'PERSONAL', 'EMERGENCY', 'UNPAID'].includes(type);
-            return isLeaveType && isHalf && req.status === 'APPROVED';
+            const statusUpper = req.status?.toUpperCase();
+            return isLeaveType && isHalf && statusUpper === 'APPROVED';
         });
 
         const session = halfDayLeave ? (halfDayLeave.halfDaySession || halfDayLeave.half_day_session) : null;
+
+        // If shifts are disabled and there is no half-day leave, return null
+        if (!isShiftsEnabled && !session) return null;
+
+        const effectiveShiftsList = isShiftsEnabled ? shiftsList : [startTime || '08:30'];
+
         if (session === 'AM') {
             const { hour, minute, totalMinutes: currentTotalMinutes } = getICTTime(now);
             const timeStr = `${hour}:${minute}`;
-            const { matchedPMStart } = calculatePMShiftDetails(timeStr, shiftsList, minHours);
+            const { matchedPMStart } = calculatePMShiftDetails(timeStr, effectiveShiftsList, minHours);
 
             const pmStartTotalMinutes = timeToMinutes(matchedPMStart);
             const diff = currentTotalMinutes - pmStartTotalMinutes;
@@ -216,9 +240,9 @@ export function useCheckInState({
             };
         } else if (session === 'PM') {
             if (isBeforeTransitionPoint) {
-                return getMatchedShiftSlot(now, shiftsList, lateBuffer, false);
+                return getMatchedShiftSlot(now, effectiveShiftsList, lateBuffer, false, masterOptions);
             } else {
-                const normalSlot = getMatchedShiftSlot(now, shiftsList, lateBuffer, false);
+                const normalSlot = getMatchedShiftSlot(now, effectiveShiftsList, lateBuffer, false, masterOptions);
                 return {
                     ...normalSlot,
                     isLate: true,
@@ -229,11 +253,11 @@ export function useCheckInState({
             }
         }
 
-        return getMatchedShiftSlot(now, shiftsList, lateBuffer, false);
-    }, [isShiftsEnabled, shiftsList, lateBuffer, isOpen, todayRequests, isBeforeTransitionPoint, minHours]);
+        return getMatchedShiftSlot(now, effectiveShiftsList, lateBuffer, false, masterOptions);
+    }, [isShiftsEnabled, shiftsList, lateBuffer, isOpen, todayRequests, isBeforeTransitionPoint, minHours, masterOptions, startTime]);
 
     const lateMinutes = useMemo(() => {
-        if (isShiftsEnabled && shiftResult) {
+        if (shiftResult) {
             return shiftResult.lateMinutes;
         }
 
@@ -258,18 +282,18 @@ export function useCheckInState({
         limit.setHours(h, m, 0, 0);
         const diff = Math.floor((now.getTime() - limit.getTime()) / 60000);
         return Math.max(0, diff);
-    }, [isShiftsEnabled, shiftResult, startTime, approvedLateTime, pendingLateTime, lateBuffer]);
+    }, [shiftResult, startTime, approvedLateTime, pendingLateTime, lateBuffer]);
 
     const isExceededLastShift = useMemo(() => {
         if (approvedLateTime) return false;
 
         // Under 4-stage late rules, we only block (isExceededLastShift) if lateness is Stage 4 (> stage3MaxMins, i.e., > 60 mins)
-        if (BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig) {
-            const stage3MaxMins = (BRAND_CONFIG as any).fourStageLateConfig.stage3MaxMins || 60;
+        if (fourStageConfig.enableFourStageLateRules) {
+            const stage3MaxMins = fourStageConfig.stage3MaxMins || 60;
             return lateMinutes > stage3MaxMins;
         }
 
-        if (isShiftsEnabled && shiftResult) {
+        if (shiftResult) {
             return !!shiftResult.isExceededLastShift;
         }
         if (!startTime) return false;
@@ -281,24 +305,24 @@ export function useCheckInState({
         const nowNormalized = new Date();
         nowNormalized.setSeconds(0, 0);
         return nowNormalized > limitWithBuffer;
-    }, [isShiftsEnabled, shiftResult, approvedLateTime, startTime, lateBuffer, lateMinutes]);
+    }, [shiftResult, approvedLateTime, startTime, lateBuffer, lateMinutes, fourStageConfig]);
 
     const isUserLate = useMemo(() => {
         if (hasAcceptedLateness) return false;
         if (hasLateRequest && !approvedLateTime) return false;
 
         // Bypass if 4-stage late rules are enabled and the lateness is within Stage 1 (<= max mins)
-        if (BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig) {
-            const maxMins = (BRAND_CONFIG as any).fourStageLateConfig.stage1MaxMins || 5;
+        if (fourStageConfig.enableFourStageLateRules) {
+            const maxMins = fourStageConfig.stage1MaxMins || 5;
             if (lateMinutes <= maxMins) {
                 return false;
             }
         }
 
-        if (isShiftsEnabled && shiftResult) {
+        if (shiftResult) {
             // 🟢 ถ้าเปิดกฎ 4 ขั้นบันไดให้นับสายย้อนหลังแบบดิบ ๆ (isRawLate)
             // 🟢 แต่ถ้าปิดกฎ 4 ขั้น (แบบดั้งเดิม) ให้เช็คจากความสายจริงหลังพ้นสิทธิ์ผ่อนผันแล้วเท่านั้น (isLate)
-            return BRAND_CONFIG.enableFourStageLateRules ? !!shiftResult.isRawLate : !!shiftResult.isLate;
+            return fourStageConfig.enableFourStageLateRules ? !!shiftResult.isRawLate : !!shiftResult.isLate;
         }
 
         if (!startTime) return false;
@@ -306,7 +330,7 @@ export function useCheckInState({
         const now = new Date();
         now.setSeconds(0, 0);
         // 🟢 ถ้าปิดกฎ 4 ขั้นบันได ให้บวกค่าผ่อนผัน (lateBuffer) คุ้มครองพนักงานไว้ก่อน
-        const bufferToApply = BRAND_CONFIG.enableFourStageLateRules ? 0 : lateBuffer;
+        const bufferToApply = fourStageConfig.enableFourStageLateRules ? 0 : lateBuffer;
 
         if (pendingLateTime) {
             const [ph, pm] = pendingLateTime.split(':').map(Number);
@@ -326,7 +350,7 @@ export function useCheckInState({
         const limit = new Date();
         limit.setHours(h, m + bufferToApply, 0, 0);
         return now > limit;
-    }, [isShiftsEnabled, shiftResult, startTime, lateBuffer, hasLateRequest, approvedLateTime, pendingLateTime, hasAcceptedLateness, lateMinutes]);
+    }, [shiftResult, startTime, lateBuffer, hasLateRequest, approvedLateTime, pendingLateTime, hasAcceptedLateness, lateMinutes, fourStageConfig]);
 
     useEffect(() => {
         if (step === 'CONFIRM_LOCATION' && isGpsSecure && isUserLate && isOpen && !showLateIntervention && !showLatePenaltyBreakdown && !hasAcceptedLateness) {
@@ -426,7 +450,7 @@ export function useCheckInState({
         const actualBypass = bypassFile !== undefined ? bypassFile : bypassSelfie;
         if (!actualBypass && !capturedFile) return;
 
-        const effectiveCheckStartTime = approvedLateTime || pendingLateTime || (isShiftsEnabled && shiftResult?.targetStartTime ? shiftResult.targetStartTime : startTime);
+        const effectiveCheckStartTime = approvedLateTime || pendingLateTime || (shiftResult?.targetStartTime ? shiftResult.targetStartTime : startTime);
 
         if (effectiveCheckStartTime && !forceCheckIn && !showLateIntervention && !showLatePenaltyBreakdown && !hasAcceptedLateness) {
             const now = new Date();
@@ -448,20 +472,20 @@ export function useCheckInState({
                 // Bypass late check
             } else {
                 let isLateCheck = false;
-                if (isShiftsEnabled && shiftResult && !approvedLateTime && !pendingLateTime) {
+                if (shiftResult && !approvedLateTime && !pendingLateTime) {
                     isLateCheck = shiftResult.isLate || shiftResult.isBlocked;
                 } else if (effectiveCheckStartTime) {
                     const [h, m] = effectiveCheckStartTime.split(':').map(Number);
                     const limit = new Date();
                     // ถ้าปิดกฎ 4 ขั้นบันได (แบบดั้งเดิม) ให้ใช้ lateBuffer (เวลาแถม) เข้ามาช่วยพนักงาน
-                    const bufferToApply = BRAND_CONFIG.enableFourStageLateRules ? 0 : lateBuffer;
+                    const bufferToApply = fourStageConfig.enableFourStageLateRules ? 0 : lateBuffer;
                     limit.setHours(h, m + bufferToApply, 0, 0);
                     isLateCheck = now > limit;
                 }
 
                 // Bypass if 4-stage late rules are enabled and the lateness is within Stage 1 (<= max mins)
-                if (isLateCheck && BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig) {
-                    const maxMins = (BRAND_CONFIG as any).fourStageLateConfig.stage1MaxMins || 5;
+                if (isLateCheck && fourStageConfig.enableFourStageLateRules) {
+                    const maxMins = fourStageConfig.stage1MaxMins || 5;
                     if (lateMinutes <= maxMins) {
                         isLateCheck = false;
                     }

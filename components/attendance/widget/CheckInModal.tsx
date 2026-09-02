@@ -150,7 +150,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
         })
     };
 
-    const effectiveDisplayStartTime = (isShiftsEnabled && shiftResult?.targetStartTime)
+    const effectiveDisplayStartTime = shiftResult?.targetStartTime
         ? shiftResult.targetStartTime
         : (approvedLateTime || startTime || '10:00');
 
@@ -239,7 +239,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
 
                             <AnimatePresence initial={false} custom={direction} mode="wait">
                                 <motion.div
-                                    key={isShiftsEnabled && shiftResult?.isBlocked && BRAND_CONFIG.allowLateAppealMode !== 2 ? 'blocked' : step}
+                                    key={shiftResult?.isBlocked && BRAND_CONFIG.allowLateAppealMode !== 2 ? 'blocked' : step}
                                     custom={direction}
                                     variants={stepVariants}
                                     initial="enter"
@@ -247,7 +247,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                     exit="exit"
                                     className="w-full flex-1 flex flex-col justify-between min-h-0"
                                 >
-                                    {isShiftsEnabled && shiftResult?.isBlocked && BRAND_CONFIG.allowLateAppealMode !== 2 ? (
+                                    {shiftResult?.isBlocked && BRAND_CONFIG.allowLateAppealMode !== 2 ? (
                                         <div className="flex-1 flex flex-col justify-between h-full">
                                             <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
                                                 <div className="bg-rose-50 p-4 rounded-full mb-4 border border-rose-100 animate-bounce">
@@ -347,7 +347,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                                             }}
                                                         />
 
-                                                        {isShiftsEnabled && shiftResult && (
+                                                        {shiftResult && (
                                                             <motion.div 
                                                                 initial={{ opacity: 0, y: 10 }}
                                                                 animate={{ opacity: 1, y: 0 }}

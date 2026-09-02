@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+    import React, { useState, useEffect } from 'react';
 import { MasterOption } from '../../../../types';
 import { Clock, MapPin, Camera, Heart } from 'lucide-react';
 import { useGameConfig } from '../../../../context/GameConfigContext';
@@ -70,6 +70,12 @@ const AttendanceRulesView: React.FC<AttendanceRulesViewProps> = ({
         monthlyOTSummaryDay: '1',
         monthlyOTSummaryMode: 'PREV_MONTH',
         lateEntryStrictEndTime: 'false',
+        enableFourStageLate: 'true',
+        lateStage1Max: '5',
+        lateStage2Max: '30',
+        lateStage3Max: '60',
+        lateStage4BaseHp: '300',
+        lateHpPerMinute: '1',
     });
     const [isStartTimeOpen, setIsStartTimeOpen] = useState(false);
     const [isEndTimeOpen, setIsEndTimeOpen] = useState(false);
@@ -120,8 +126,14 @@ const AttendanceRulesView: React.FC<AttendanceRulesViewProps> = ({
         const monthlyOTSummaryDayOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'MONTHLY_OT_SUMMARY_DAY');
         const monthlyOTSummaryModeOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'MONTHLY_OT_SUMMARY_MODE');
         const lateEntryStrictEndTimeOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_ENTRY_STRICT_END_TIME');
+        const enableFourStageLateOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'ENABLE_FOUR_STAGE_LATE');
+        const lateStage1MaxOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE1_MAX');
+        const lateStage2MaxOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE2_MAX');
+        const lateStage3MaxOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE3_MAX');
+        const lateStage4BaseHpOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE4_BASE_HP');
+        const lateHpPerMinuteOpt = masterOptions.find(o => o.type === 'WORK_CONFIG' && o.key === 'LATE_HP_PER_MINUTE');
         
-        if (startOpt || endOpt || bufferOpt || minHoursOpt || otThresholdOpt || checkoutPenaltyTimeOpt || dailySummaryDelayHoursOpt || dailySummaryTimeOpt || lineSummaryDestinationOpt || enableRaceOpt || lateAlertModeOpt || lateAlertOffsetOpt || shiftsEnabledOpt || shiftsListOpt || lineApprovalModeOpt || lineHeaderTitleOpt || lateAlertTargetRolesOpt || checkoutPenaltyTargetRolesOpt || checkoutAlertEnabledOpt || checkoutAlertModeOpt || checkoutAlertOffsetOpt || checkoutAlertTargetRolesOpt || adminAbsentPenaltyEnabledOpt || absentPenaltyEnabledOpt || absentPenaltyTimeOpt || absentPenaltyTargetRolesOpt || forgotCheckInLimitHoursOpt || lineSubmissionAlertModeOpt || monthlySummaryTimeOpt || monthlySummaryDayOpt || monthlySummaryModeOpt || monthlySummaryFebDayOpt || monthlyOTSummaryTimeOpt || monthlyOTSummaryDayOpt || monthlyOTSummaryModeOpt || lateEntryStrictEndTimeOpt) {
+        if (startOpt || endOpt || bufferOpt || minHoursOpt || otThresholdOpt || checkoutPenaltyTimeOpt || dailySummaryDelayHoursOpt || dailySummaryTimeOpt || lineSummaryDestinationOpt || enableRaceOpt || lateAlertModeOpt || lateAlertOffsetOpt || shiftsEnabledOpt || shiftsListOpt || lineApprovalModeOpt || lineHeaderTitleOpt || lateAlertTargetRolesOpt || checkoutPenaltyTargetRolesOpt || checkoutAlertEnabledOpt || checkoutAlertModeOpt || checkoutAlertOffsetOpt || checkoutAlertTargetRolesOpt || adminAbsentPenaltyEnabledOpt || absentPenaltyEnabledOpt || absentPenaltyTimeOpt || absentPenaltyTargetRolesOpt || forgotCheckInLimitHoursOpt || lineSubmissionAlertModeOpt || monthlySummaryTimeOpt || monthlySummaryDayOpt || monthlySummaryModeOpt || monthlySummaryFebDayOpt || monthlyOTSummaryTimeOpt || monthlyOTSummaryDayOpt || monthlyOTSummaryModeOpt || lateEntryStrictEndTimeOpt || enableFourStageLateOpt || lateStage1MaxOpt || lateStage2MaxOpt || lateStage3MaxOpt || lateStage4BaseHpOpt || lateHpPerMinuteOpt) {
             setTempTimeConfig({
                 start: startOpt?.label || '10:00',
                 end: endOpt?.label || '19:00',
@@ -159,6 +171,12 @@ const AttendanceRulesView: React.FC<AttendanceRulesViewProps> = ({
                 monthlyOTSummaryDay: monthlyOTSummaryDayOpt?.label || '1',
                 monthlyOTSummaryMode: monthlyOTSummaryModeOpt?.label || 'PREV_MONTH',
                 lateEntryStrictEndTime: lateEntryStrictEndTimeOpt?.label || 'false',
+                enableFourStageLate: enableFourStageLateOpt?.label || 'true',
+                lateStage1Max: lateStage1MaxOpt?.label || '5',
+                lateStage2Max: lateStage2MaxOpt?.label || '30',
+                lateStage3Max: lateStage3MaxOpt?.label || '60',
+                lateStage4BaseHp: lateStage4BaseHpOpt?.label || '300',
+                lateHpPerMinute: lateHpPerMinuteOpt?.label || '1',
             });
         }
 
@@ -233,6 +251,12 @@ const AttendanceRulesView: React.FC<AttendanceRulesViewProps> = ({
         prepareUpdateOrInsert('MONTHLY_OT_SUMMARY_DAY', tempTimeConfig.monthlyOTSummaryDay || '1');
         prepareUpdateOrInsert('MONTHLY_OT_SUMMARY_MODE', tempTimeConfig.monthlyOTSummaryMode || 'PREV_MONTH');
         prepareUpdateOrInsert('LATE_ENTRY_STRICT_END_TIME', tempTimeConfig.lateEntryStrictEndTime || 'false');
+        prepareUpdateOrInsert('ENABLE_FOUR_STAGE_LATE', tempTimeConfig.enableFourStageLate || 'true');
+        prepareUpdateOrInsert('LATE_STAGE1_MAX', tempTimeConfig.lateStage1Max || '5');
+        prepareUpdateOrInsert('LATE_STAGE2_MAX', tempTimeConfig.lateStage2Max || '30');
+        prepareUpdateOrInsert('LATE_STAGE3_MAX', tempTimeConfig.lateStage3Max || '60');
+        prepareUpdateOrInsert('LATE_STAGE4_BASE_HP', tempTimeConfig.lateStage4BaseHp || '300');
+        prepareUpdateOrInsert('LATE_HP_PER_MINUTE', tempTimeConfig.lateHpPerMinute || '1');
         
         if (optionsToSave.length > 0) {
             if (saveMasterOptionsBulk) {

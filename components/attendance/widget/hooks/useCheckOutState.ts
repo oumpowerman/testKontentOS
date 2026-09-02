@@ -60,6 +60,22 @@ export const useCheckOutState = ({
         });
     }, [leaveRequests]);
 
+    const todayHalfDayPMLeave = useMemo(() => {
+        if (!leaveRequests || !Array.isArray(leaveRequests)) return null;
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
+        return leaveRequests.find((req: any) => {
+            const isHalfDay = req.isHalfDay === true || req.is_half_day === true;
+            const session = req.halfDaySession || req.half_day_session;
+            const isPM = session === 'PM' || session === 'pm';
+            const isActive = req.status === 'APPROVED' || req.status === 'approved' || req.status === 'PENDING' || req.status === 'pending';
+            
+            if (!isHalfDay || !isPM || !isActive) return false;
+            
+            const reqDate = req.date || req.startDate || req.start_date;
+            return reqDate === todayStr;
+        });
+    }, [leaveRequests]);
+
     // Dynamically retrieve early leave interval and rate from Game Config, Master Options, or safe fallbacks
     const earlyLeaveInterval = parseFloat(
         config?.PENALTY_RATES?.HP_PENALTY_EARLY_LEAVE_INTERVAL?.toString() || 
@@ -231,8 +247,10 @@ export const useCheckOutState = ({
                 { enabled: isShiftsEnabled, shiftsList }
             );
 
-            const isHalfDay = !!note && (note.includes('[HALF_DAY:AM]') || note.includes('[HALF_DAY:PM]'));
-            const halfDaySession = note && note.includes('[HALF_DAY:AM]') ? 'AM' : (note && note.includes('[HALF_DAY:PM]') ? 'PM' : undefined);
+            const isHalfDay = (!!note && (note.includes('[HALF_DAY:AM]') || note.includes('[HALF_DAY:PM]'))) || !!todayHalfDayPMLeave;
+            const halfDaySession = note && note.includes('[HALF_DAY:AM]') 
+                ? 'AM' 
+                : (note && note.includes('[HALF_DAY:PM]') ? 'PM' : (todayHalfDayPMLeave ? 'PM' : undefined));
 
             const hasLateEntryNote = !!note && (
                 note.includes('[PROVISIONAL_LATE_ENTRY]') ||

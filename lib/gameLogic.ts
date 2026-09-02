@@ -330,31 +330,45 @@ export const evaluateAction = (action: GameActionType, context: any, config: any
             let detailsStr = `${rule.xp > 0 ? `+${rule.xp} XP` : ''} ${rule.hp < 0 ? `${rule.hp} HP` : ''}`.trim();
             
             if (status === 'LATE') {
-                if (BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig) {
-                    const cfg4 = (BRAND_CONFIG as any).fourStageLateConfig;
-                    const lateMinutes = context.lateMinutes || 0;
-                    const rate = penalties.HP_PENALTY_LATE_RATE || cfg4.hpPerMinuteRate || 1;
+                const masterOptions = context.masterOptions;
+                const enableOpt = masterOptions?.find((o: any) => o.type === 'WORK_CONFIG' && o.key === 'ENABLE_FOUR_STAGE_LATE');
+                const enableFourStage = enableOpt ? enableOpt.label === 'true' : ((BRAND_CONFIG as any).enableFourStageLateRules ?? true);
 
-                    if (lateMinutes <= (cfg4.stage1MaxMins || 5)) {
+                if (enableFourStage) {
+                    const stage1MaxOpt = masterOptions?.find((o: any) => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE1_MAX');
+                    const stage2Opt = masterOptions?.find((o: any) => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE2_MAX');
+                    const stage3Opt = masterOptions?.find((o: any) => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE3_MAX');
+                    const stage4BaseHpOpt = masterOptions?.find((o: any) => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE4_BASE_HP');
+                    const hpPerMinuteRateOpt = masterOptions?.find((o: any) => o.type === 'WORK_CONFIG' && o.key === 'LATE_HP_PER_MINUTE');
+
+                    const stage1MaxMins = stage1MaxOpt ? Number(stage1MaxOpt.label) : 5;
+                    const stage2MaxMins = stage2Opt ? Number(stage2Opt.label) : 30;
+                    const stage3MaxMins = stage3Opt ? Number(stage3Opt.label) : 60;
+                    const stage4BaseHp = stage4BaseHpOpt ? Number(stage4BaseHpOpt.label) : 300;
+                    const hpPerMinuteRate = hpPerMinuteRateOpt ? Number(hpPerMinuteRateOpt.label) : 1;
+
+                    const lateMinutes = context.lateMinutes || 0;
+                    const rate = penalties.HP_PENALTY_LATE_RATE || hpPerMinuteRate || 1;
+
+                    if (lateMinutes <= stage1MaxMins) {
                         // Stage 1 (1 - 5 mins): No HP penalty
                         hpChange = 0;
                         detailsStr = `0 HP (สาย ${lateMinutes} นาที - ช่วงอนุโลมพิเศษ) ${rule.xp > 0 ? `+${rule.xp} XP` : ''}`.trim();
-                    } else if (lateMinutes <= (cfg4.stage2MaxMins || 30)) {
+                    } else if (lateMinutes <= stage2MaxMins) {
                         // Stage 2 (6 - 30 mins): rate * lateMinutes
                         const penalty = lateMinutes * rate;
                         hpChange = -penalty;
                         detailsStr = `-${penalty} HP (สาย ${lateMinutes} นาที) ${rule.xp > 0 ? `+${rule.xp} XP` : ''}`.trim();
-                    } else if (lateMinutes <= (cfg4.stage3MaxMins || 60)) {
+                    } else if (lateMinutes <= stage3MaxMins) {
                         // Stage 3 (31 - 60 mins): rate * lateMinutes
                         const penalty = lateMinutes * rate;
                         hpChange = -penalty;
                         detailsStr = `-${penalty} HP (สาย ${lateMinutes} นาที) ${rule.xp > 0 ? `+${rule.xp} XP` : ''}`.trim();
                     } else {
                         // Stage 4 (61+ mins): baseHp + lateMinutes * rate
-                        const basePenalty = cfg4.stage4BaseHp || 300;
-                        const penalty = basePenalty + (lateMinutes * rate);
+                        const penalty = stage4BaseHp + (lateMinutes * rate);
                         hpChange = -penalty;
-                        detailsStr = `-${penalty} HP (สาย ${lateMinutes} นาที - ปรับหนัก ${basePenalty} + ${lateMinutes * rate}) ${rule.xp > 0 ? `+${rule.xp} XP` : ''}`.trim();
+                        detailsStr = `-${penalty} HP (สาย ${lateMinutes} นาที - ปรับหนัก ${stage4BaseHp} + ${lateMinutes * rate}) ${rule.xp > 0 ? `+${rule.xp} XP` : ''}`.trim();
                     }
                 } else {
                     const lateModeDynamic = penalties.LATE_MODE_DYNAMIC !== undefined ? penalties.LATE_MODE_DYNAMIC : 0;
@@ -375,7 +389,17 @@ export const evaluateAction = (action: GameActionType, context: any, config: any
             let msg = '';
             if (status === 'LATE') {
                 const lateMinutes = context.lateMinutes || 0;
-                if (BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig && lateMinutes <= ((BRAND_CONFIG as any).fourStageLateConfig.stage1MaxMins || 5)) {
+                const masterOptions = context.masterOptions;
+                const enableOpt = masterOptions?.find((o: any) => o.type === 'WORK_CONFIG' && o.key === 'ENABLE_FOUR_STAGE_LATE');
+                const enableFourStage = enableOpt ? enableOpt.label === 'true' : ((BRAND_CONFIG as any).enableFourStageLateRules ?? true);
+
+                let stage1MaxMins = 5;
+                if (enableFourStage) {
+                    const stage1MaxOpt = masterOptions?.find((o: any) => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE1_MAX');
+                    stage1MaxMins = stage1MaxOpt ? Number(stage1MaxOpt.label) : 5;
+                }
+
+                if (enableFourStage && lateMinutes <= stage1MaxMins) {
                     msg = `เข้างานสาย${timeStr}${lateMinutes > 0 ? ` (สาย ${lateMinutes} นาที - ช่วงอนุโลมพิเศษ)` : ''}${dateStr}`;
                 } else {
                     msg = `เข้างานสาย${timeStr}${lateMinutes > 0 ? ` (สาย ${lateMinutes} นาที)` : ''}${dateStr}`;
@@ -432,27 +456,41 @@ export const evaluateAction = (action: GameActionType, context: any, config: any
             let hpChange = rule.hp;
             let detailsStr = `${rule.hp} HP`;
             
-            if (BRAND_CONFIG.enableFourStageLateRules && (BRAND_CONFIG as any).fourStageLateConfig) {
-                const cfg4 = (BRAND_CONFIG as any).fourStageLateConfig;
-                const lateMinutes = context.lateMinutes || 0;
-                const rate = penalties.HP_PENALTY_LATE_RATE || cfg4.hpPerMinuteRate || 1;
+            const masterOptions = context.masterOptions;
+            const enableOpt = masterOptions?.find((o: any) => o.type === 'WORK_CONFIG' && o.key === 'ENABLE_FOUR_STAGE_LATE');
+            const enableFourStage = enableOpt ? enableOpt.label === 'true' : ((BRAND_CONFIG as any).enableFourStageLateRules ?? true);
 
-                if (lateMinutes <= (cfg4.stage1MaxMins || 5)) {
+            if (enableFourStage) {
+                const stage1MaxOpt = masterOptions?.find((o: any) => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE1_MAX');
+                const stage2Opt = masterOptions?.find((o: any) => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE2_MAX');
+                const stage3Opt = masterOptions?.find((o: any) => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE3_MAX');
+                const stage4BaseHpOpt = masterOptions?.find((o: any) => o.type === 'WORK_CONFIG' && o.key === 'LATE_STAGE4_BASE_HP');
+                const hpPerMinuteRateOpt = masterOptions?.find((o: any) => o.type === 'WORK_CONFIG' && o.key === 'LATE_HP_PER_MINUTE');
+
+                const stage1MaxMins = stage1MaxOpt ? Number(stage1MaxOpt.label) : 5;
+                const stage2MaxMins = stage2Opt ? Number(stage2Opt.label) : 30;
+                const stage3MaxMins = stage3Opt ? Number(stage3Opt.label) : 60;
+                const stage4BaseHp = stage4BaseHpOpt ? Number(stage4BaseHpOpt.label) : 300;
+                const hpPerMinuteRate = hpPerMinuteRateOpt ? Number(hpPerMinuteRateOpt.label) : 1;
+
+                const lateMinutes = context.lateMinutes || 0;
+                const rate = penalties.HP_PENALTY_LATE_RATE || hpPerMinuteRate || 1;
+
+                if (lateMinutes <= stage1MaxMins) {
                     hpChange = 0;
                     detailsStr = `0 HP (สาย ${lateMinutes} นาที - ช่วงอนุโลมพิเศษ)`;
-                } else if (lateMinutes <= (cfg4.stage2MaxMins || 30)) {
+                } else if (lateMinutes <= stage2MaxMins) {
                     const penalty = lateMinutes * rate;
                     hpChange = -penalty;
                     detailsStr = `-${penalty} HP (สาย ${lateMinutes} นาที)`;
-                } else if (lateMinutes <= (cfg4.stage3MaxMins || 60)) {
+                } else if (lateMinutes <= stage3MaxMins) {
                     const penalty = lateMinutes * rate;
                     hpChange = -penalty;
                     detailsStr = `-${penalty} HP (สาย ${lateMinutes} นาที)`;
                 } else {
-                    const basePenalty = cfg4.stage4BaseHp || 300;
-                    const penalty = basePenalty + (lateMinutes * rate);
+                    const penalty = stage4BaseHp + (lateMinutes * rate);
                     hpChange = -penalty;
-                    detailsStr = `-${penalty} HP (สาย ${lateMinutes} นาที - ปรับหนัก ${basePenalty} + ${lateMinutes * rate})`;
+                    detailsStr = `-${penalty} HP (สาย ${lateMinutes} นาที - ปรับหนัก ${stage4BaseHp} + ${lateMinutes * rate})`;
                 }
             } else {
                 const lateModeDynamic = penalties.LATE_MODE_DYNAMIC !== undefined ? penalties.LATE_MODE_DYNAMIC : 0;

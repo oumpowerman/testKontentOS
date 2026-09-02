@@ -261,7 +261,8 @@ const AttendanceControl: React.FC<AttendanceControlProps> = ({
         );
 
         const todayHalfDayLeave = todayRequests.find(
-            r => r.status === 'APPROVED' && (r.is_half_day === true || r.is_half_day === 'true' || r.isHalfDay === true || r.isHalfDay === 'true')
+            r => (r.status === 'APPROVED' || r.status === 'PENDING') && 
+                 (r.is_half_day === true || r.is_half_day === 'true' || r.isHalfDay === true || r.isHalfDay === 'true')
         );
         const isHalfDay = !!todayHalfDayLeave;
         const halfDaySession = todayHalfDayLeave ? (todayHalfDayLeave.half_day_session || todayHalfDayLeave.halfDaySession) : undefined;

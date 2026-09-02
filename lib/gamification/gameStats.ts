@@ -14,6 +14,17 @@ export const updateGameStats = async (
     config: GameConfig
 ) => {
     try {
+        // Fetch master options dynamically from database if not already provided
+        if (!context.masterOptions && (action === 'ATTENDANCE_CHECK_IN' || action === 'ATTENDANCE_LATE')) {
+            const { data: options } = await supabase
+                .from('master_options')
+                .select('*')
+                .eq('type', 'WORK_CONFIG');
+            if (options) {
+                context.masterOptions = options;
+            }
+        }
+
         // 1. 📐 Rule Engine: คำนวณหาค่า XP/HP ที่ควรได้
         const result = evaluateAction(action, context, config);
         
