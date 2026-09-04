@@ -332,6 +332,15 @@ const AuthPage: React.FC<AuthPageProps> = ({
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg(null);
+
+    const preventNavigation = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = 'ระบบกำลังดำเนินการสมัครสมาชิก กรุณาอย่าปิดหน้านี้นะครับ';
+      return event.returnValue;
+    };
+
+    window.addEventListener('beforeunload', preventNavigation);
+
     try {
       const cleanUsername = username.toLowerCase().trim();
       if (!cleanUsername) {
@@ -353,10 +362,10 @@ const AuthPage: React.FC<AuthPageProps> = ({
 
       // Check if username is taken in profiles
       const { data: existingUser, error: checkError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('username', cleanUsername)
-        .maybeSingle();
+         .from('profiles')
+         .select('id')
+         .eq('username', cleanUsername)
+         .maybeSingle();
 
       if (checkError) throw checkError;
       if (existingUser) {
@@ -443,6 +452,7 @@ const AuthPage: React.FC<AuthPageProps> = ({
     } catch (err: any) {
       setErrorMsg(err.message || 'มีข้อพิลึกบางอย่างโปรดลองใหม่อีกครั้งครับ');
     } finally {
+      window.removeEventListener('beforeunload', preventNavigation);
       setIsLoading(false);
     }
   };
@@ -502,6 +512,53 @@ const AuthPage: React.FC<AuthPageProps> = ({
       <motion.div
         className={`relative w-full max-w-5xl bg-white/40 backdrop-blur-3xl rounded-[2.6rem] p-[1px] border border-white/70 transition-all duration-700 h-full max-h-[92dvh] md:h-[min(780px,88dvh)] my-auto flex flex-col md:flex-row overflow-hidden ${dynamicShadow}`}
       >
+
+        {/* Layer 2: Interaction Shield Overlay during Registration */}
+        <AnimatePresence>
+          {isLoading && authMode === 'REGISTER' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0 z-[60] bg-white/80 backdrop-blur-md rounded-[2.5rem] flex flex-col items-center justify-center p-8 select-none text-center"
+            >
+              <div className="relative flex flex-col items-center max-w-md mx-auto">
+                {/* Breathing / Pulsing Outer Ring */}
+                <motion.div
+                  animate={{
+                    scale: [1, 1.12, 1],
+                    opacity: [0.35, 0.65, 0.35]
+                  }}
+                  transition={{
+                    duration: 2.2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  className="absolute w-24 h-24 bg-pink-500/15 rounded-full blur-xl"
+                />
+
+                {/* Minimalist circular spinner with emoji */}
+                <div className="relative w-20 h-20 mb-6 flex items-center justify-center">
+                  <div className="absolute inset-0 border-4 border-slate-100 rounded-full" />
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-0 border-4 border-t-pink-500 border-r-indigo-500 rounded-full"
+                  />
+                  <span className="text-2xl">🚀</span>
+                </div>
+
+                <h4 className="text-xl font-black text-slate-800 mb-2">
+                  ระบบกำลังบันทึกข้อมูล
+                </h4>
+                <p className="text-slate-500 font-semibold text-sm max-w-xs leading-relaxed">
+                  กรุณาอย่าปิดหน้าจอ หรือรีเฟรชเบราว์เซอร์ในขณะนี้เพื่อความปลอดภัยสูงสุดของบัญชีท่านนะครับ ✨
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {onBack && (
             <button 
